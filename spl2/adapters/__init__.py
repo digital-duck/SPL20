@@ -49,5 +49,11 @@ def _register_builtin_adapters():
     except ImportError:
         pass
 
+    try:
+        from spl2.adapters.momagrid import MomagridAdapter
+        register_adapter("momagrid", MomagridAdapter)
+    except ImportError:
+        pass
+
 
 _register_builtin_adapters()

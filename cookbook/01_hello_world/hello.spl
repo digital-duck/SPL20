@@ -1,0 +1,12 @@
+-- Recipe 01: Hello World
+-- Minimal SPL program — verify spl2 + adapter + model work.
+--
+-- Usage:
+--   spl2 run cookbook/01_hello_world/hello.spl
+--   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
+--   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama -m llama3.2
+
+PROMPT hello_world
+SELECT
+    system_role('You are a friendly assistant. Introduce yourself and SPL 2.0 in two sentences.')
+GENERATE greeting()

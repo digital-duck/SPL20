@@ -1,0 +1,14 @@
+-- Ollama Proxy: a general-purpose LLM query via any adapter
+-- Usage:
+--   spl2 run examples/ollama_proxy.spl --adapter ollama --model gemma3 prompt="Explain quantum computing"
+--   spl2 run examples/ollama_proxy.spl --adapter ollama --model llama3.2 prompt="Write a haiku about coding"
+--   spl2 run examples/ollama_proxy.spl --adapter ollama --model mistral prompt="What is 2+2?"
+--
+-- Parameters:
+--   prompt  (required)  The user prompt / question
+
+PROMPT ollama_proxy
+SELECT
+    system_role('You are a helpful, knowledgeable assistant.'),
+    context.prompt AS prompt
+GENERATE answer(prompt)

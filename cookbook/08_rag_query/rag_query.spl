@@ -1,0 +1,20 @@
+-- Recipe 08: RAG Query
+-- Retrieval-augmented generation over indexed documents.
+--
+-- Setup:
+--   pip install numpy faiss-cpu
+--   spl2 rag add "Python is a programming language created by Guido van Rossum"
+--   spl2 rag add "Rust is a systems programming language focused on safety and performance"
+--   spl2 rag add "JavaScript runs in browsers and powers the modern web"
+--   spl2 rag add "Go was designed at Google for scalable network services"
+--
+-- Usage:
+--   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What language is best for systems programming?"
+--   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="Which language runs in browsers?"
+
+PROMPT rag_answer
+SELECT
+    system_role('You are a knowledgeable assistant. Use the provided context to answer accurately.'),
+    rag.query(context.question, top_k=3) AS background,
+    context.question AS question
+GENERATE answer(question)

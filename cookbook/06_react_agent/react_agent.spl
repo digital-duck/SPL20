@@ -1,0 +1,43 @@
+-- SPL 2.0: ReAct Agent Pattern
+-- Reasoning + Acting loop with tool use
+
+WORKFLOW react_agent
+  INPUT: @task text
+  OUTPUT: @answer text
+DO
+  @iteration := 0
+  @history := ''
+  @context := ''
+
+  WHILE @iteration < 10 DO
+
+    -- Reasoning step
+    GENERATE thought(@task, @history, @context) INTO @current_thought
+
+    -- Action decision
+    GENERATE action_decision(@current_thought) INTO @action
+
+    -- Execute action based on classification
+    EVALUATE @action
+      WHEN 'search' THEN
+        CALL search_tool(@action) INTO @observation
+      WHEN 'calculate' THEN
+        CALL calculator(@action) INTO @observation
+      WHEN 'answer' THEN
+        GENERATE final_answer(@history) INTO @answer
+        COMMIT @answer WITH status = 'complete'
+    END
+
+    -- Accumulate history
+    @history := @history + @current_thought
+    @iteration := @iteration + 1
+
+  END
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    GENERATE best_answer(@history) INTO @answer
+    COMMIT @answer WITH status = 'partial'
+  WHEN HallucinationDetected THEN
+    RETRY WITH temperature = 0.1
+END

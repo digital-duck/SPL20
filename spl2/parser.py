@@ -376,7 +376,7 @@ class Parser:
         if tok.type == TokenType.IDENTIFIER and tok.value.lower() == "context":
             self._advance()
             self._expect(TokenType.DOT)
-            field_name = self._expect(TokenType.IDENTIFIER).value
+            field_name = self._expect_identifier_or_keyword().value
             return ContextRef(field_name=field_name)
 
         if tok.type == TokenType.IDENTIFIER and tok.value.lower() == "rag":
