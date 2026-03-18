@@ -14,6 +14,9 @@ __version__ = "2.0.0"
 from spl2.lexer import Lexer
 from spl2.parser import Parser
 from spl2.analyzer import Analyzer
+from spl2.optimizer import Optimizer
+from spl2.executor import Executor, SPLResult, WorkflowResult
+from spl2.explain import explain_plan, explain_plans
 
 
 def parse(source: str):
@@ -29,3 +32,10 @@ def validate(source: str):
     ast = parse(source)
     analyzer = Analyzer()
     return analyzer.analyze(ast)
+
+
+def optimize(source: str):
+    """Parse, validate, and generate execution plans."""
+    analysis = validate(source)
+    optimizer = Optimizer()
+    return optimizer.optimize(analysis)

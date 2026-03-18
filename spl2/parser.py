@@ -1229,6 +1229,10 @@ class Parser:
             TokenType.FORMAT, TokenType.MODEL, TokenType.RESULT,
             TokenType.VERSION, TokenType.SCHEMA, TokenType.ERROR,
             TokenType.OUTPUT, TokenType.INPUT, TokenType.TEMPERATURE,
+            TokenType.PROMPT, TokenType.BUDGET, TokenType.TOKENS,
+            TokenType.ORDER, TokenType.FROM, TokenType.WHERE,
+            TokenType.WORKFLOW, TokenType.PROCEDURE, TokenType.DEFAULT,
+            TokenType.SECURITY, TokenType.ACCOUNTING, TokenType.CLASSIFICATION,
         }
         if tok.type in keyword_as_expr:
             self._advance()
