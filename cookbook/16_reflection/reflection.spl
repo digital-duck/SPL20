@@ -1,0 +1,53 @@
+-- Recipe 16: Reflection Agent
+-- The agent solves a problem, then reflects on its own reasoning to catch errors.
+-- If reflection finds issues, it corrects and re-reflects until confident.
+-- Demonstrates meta-cognitive loops and self-assessment patterns.
+--
+-- Usage:
+--   spl2 run cookbook/16_reflection/reflection.spl --adapter ollama -m gemma3 problem="What are the trade-offs of microservices vs monoliths?"
+--   spl2 run cookbook/16_reflection/reflection.spl --adapter ollama problem="Design a URL shortener system"
+--   spl2 run cookbook/16_reflection/reflection.spl --adapter ollama problem="Explain why bubble sort is O(n^2)"
+
+WORKFLOW reflection_agent
+    INPUT: @problem TEXT
+    OUTPUT: @answer TEXT
+DO
+    @iteration := 0
+    @max_reflections := 3
+    @confidence := 0
+
+    -- Initial attempt at solving the problem
+    GENERATE solve(@problem) INTO @answer
+
+    -- Reflection loop: assess and improve
+    WHILE @iteration < @max_reflections DO
+        -- Reflect: identify errors, gaps, or weak reasoning
+        GENERATE reflect(@problem, @answer) INTO @reflection
+
+        -- Score confidence in the answer
+        GENERATE confidence_score(@answer, @reflection) INTO @confidence
+
+        EVALUATE @confidence
+            WHEN > 0.85 THEN
+                COMMIT @answer WITH status = 'confident', confidence = @confidence, reflections = @iteration
+            OTHERWISE
+                -- Extract specific issues to fix
+                GENERATE extract_issues(@reflection) INTO @issues
+
+                -- Correct the answer based on identified issues
+                GENERATE correct(@answer, @issues, @problem) INTO @answer
+
+                @iteration := @iteration + 1
+        END
+    END
+
+    -- If loop exhausted, commit best effort with final confidence
+    COMMIT @answer WITH status = 'best_effort', confidence = @confidence, reflections = @iteration
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        COMMIT @answer WITH status = 'max_reflections', confidence = @confidence
+    WHEN HallucinationDetected THEN
+        GENERATE solve(@problem) INTO @answer
+        COMMIT @answer WITH status = 'restarted'
+END

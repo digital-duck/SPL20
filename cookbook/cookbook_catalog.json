@@ -1,0 +1,397 @@
+{
+  "_comment": "SPL 2.0 Cookbook Catalog \u2014 single source of truth for all recipes.",
+  "_schema": {
+    "is_active": "bool   \u2014 included in default batch run (python run_all.py)",
+    "approval_status": "string \u2014 new | approved | wip | disabled | rejected",
+    "category": "string \u2014 basics | agentic | reasoning | safety | retrieval | multi-agent | application | benchmarking"
+  },
+  "recipes": [
+    {
+      "id": "01",
+      "name": "Hello World",
+      "description": "Minimal SPL program \u2014 verify spl2 + adapter + model work",
+      "args": [
+        "spl2",
+        "run",
+        "./01_hello_world/hello.spl",
+        "--adapter",
+        "ollama"
+      ],
+      "dir": "01_hello_world",
+      "log": "hello",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "basics"
+    },
+    {
+      "id": "02",
+      "name": "Ollama Proxy",
+      "description": "General-purpose LLM query \u2014 proxy any Ollama model",
+      "args": [
+        "spl2",
+        "run",
+        "./02_ollama_proxy/proxy.spl",
+        "--adapter",
+        "ollama",
+        "prompt=Explain quantum computing in one sentence"
+      ],
+      "dir": "02_ollama_proxy",
+      "log": "proxy",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "basics"
+    },
+    {
+      "id": "03",
+      "name": "Multilingual Greeting",
+      "description": "Greet in any language \u2014 parametric context demo",
+      "args": [
+        "spl2",
+        "run",
+        "./03_multilingual/multilingual.spl",
+        "--adapter",
+        "ollama",
+        "user_input=hello wen",
+        "lang=Chinese"
+      ],
+      "dir": "03_multilingual",
+      "log": "multilingual",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "basics"
+    },
+    {
+      "id": "04",
+      "name": "Model Showdown",
+      "description": "Same prompt to multiple models \u2014 compare output and latency",
+      "args": [
+        "bash",
+        "./04_model_showdown/showdown.sh",
+        "What is the meaning of life?"
+      ],
+      "dir": "04_model_showdown",
+      "log": "showdown",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "benchmarking"
+    },
+    {
+      "id": "05",
+      "name": "Self-Refine",
+      "description": "Iterative improvement: draft \u2192 critique \u2192 refine loop",
+      "args": [
+        "spl2",
+        "run",
+        "./05_self_refine/self_refine.spl",
+        "--adapter",
+        "ollama",
+        "task=Write a haiku about coding"
+      ],
+      "dir": "05_self_refine",
+      "log": "self_refine",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "agentic"
+    },
+    {
+      "id": "06",
+      "name": "ReAct Agent",
+      "description": "Reasoning + Acting loop with tool-call pattern",
+      "args": [
+        "spl2",
+        "run",
+        "./06_react_agent/react_agent.spl",
+        "--adapter",
+        "ollama",
+        "task=What is the population of France?"
+      ],
+      "dir": "06_react_agent",
+      "log": "react_agent",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "agentic"
+    },
+    {
+      "id": "07",
+      "name": "Safe Generation",
+      "description": "Exception handling for production LLM safety",
+      "args": [
+        "spl2",
+        "run",
+        "./07_safe_generation/safe_generation.spl",
+        "--adapter",
+        "ollama",
+        "prompt=Explain how encryption works"
+      ],
+      "dir": "07_safe_generation",
+      "log": "safe_generation",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "safety"
+    },
+    {
+      "id": "08",
+      "name": "RAG Query",
+      "description": "Retrieval-augmented generation over indexed documents",
+      "args": [
+        "spl2",
+        "run",
+        "./08_rag_query/rag_query.spl",
+        "--adapter",
+        "ollama",
+        "question=What language is best for systems programming?"
+      ],
+      "dir": "08_rag_query",
+      "log": "rag_query",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "retrieval"
+    },
+    {
+      "id": "09",
+      "name": "Chain of Thought",
+      "description": "Multi-step reasoning: Research \u2192 Analyze \u2192 Summarize",
+      "args": [
+        "spl2",
+        "run",
+        "./09_chain_of_thought/chain.spl",
+        "--adapter",
+        "ollama",
+        "topic=distributed AI inference"
+      ],
+      "dir": "09_chain_of_thought",
+      "log": "chain",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "reasoning"
+    },
+    {
+      "id": "10",
+      "name": "Batch Test",
+      "description": "Automated testing of all .spl recipes across models",
+      "args": [
+        "bash",
+        "./10_batch_test/batch_test.sh"
+      ],
+      "dir": "10_batch_test",
+      "log": "batch_test",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "benchmarking"
+    },
+    {
+      "id": "11",
+      "name": "Debate Arena",
+      "description": "Adversarial debate between two LLM personas with a judge",
+      "args": [
+        "spl2",
+        "run",
+        "./11_debate_arena/debate.spl",
+        "--adapter",
+        "ollama",
+        "topic=AI should be open-sourced"
+      ],
+      "dir": "11_debate_arena",
+      "log": "debate",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "multi-agent"
+    },
+    {
+      "id": "12",
+      "name": "Plan and Execute",
+      "description": "Planner decomposes task into steps, executor runs each one",
+      "args": [
+        "spl2",
+        "run",
+        "./12_plan_and_execute/plan_execute.spl",
+        "--adapter",
+        "ollama",
+        "task=Build a REST API for a todo app"
+      ],
+      "dir": "12_plan_and_execute",
+      "log": "plan_execute",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "agentic"
+    },
+    {
+      "id": "13",
+      "name": "Map-Reduce Summarizer",
+      "description": "Split large docs into chunks, summarize each, combine results",
+      "args": [
+        "spl2",
+        "run",
+        "./13_map_reduce/map_reduce.spl",
+        "--adapter",
+        "ollama",
+        "document=The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization.",
+        "style=bullet points"
+      ],
+      "dir": "13_map_reduce",
+      "log": "map_reduce",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "application"
+    },
+    {
+      "id": "14",
+      "name": "Multi-Agent Collaboration",
+      "description": "Researcher \u2192 Analyst \u2192 Writer collaboration via PROCEDURE",
+      "args": [
+        "spl2",
+        "run",
+        "./14_multi_agent/multi_agent.spl",
+        "--adapter",
+        "ollama",
+        "topic=Impact of AI on healthcare"
+      ],
+      "dir": "14_multi_agent",
+      "log": "multi_agent",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "multi-agent"
+    },
+    {
+      "id": "15",
+      "name": "Code Review",
+      "description": "Multi-pass review: security, performance, style, bugs",
+      "args": [
+        "spl2",
+        "run",
+        "./15_code_review/code_review.spl",
+        "--adapter",
+        "ollama",
+        "code=def foo(x): return eval(x)",
+        "language=Python"
+      ],
+      "dir": "15_code_review",
+      "log": "code_review",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "application"
+    },
+    {
+      "id": "16",
+      "name": "Reflection Agent",
+      "description": "Meta-cognitive loop: solve \u2192 reflect \u2192 correct until confident",
+      "args": [
+        "spl2",
+        "run",
+        "./16_reflection/reflection.spl",
+        "--adapter",
+        "ollama",
+        "problem=Design a URL shortener system"
+      ],
+      "dir": "16_reflection",
+      "log": "reflection",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "agentic"
+    },
+    {
+      "id": "17",
+      "name": "Tree of Thought",
+      "description": "Explore multiple reasoning paths, score and pick the best",
+      "args": [
+        "spl2",
+        "run",
+        "./17_tree_of_thought/tree_of_thought.spl",
+        "--adapter",
+        "ollama",
+        "problem=Should we rewrite the legacy system or incrementally refactor?"
+      ],
+      "dir": "17_tree_of_thought",
+      "log": "tree_of_thought",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "reasoning"
+    },
+    {
+      "id": "18",
+      "name": "Guardrails Pipeline",
+      "description": "Input/output safety pipeline with PII detection and filtering",
+      "args": [
+        "spl2",
+        "run",
+        "./18_guardrails/guardrails.spl",
+        "--adapter",
+        "ollama",
+        "user_input=Explain how encryption works"
+      ],
+      "dir": "18_guardrails",
+      "log": "guardrails",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "safety"
+    },
+    {
+      "id": "19",
+      "name": "Memory Conversation",
+      "description": "Persistent memory across conversations via memory.get/set",
+      "args": [
+        "spl2",
+        "run",
+        "./19_memory_conversation/memory_chat.spl",
+        "--adapter",
+        "ollama",
+        "user_input=My name is Alice and I am a data scientist"
+      ],
+      "dir": "19_memory_conversation",
+      "log": "memory_chat",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "application"
+    },
+    {
+      "id": "20",
+      "name": "Ensemble Voting",
+      "description": "Generate multiple answers, score and vote for consensus",
+      "args": [
+        "spl2",
+        "run",
+        "./20_ensemble_voting/ensemble.spl",
+        "--adapter",
+        "ollama",
+        "question=What causes inflation?"
+      ],
+      "dir": "20_ensemble_voting",
+      "log": "ensemble",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "multi-agent"
+    },
+    {
+      "id": "21",
+      "name": "Multi-Model Pipeline",
+      "description": "Per-step model selection with GENERATE...USING MODEL and quality loop",
+      "args": [
+        "spl2",
+        "run",
+        "./21_multi_model_pipeline/multi_model.spl",
+        "--adapter",
+        "ollama",
+        "topic=climate change"
+      ],
+      "dir": "21_multi_model_pipeline",
+      "log": "multi_model",
+      "is_active": true,
+      "approval_status": "approved",
+      "category": "agentic"
+    },
+    {
+      "id": "22",
+      "name": "Text2SPL Demo",
+      "description": "Natural language to SPL 2.0 compiler \u2014 prompt, workflow, and auto modes",
+      "args": [
+        "bash",
+        "./22_text2spl_demo/text2spl_demo.sh"
+      ],
+      "dir": "22_text2spl_demo",
+      "log": "text2spl_demo",
+      "is_active": false,
+      "approval_status": "new",
+      "category": "application"
+    }
+  ]
+}

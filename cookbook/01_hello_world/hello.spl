@@ -4,7 +4,7 @@
 -- Usage:
 --   spl2 run cookbook/01_hello_world/hello.spl
 --   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
---   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama -m llama3.2
+--   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama -m gemma3
 
 PROMPT hello_world
 SELECT

@@ -11,6 +11,7 @@ SPL 2.0 extends the SQL-inspired [SPL 1.0](https://github.com/digital-duck/SPL) 
 | `EVALUATE ... WHEN ... END` | LLM-judged (semantic) + deterministic branching |
 | `WHILE ... DO ... END` | Iterative refinement loops |
 | `GENERATE ... INTO @var` | LLM call with result capture |
+| `GENERATE ... USING MODEL` | Per-step model selection in workflows |
 | `@var := expr` | Variable assignment |
 | `COMMIT @var` | Finalize workflow output |
 | `DO ... EXCEPTION ... END` | LLM-specific error handling |
@@ -168,11 +169,28 @@ spl2 explain  <file.spl>              # Show execution plan (no LLM call)
 spl2 parse    <file.spl> [--json]     # Validate syntax, optionally dump AST as JSON
 spl2 validate <file.spl>              # Alias for parse
 spl2 syntax   <file.spl>              # Alias for parse
+spl2 text2spl "<description>" [--mode auto|prompt|workflow] [--adapter NAME] [-o FILE] [--execute]
+spl2 compile  "<description>"          # Alias for text2spl
 spl2 init                              # Initialise .spl/ workspace
 spl2 adapters                          # List available LLM adapter engines
 spl2 memory   {list,get,set,delete}    # Manage persistent memory store
 spl2 rag      {add,query,count}        # Manage RAG vector store
 spl2 version                           # Print version
+```
+
+### text2SPL Compiler
+
+Compile natural language directly into SPL 2.0 code:
+
+```bash
+# Generate SPL from English
+spl2 text2spl "summarize a document" --adapter ollama
+
+# Save to file
+spl2 text2spl "build a review agent" --mode workflow -o review.spl --adapter ollama
+
+# Compile and execute in one step
+spl2 compile "translate text to French" --execute --adapter anthropic text="Hello world"
 ```
 
 Parameters can be passed with `-p KEY=VALUE` or as trailing `KEY=VALUE` arguments:
@@ -184,23 +202,35 @@ spl2 run query.spl question="What is SPL?" lang=en   # multiple params
 
 ## LLM Adapters
 
+SPL 2.0 supports 10 adapter backends — from local inference to major cloud providers:
+
 ```bash
 $ spl2 adapters
-Available LLM adapters (5):
+Available LLM adapters (10):
 
+  anthropic      Claude models via Anthropic API (requires anthropic, ANTHROPIC_API_KEY)
   claude_cli     Wraps claude -p CLI (requires Claude Code installed)
+  deepseek       DeepSeek models (requires httpx, DEEPSEEK_API_KEY)
   echo           Returns prompt as response (testing, no setup required)
+  google         Gemini models via Google GenAI (requires google-genai, GOOGLE_API_KEY)
   momagrid       Decentralized AI inference grid (requires httpx, MOMAGRID_HUB_URL)
   ollama         Local models via Ollama (requires httpx, ollama running)
+  openai         GPT/o-series via OpenAI API (requires openai, OPENAI_API_KEY)
   openrouter     100+ models via OpenRouter.ai (requires httpx, OPENROUTER_API_KEY)
+  qwen           Qwen models via DashScope (requires httpx, DASHSCOPE_API_KEY)
 ```
 
 | Adapter | Description | Setup |
 |---------|-------------|-------|
 | `echo` | Returns prompt as response (testing) | Built-in, no setup |
 | `claude_cli` | Wraps `claude -p` CLI (subscription) | Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) |
-| `openrouter` | 100+ models via OpenRouter.ai | `pip install httpx`, set `OPENROUTER_API_KEY` |
 | `ollama` | Local models via Ollama | `pip install httpx`, [install Ollama](https://ollama.ai) |
+| `anthropic` | Claude models via Anthropic API | `pip install anthropic`, set `ANTHROPIC_API_KEY` |
+| `openai` | GPT/o-series via OpenAI API | `pip install openai`, set `OPENAI_API_KEY` |
+| `google` | Gemini models via Google GenAI | `pip install google-genai`, set `GOOGLE_API_KEY` |
+| `deepseek` | DeepSeek chat & reasoning models | `pip install httpx`, set `DEEPSEEK_API_KEY` |
+| `qwen` | Qwen models via Alibaba DashScope | `pip install httpx`, set `DASHSCOPE_API_KEY` |
+| `openrouter` | 100+ models via OpenRouter.ai | `pip install httpx`, set `OPENROUTER_API_KEY` |
 | `momagrid` | Decentralized AI inference grid | `pip install httpx`, set `MOMAGRID_HUB_URL` |
 
 ## Architecture
@@ -230,14 +260,17 @@ Lexer --> Parser --> Analyzer --> Optimizer --> Executor
 | IR | `spl2/ir.py` | JSON serialization of AST and plans |
 | CLI | `spl2/cli.py` | Command-line interface |
 | text2SPL | `spl2/text2spl.py` | Natural language to SPL compiler |
-| Adapters | `spl2/adapters/` | LLM backend plugins |
+| Adapters | `spl2/adapters/` | LLM backend plugins (10 adapters) |
 | Storage | `spl2/storage/` | SQLite memory + FAISS vector store |
 
 ## Requirements
 
 - Python >= 3.11
 - `click>=8.0` (CLI framework)
-- Optional: `httpx` (for openrouter/ollama/momagrid adapters)
+- Optional: `httpx` (for ollama/openrouter/momagrid/deepseek/qwen adapters)
+- Optional: `anthropic` (for Anthropic adapter)
+- Optional: `openai` (for OpenAI adapter)
+- Optional: `google-genai` (for Google Gemini adapter)
 - Optional: `numpy`, `faiss-cpu` (for RAG vector store)
 - Optional: `tiktoken` (for accurate OpenAI token counting)
 

@@ -10,6 +10,8 @@ _MODEL_CPT: dict[str, float] = {
     "gemini": 3.8,
     "llama": 3.5,
     "mistral": 3.5,
+    "deepseek": 3.5,
+    "qwen": 3.5,
 }
 
 # Try to import tiktoken for accurate OpenAI model counting
@@ -76,6 +78,16 @@ class TokenCounter:
             "gpt-4o": (2.5, 10.0),
             "gpt-4": (30.0, 60.0),
             "gpt-3.5": (0.5, 1.5),
+            "deepseek-chat": (0.27, 1.10),
+            "deepseek-reasoner": (0.55, 2.19),
+            "qwen-max": (1.6, 6.4),
+            "qwen-plus": (0.4, 1.2),
+            "qwen-turbo": (0.06, 0.2),
+            "gemini-2.5-pro": (1.25, 10.0),
+            "gemini-2.5-flash": (0.15, 0.60),
+            "gemini-2.0-flash": (0.10, 0.40),
+            "gemini-1.5-pro": (1.25, 5.0),
+            "gemini-1.5-flash": (0.075, 0.30),
         }
         lower = self.model.lower()
         for model_prefix, (inp_price, out_price) in pricing.items():

@@ -7,6 +7,12 @@ Usage examples:
     spl2 explain  query.spl
     spl2 run      query.spl --adapter ollama -p task="Write a haiku"
     spl2 execute  query.spl --adapter momagrid --cache
+    spl2 text2spl "summarize a document" --adapter ollama
+    spl2 compile  "build a review agent" --adapter ollama --execute
+    spl2 config show
+    spl2 config set adapter ollama
+    spl2 config get adapter
+    spl2 config init
     spl2 adapters
     spl2 memory list
     spl2 memory get  <key>
@@ -24,6 +30,7 @@ import asyncio
 import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import click
@@ -80,6 +87,45 @@ def _analyze_source(source: str):
     return Analyzer().analyze(ast)
 
 
+def _get_cfg():
+    """Load SPL config (lazy, cached per process)."""
+    from spl2.config import load_config
+    return load_config()
+
+
+def _cfg_default(key: str, fallback):
+    """Get a config value, returning fallback if missing."""
+    try:
+        cfg = _get_cfg()
+        return cfg.get(key, fallback)
+    except Exception:
+        return fallback
+
+
+def _setup_logging(run_name: str, adapter: str = "", spl_file: str = ""):
+    """Set up dd-logging for the current run. Returns log file path."""
+    from dd_logging import setup_logging
+    from spl2.config import LOG_DIR
+
+    # Build a descriptive run_name from the spl file
+    if spl_file:
+        stem = Path(spl_file).stem
+        run_name = stem
+
+    log_level = _cfg_default("log_level", "info")
+    console = _cfg_default("log_console", False)
+
+    log_path = setup_logging(
+        run_name=run_name,
+        root_name="spl2",
+        adapter=adapter,
+        log_level=log_level,
+        log_dir=str(LOG_DIR),
+        console=console,
+    )
+    return log_path
+
+
 def _print_result(result) -> None:
     """Pretty-print an SPLResult or WorkflowResult."""
     from spl2.executor import SPLResult, WorkflowResult
@@ -130,6 +176,11 @@ def cmd_init() -> None:
         click.echo("  .spl/memory.db  — persistent memory store")
     else:
         click.echo("Workspace already exists: .spl/")
+
+    # Also ensure ~/.spl/config.yaml exists
+    from spl2.config import ensure_defaults, CONFIG_PATH
+    ensure_defaults()
+    click.echo(f"  Config: {CONFIG_PATH}")
 
 
 # ── spl2 validate / syntax ───────────────────────────────────────────────────
@@ -193,20 +244,20 @@ def cmd_explain(file: str) -> None:
 
 @cli.command("execute", context_settings={"ignore_unknown_options": True})
 @click.argument("file", type=click.Path(dir_okay=False))
-@click.option("--adapter", default="echo", show_default=True, metavar="NAME",
-              help="LLM adapter engine.")
+@click.option("--adapter", default=None, metavar="NAME",
+              help="LLM adapter engine (default from config or 'echo').")
 @click.option("--model", "-m", default=None, metavar="MODEL",
               help="Override USING MODEL for all statements (e.g. gemma3, llama3.2).")
 @click.option("--param", "-p", multiple=True, metavar="KEY=VALUE",
               help="Pass parameter (repeatable).")
-@click.option("--cache", is_flag=True, default=False,
-              help="Enable prompt caching.")
-@click.option("--storage-dir", default=".spl", show_default=True,
-              help="Storage directory for memory/cache.")
+@click.option("--cache/--no-cache", default=None,
+              help="Enable/disable prompt caching (default from config).")
+@click.option("--storage-dir", default=None, show_default=True,
+              help="Storage directory for memory/cache (default from config or '.spl').")
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
-def cmd_execute(file: str, adapter: str, model: str | None,
+def cmd_execute(file: str, adapter: str | None, model: str | None,
                 param: tuple[str, ...],
-                cache: bool, storage_dir: str,
+                cache: bool | None, storage_dir: str | None,
                 extra_args: tuple[str, ...]) -> None:
     """Execute FILE and print each PROMPT/WORKFLOW result.
 
@@ -217,10 +268,24 @@ def cmd_execute(file: str, adapter: str, model: str | None,
       spl2 run query.spl question="What is SPL?"
       spl2 run query.spl --adapter ollama --model gemma3 question="hello"
     """
+    # Apply config defaults
+    adapter = adapter or _cfg_default("adapter", "echo")
+    model = model or _cfg_default("model", None) or None
+    cache = cache if cache is not None else _cfg_default("cache", False)
+    storage_dir = storage_dir or _cfg_default("storage_dir", ".spl")
+
     source = _read_file(file)
     params = _parse_params(param + extra_args)
 
     _ensure_workspace(storage_dir)
+
+    # Set up logging
+    log_path = _setup_logging(run_name="run", adapter=adapter, spl_file=file)
+
+    from dd_logging import get_logger
+    log = get_logger("cli", "spl2")
+    log.info("spl2 run %s --adapter %s %s", file, adapter,
+             f"-m {model}" if model else "")
 
     try:
         from spl2.executor import Executor
@@ -237,21 +302,33 @@ def cmd_execute(file: str, adapter: str, model: str | None,
         from spl2.analyzer import Analyzer
         analysis = Analyzer().analyze(ast)
 
+        cache_ttl = _cfg_default("cache_ttl", 3600)
         executor = Executor(
             adapter_name=adapter,
             storage_dir=storage_dir,
             cache_enabled=cache,
+            cache_ttl=cache_ttl,
         )
         try:
             results = asyncio.run(executor.execute_program(analysis, params=params))
             for result in results:
                 _print_result(result)
+                log.info("Result: model=%s tokens=%d latency=%.0fms",
+                         getattr(result, "model", ""),
+                         getattr(result, "total_tokens", 0) or
+                         getattr(result, "total_input_tokens", 0) +
+                         getattr(result, "total_output_tokens", 0),
+                         getattr(result, "latency_ms", 0) or
+                         getattr(result, "total_latency_ms", 0))
         finally:
             executor.close()
     except click.ClickException:
         raise
     except Exception as exc:
+        log.exception("Execution failed: %s", exc)
         raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Log: {log_path}", err=True)
 
 
 # Register alias: run
@@ -271,6 +348,11 @@ def cmd_adapters() -> None:
         "openrouter": "100+ models via OpenRouter.ai (requires httpx, OPENROUTER_API_KEY)",
         "ollama": "Local models via Ollama (requires httpx, ollama running)",
         "momagrid": "Decentralized AI inference grid (requires httpx, MOMAGRID_HUB_URL)",
+        "anthropic": "Claude models via Anthropic API (requires anthropic, ANTHROPIC_API_KEY)",
+        "openai": "GPT/o-series via OpenAI API (requires openai, OPENAI_API_KEY)",
+        "google": "Gemini models via Google GenAI (requires google-genai, GOOGLE_API_KEY)",
+        "deepseek": "DeepSeek models (requires httpx, DEEPSEEK_API_KEY)",
+        "qwen": "Qwen models via DashScope (requires httpx, DASHSCOPE_API_KEY)",
     }
 
     available = list_adapters()
@@ -279,6 +361,208 @@ def cmd_adapters() -> None:
         desc = adapters_info.get(name, "")
         click.echo(f"  {name:<14} {desc}")
     click.echo(f"\nUsage: spl2 run <file.spl> --adapter <name>")
+
+
+# ── spl2 config ──────────────────────────────────────────────────────────────
+
+@cli.group("config")
+def cmd_config() -> None:
+    """Manage SPL 2.0 configuration (~/.spl/config.yaml)."""
+
+
+@cmd_config.command("show")
+def config_show() -> None:
+    """Show current configuration."""
+    from spl2.config import load_config, CONFIG_PATH
+    import yaml
+
+    cfg = load_config()
+    click.echo(f"# {CONFIG_PATH}")
+    click.echo(yaml.dump(cfg.to_dict(), default_flow_style=False, sort_keys=False))
+
+
+@cmd_config.command("get")
+@click.argument("key")
+def config_get(key: str) -> None:
+    """Get a configuration value (supports dot-path like 'adapters.ollama.timeout')."""
+    from spl2.config import load_config
+
+    cfg = load_config()
+    value = cfg.get(key)
+    if value is None:
+        raise click.ClickException(f"Key not found: {key}")
+    if isinstance(value, dict):
+        import yaml
+        click.echo(yaml.dump(value, default_flow_style=False, sort_keys=False))
+    else:
+        click.echo(value)
+
+
+@cmd_config.command("set", context_settings={"ignore_unknown_options": True})
+@click.argument("pairs", nargs=-1, required=True)
+def config_set(pairs: tuple[str, ...]) -> None:
+    """Set configuration value(s). Supports KEY VALUE or KEY=VALUE syntax.
+
+    \b
+    Examples:
+      spl2 config set adapter ollama
+      spl2 config set adapter ollama model gemma3
+      spl2 config set adapters.ollama.timeout 300
+      spl2 config set adapter=ollama model=gemma3
+    """
+    from spl2.config import load_config, save_config
+
+    cfg = load_config()
+
+    # Parse pairs: support both "key value" and "key=value" syntax
+    kvs: list[tuple[str, str]] = []
+    i = 0
+    args = list(pairs)
+    while i < len(args):
+        if "=" in args[i]:
+            k, v = args[i].split("=", 1)
+            kvs.append((k.strip(), v.strip()))
+            i += 1
+        elif i + 1 < len(args) and "=" not in args[i + 1]:
+            kvs.append((args[i], args[i + 1]))
+            i += 2
+        elif i + 1 < len(args):
+            # Next arg has '=', so current is a key without a value
+            raise click.UsageError(f"Missing value for key: {args[i]}")
+        else:
+            raise click.UsageError(
+                f"Missing value for key: {args[i]}\n"
+                f"Usage: spl2 config set KEY VALUE [KEY VALUE ...]\n"
+                f"   or: spl2 config set KEY=VALUE [KEY=VALUE ...]"
+            )
+
+    for key, value in kvs:
+        # Auto-detect types
+        if value.lower() == "true":
+            typed_value: str | bool | int | float = True
+        elif value.lower() == "false":
+            typed_value = False
+        elif value.isdigit():
+            typed_value = int(value)
+        else:
+            try:
+                typed_value = float(value)
+            except ValueError:
+                typed_value = value
+
+        cfg[key] = typed_value
+        click.echo(f"Set {key} = {typed_value}")
+
+    save_config(cfg)
+
+
+@cmd_config.command("init")
+@click.option("--force", is_flag=True, default=False,
+              help="Overwrite existing config with defaults.")
+def config_init(force: bool) -> None:
+    """Create ~/.spl/config.yaml with smart defaults."""
+    from spl2.config import CONFIG_PATH, save_config, DEFAULTS, SPL_HOME
+    from dd_config import Config
+
+    if CONFIG_PATH.exists() and not force:
+        click.echo(f"Config already exists: {CONFIG_PATH}")
+        click.echo("Use --force to overwrite with defaults.")
+        return
+
+    SPL_HOME.mkdir(parents=True, exist_ok=True)
+    cfg = Config.from_dict(DEFAULTS)
+    save_config(cfg)
+    click.echo(f"Created {CONFIG_PATH} with defaults")
+
+
+@cmd_config.command("path")
+def config_path() -> None:
+    """Print the config file path."""
+    from spl2.config import CONFIG_PATH, LOG_DIR
+    click.echo(f"Config: {CONFIG_PATH}")
+    click.echo(f"Logs:   {LOG_DIR}")
+
+
+@cmd_config.command("reset")
+@click.argument("key")
+def config_reset(key: str) -> None:
+    """Reset a configuration key to its default value."""
+    from spl2.config import load_config, save_config, DEFAULTS
+    from dd_config import Config
+
+    defaults = Config.from_dict(DEFAULTS)
+    default_val = defaults.get(key)
+    if default_val is None:
+        raise click.ClickException(f"No default for key: {key}")
+
+    cfg = load_config()
+    cfg[key] = default_val
+    save_config(cfg)
+    click.echo(f"Reset {key} = {default_val}")
+
+
+# ── spl2 cache ────────────────────────────────────────────────────────────────
+
+@cli.group("cache")
+def cmd_cache() -> None:
+    """Manage the prompt cache (.spl/memory.db)."""
+
+
+@cmd_cache.command("list")
+@click.option("--storage-dir", default=None, show_default=True)
+def cache_list(storage_dir: str | None) -> None:
+    """List cached prompts."""
+    storage_dir = storage_dir or _cfg_default("storage_dir", ".spl")
+    from spl2.storage.memory import MemoryStore
+    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
+    rows = store._conn.execute(
+        "SELECT prompt_hash, model, tokens_used, created_at, expires_at "
+        "FROM prompt_cache ORDER BY created_at DESC"
+    ).fetchall()
+    store.close()
+    if not rows:
+        click.echo("(empty)")
+        return
+    for r in rows:
+        expired = ""
+        if r["expires_at"]:
+            from datetime import datetime
+            try:
+                # Handle both ISO format and SQLite format
+                exp_str = r["expires_at"].replace("T", " ")
+                exp = datetime.strptime(exp_str[:19], "%Y-%m-%d %H:%M:%S")
+                if exp < datetime.utcnow():
+                    expired = " [EXPIRED]"
+            except (ValueError, TypeError):
+                pass
+        click.echo(
+            f"  {r['prompt_hash'][:12]}...  model={r['model']}  "
+            f"tokens={r['tokens_used']}  created={r['created_at']}"
+            f"  expires={r['expires_at'] or 'never'}{expired}"
+        )
+    click.echo(f"\nTotal: {len(rows)} cached entries")
+
+
+@cmd_cache.command("clear")
+@click.option("--storage-dir", default=None, show_default=True)
+@click.option("--expired-only", is_flag=True, default=False,
+              help="Only clear expired entries.")
+def cache_clear(storage_dir: str | None, expired_only: bool) -> None:
+    """Clear the prompt cache."""
+    storage_dir = storage_dir or _cfg_default("storage_dir", ".spl")
+    from spl2.storage.memory import MemoryStore
+    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
+    if expired_only:
+        cursor = store._conn.execute(
+            "DELETE FROM prompt_cache WHERE expires_at IS NOT NULL "
+            "AND expires_at < CURRENT_TIMESTAMP"
+        )
+    else:
+        cursor = store._conn.execute("DELETE FROM prompt_cache")
+    store._conn.commit()
+    store.close()
+    label = "expired " if expired_only else ""
+    click.echo(f"Cleared {cursor.rowcount} {label}cache entries")
 
 
 # ── spl2 memory ───────────────────────────────────────────────────────────────
@@ -397,6 +681,115 @@ def rag_count(storage_dir: str) -> None:
     n = store.count()
     store.close()
     click.echo(f"Documents indexed: {n}")
+
+
+# ── spl2 text2spl / compile ──────────────────────────────────────────────────
+
+@cli.command("text2spl", context_settings={"ignore_unknown_options": True})
+@click.argument("description")
+@click.option("--adapter", default=None, metavar="NAME",
+              help="LLM adapter for code generation (default from config or 'ollama').")
+@click.option("--model", "-m", default=None, metavar="MODEL",
+              help="Override model for the compiler LLM.")
+@click.option("--mode", type=click.Choice(["auto", "prompt", "workflow"]),
+              default=None,
+              help="Generation mode: prompt, workflow, or auto (default from config).")
+@click.option("--validate/--no-validate", default=True, show_default=True,
+              help="Validate generated SPL code.")
+@click.option("--output", "-o", default=None, metavar="FILE",
+              help="Write generated SPL code to FILE.")
+@click.option("--execute", is_flag=True, default=False,
+              help="Execute the generated code immediately.")
+@click.option("--param", "-p", multiple=True, metavar="KEY=VALUE",
+              help="Parameters for execution (use with --execute).")
+@click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
+def cmd_text2spl(description: str, adapter: str | None, model: str | None,
+                 mode: str | None, validate: bool, output: str | None,
+                 execute: bool, param: tuple[str, ...],
+                 extra_args: tuple[str, ...]) -> None:
+    """Compile natural language DESCRIPTION into SPL 2.0 code.
+
+    \b
+    Examples:
+      spl2 text2spl "summarize a document" --adapter ollama
+      spl2 text2spl "build a review agent" --mode workflow
+      spl2 text2spl "translate text to French" -o translate.spl
+      spl2 text2spl "classify user intent" --execute text="Hello there"
+    """
+    # Apply config defaults
+    adapter = adapter or _cfg_default("adapter", "ollama")
+    mode = mode or _cfg_default("text2spl.mode", "auto")
+
+    # Set up logging
+    log_path = _setup_logging(run_name="text2spl", adapter=adapter)
+    from dd_logging import get_logger
+    log = get_logger("cli.text2spl", "spl2")
+    log.info("spl2 text2spl %r --adapter %s --mode %s", description, adapter, mode)
+
+    from spl2.text2spl import Text2SPL
+    from spl2.adapters import get_adapter as _get_adapter
+
+    try:
+        llm = _get_adapter(adapter)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    compiler = Text2SPL(llm)
+
+    try:
+        spl_code = asyncio.run(compiler.compile(description, mode=mode))
+    except Exception as exc:
+        log.exception("Compilation failed: %s", exc)
+        raise click.ClickException(f"Compilation failed: {exc}") from exc
+
+    log.info("Generated %d bytes of SPL code", len(spl_code))
+
+    # Validate
+    if validate:
+        valid, message = Text2SPL.validate_output(spl_code)
+        if not valid:
+            click.echo("--- Generated (invalid) ---", err=True)
+            click.echo(spl_code, err=True)
+            log.warning("Validation failed: %s", message)
+            raise click.ClickException(f"Validation failed: {message}")
+        if message != "OK":
+            click.echo(f"Validation: {message}", err=True)
+
+    # Output
+    if output:
+        Path(output).write_text(spl_code, encoding="utf-8")
+        click.echo(f"Written to {output}")
+    else:
+        click.echo(spl_code)
+
+    # Execute if requested
+    if execute:
+        params = _parse_params(param + extra_args)
+        _ensure_workspace(".spl")
+        from spl2.executor import Executor
+
+        ast = _parse_source(spl_code)
+        if model:
+            from spl2.ast_nodes import PromptStatement
+            for stmt in ast.statements:
+                if isinstance(stmt, PromptStatement):
+                    stmt.model = model
+        from spl2.analyzer import Analyzer
+        analysis = Analyzer().analyze(ast)
+
+        executor = Executor(adapter_name=adapter, storage_dir=".spl")
+        try:
+            results = asyncio.run(executor.execute_program(analysis, params=params))
+            for result in results:
+                _print_result(result)
+        finally:
+            executor.close()
+
+    click.echo(f"Log: {log_path}", err=True)
+
+
+# Register alias: compile
+cli.add_command(cmd_text2spl, name="compile")
 
 
 # ── spl2 version ──────────────────────────────────────────────────────────────

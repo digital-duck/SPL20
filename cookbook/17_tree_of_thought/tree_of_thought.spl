@@ -1,0 +1,59 @@
+-- Recipe 17: Tree of Thought
+-- Explores multiple reasoning paths in parallel, evaluates each, and selects the best.
+-- Demonstrates branching exploration, comparative evaluation, and path scoring.
+--
+-- Usage:
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem="How should a startup prioritize between growth and profitability?"
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Design a caching strategy for a high-traffic API"
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Should we rewrite the legacy system or incrementally refactor?"
+
+WORKFLOW tree_of_thought
+    INPUT: @problem TEXT
+    OUTPUT: @best_solution TEXT
+DO
+    -- Step 1: Generate multiple initial approaches
+    GENERATE approach_1(@problem) INTO @path_a
+    GENERATE approach_2(@problem) INTO @path_b
+    GENERATE approach_3(@problem) INTO @path_c
+
+    -- Step 2: Develop each approach one level deeper
+    GENERATE develop(@path_a, @problem) INTO @path_a_developed
+    GENERATE develop(@path_b, @problem) INTO @path_b_developed
+    GENERATE develop(@path_c, @problem) INTO @path_c_developed
+
+    -- Step 3: Score each path on multiple criteria
+    GENERATE evaluate_path(@path_a_developed, @problem) INTO @score_a
+    GENERATE evaluate_path(@path_b_developed, @problem) INTO @score_b
+    GENERATE evaluate_path(@path_c_developed, @problem) INTO @score_c
+
+    -- Step 4: Select the best path
+    GENERATE select_best(
+        @path_a_developed, @score_a,
+        @path_b_developed, @score_b,
+        @path_c_developed, @score_c
+    ) INTO @best_path
+
+    -- Step 5: Refine the winning path into a final solution
+    GENERATE refine_solution(@best_path, @problem) INTO @best_solution
+
+    -- Step 6: Verify the solution holds up
+    GENERATE verify(@best_solution, @problem) INTO @verification
+
+    EVALUATE @verification
+        WHEN 'sound' THEN
+            COMMIT @best_solution WITH status = 'complete', paths_explored = 3
+        OTHERWISE
+            -- If verification fails, combine insights from all paths
+            GENERATE synthesize_all(
+                @path_a_developed, @path_b_developed, @path_c_developed, @problem
+            ) INTO @best_solution
+            COMMIT @best_solution WITH status = 'synthesized', paths_explored = 3
+    END
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        -- Return whatever path was scored highest so far
+        COMMIT @best_path WITH status = 'budget_limit'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END

@@ -1,0 +1,53 @@
+-- Recipe 13: Map-Reduce Summarizer
+-- Splits a large document into chunks, summarizes each chunk (map),
+-- then combines all summaries into a final summary (reduce).
+-- Demonstrates the map-reduce pattern for handling content beyond context limits.
+--
+-- Usage:
+--   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama -m gemma3 document="$(cat large_doc.txt)"
+--   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="$(cat README.md)" style="bullet points"
+--   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="long text here..." style="executive brief"
+
+WORKFLOW map_reduce_summarizer
+    INPUT: @document TEXT, @style TEXT
+    OUTPUT: @final_summary TEXT
+DO
+    @chunk_index := 0
+    @summaries := ''
+
+    -- Step 1: Determine how to split the document
+    GENERATE chunk_plan(@document) INTO @chunk_count
+
+    -- Step 2: MAP — summarize each chunk independently
+    WHILE @chunk_index < @chunk_count DO
+        GENERATE extract_chunk(@document, @chunk_index, @chunk_count) INTO @chunk
+
+        GENERATE summarize_chunk(@chunk, @chunk_index) INTO @chunk_summary
+
+        @summaries := @summaries + '\n[Chunk ' + @chunk_index + ']: ' + @chunk_summary
+        @chunk_index := @chunk_index + 1
+    END
+
+    -- Step 3: REDUCE — combine all chunk summaries into one
+    GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+
+    -- Step 4: Quality check the final summary
+    GENERATE quality_score(@final_summary, @document) INTO @score
+
+    EVALUATE @score
+        WHEN > 0.7 THEN
+            COMMIT @final_summary WITH status = 'complete', chunks = @chunk_count
+        OTHERWISE
+            GENERATE improve_summary(@final_summary, @summaries) INTO @final_summary
+            COMMIT @final_summary WITH status = 'refined', chunks = @chunk_count
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- If document is too large even for chunking, do hierarchical reduction
+        GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+        COMMIT @final_summary WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+        COMMIT @final_summary WITH status = 'budget_limit'
+END

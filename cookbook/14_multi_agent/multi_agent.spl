@@ -1,0 +1,56 @@
+-- Recipe 14: Multi-Agent Collaboration
+-- Specialized agents (Researcher, Analyst, Writer) collaborate on a report.
+-- Each agent has a distinct role and passes results to the next.
+-- Demonstrates procedural decomposition, CALL-based delegation, and role specialization.
+--
+-- Usage:
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
+
+-- Agent 1: Researcher — gathers key facts and sources
+PROCEDURE researcher(topic TEXT) RETURNS TEXT
+DO
+    GENERATE research_facts(topic) INTO @facts
+    GENERATE identify_key_themes(@facts) INTO @themes
+    @result := @facts + '\n\nKey Themes:\n' + @themes
+    COMMIT @result
+END
+
+-- Agent 2: Analyst — identifies trends, risks, and opportunities
+PROCEDURE analyst(research TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE analyze_trends(research) INTO @trends
+    GENERATE assess_risks(research, topic) INTO @risks
+    GENERATE find_opportunities(research, topic) INTO @opportunities
+    @result := 'Trends:\n' + @trends + '\n\nRisks:\n' + @risks + '\n\nOpportunities:\n' + @opportunities
+    COMMIT @result
+END
+
+-- Agent 3: Writer — produces polished final report
+PROCEDURE writer(research TEXT, analysis TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE draft_report(topic, research, analysis) INTO @draft
+    GENERATE critique(@draft) INTO @feedback
+    GENERATE revise_report(@draft, @feedback) INTO @final
+    COMMIT @final
+END
+
+-- Orchestrator workflow
+WORKFLOW multi_agent_report
+    INPUT: @topic TEXT
+    OUTPUT: @report TEXT
+DO
+    -- Delegate to specialized agents
+    CALL researcher(@topic) INTO @research
+    CALL analyst(@research, @topic) INTO @analysis
+    CALL writer(@research, @analysis, @topic) INTO @report
+
+    COMMIT @report WITH status = 'complete'
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        COMMIT @research WITH status = 'partial_research_only'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END

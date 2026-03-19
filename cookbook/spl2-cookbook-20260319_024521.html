@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SPL 2.0 Cookbook Report</title>
+  <style>
+    body     { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+               background: #0e1117; color: #fafafa; margin: 40px; }
+    h1       { color: #4f8ef7; border-bottom: 2px solid #1e293b; padding-bottom: 10px; }
+    .summary { color: #888; margin-bottom: 30px; font-size: 1.1em; }
+    .summary span { color: #3fb950; font-weight: bold; }
+    table    { width: 100%; border-collapse: collapse; background: #161b22;
+               border-radius: 8px; overflow: hidden;
+               box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    th, td   { padding: 11px 14px; text-align: left;
+               border-bottom: 1px solid #30363d; }
+    th       { background: #21262d; color: #8b949e; font-weight: 600;
+               text-transform: uppercase; font-size: 11px; }
+    tr:hover { background: #1c2128; }
+    .ok      { color: #3fb950; font-weight: bold; }
+    .fail    { color: #f85149; font-weight: bold; }
+    .mono    { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; color: #c9d1d9; }
+    .cat     { font-size: 11px; color: #8b949e; }
+    .commit  { font-size: 11px; color: #a5d6ff; font-style: italic; max-width: 260px;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .badge-p { background: #1f4068; color: #58a6ff; padding: 1px 6px; border-radius: 10px;
+               font-size: 10px; }
+    .badge-w { background: #2d1f5e; color: #d2a8ff; padding: 1px 6px; border-radius: 10px;
+               font-size: 10px; }
+    .footer  { margin-top: 40px; font-size: 12px; color: #8b949e; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>SPL 2.0 Cookbook — Batch Run Report</h1>
+  <div class="summary">
+    Generated: 2026-03-19 02:45:21 &nbsp;|&nbsp;
+    Status: <span>19/21 Success</span> &nbsp;|&nbsp;
+    Adapter: ollama
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Recipe</th>
+        <th>Category</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Model</th>
+        <th>Tokens ↑/↓</th>
+        <th>Latency</th>
+        <th>LLM Calls</th>
+        <th>Committed / Output</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono">01</td>
+        <td><strong>Hello World</strong></td>
+        <td class="cat">basics</td>
+        <td><span class="badge-p">PROMPT</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">gemma3</td>
+        <td class="mono">45↑ / 54↓</td>
+        <td class="mono">2.2s</td>
+        <td class="mono" style="text-align:center">1</td>
+        <td class="commit" title=""></td>
+      </tr>
+      <tr>
+        <td class="mono">02</td>
+        <td><strong>Ollama Proxy</strong></td>
+        <td class="cat">basics</td>
+        <td><span class="badge-p">PROMPT</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">gemma3</td>
+        <td class="mono">47↑ / 27↓</td>
+        <td class="mono">484ms</td>
+        <td class="mono" style="text-align:center">1</td>
+        <td class="commit" title=""></td>
+      </tr>
+      <tr>
+        <td class="mono">03</td>
+        <td><strong>Multilingual Greeting</strong></td>
+        <td class="cat">basics</td>
+        <td><span class="badge-p">PROMPT</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">gemma3</td>
+        <td class="mono">54↑ / 21↓</td>
+        <td class="mono">391ms</td>
+        <td class="mono" style="text-align:center">1</td>
+        <td class="commit" title=""></td>
+      </tr>
+      <tr>
+        <td class="mono">04</td>
+        <td><strong>Model Showdown</strong></td>
+        <td class="cat">benchmarking</td>
+        <td><span class="badge-p">PROMPT</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">gemma3</td>
+        <td class="mono">48↑ / 708↓</td>
+        <td class="mono">11.1s</td>
+        <td class="mono" style="text-align:center">1</td>
+        <td class="commit" title=""></td>
+      </tr>
+      <tr>
+        <td class="mono">05</td>
+        <td><strong>Self-Refine</strong></td>
+        <td class="cat">agentic</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">331↑ / 209↓</td>
+        <td class="mono">2.6s</td>
+        <td class="mono" style="text-align:center">3</td>
+        <td class="commit" title="Lines of code dance slow
+Algorithms' gentle beat
+Logic's subtle song">Lines of code dance slow
+Algorithms' gentle beat
+Logic's subtle song</td>
+      </tr>
+      <tr>
+        <td class="mono">06</td>
+        <td><strong>ReAct Agent</strong></td>
+        <td class="cat">agentic</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">8318↑ / 1923↓</td>
+        <td class="mono">27.5s</td>
+        <td class="mono" style="text-align:center">41</td>
+        <td class="commit" title="I think there's been a misunderstanding here.
+
+Let's start fresh. You initially asked for the final answer, but I didn't">I think there's been a misunderstanding here.
+
+Let's start fresh. You initially asked for the final answer, but I didn't</td>
+      </tr>
+      <tr>
+        <td class="mono">07</td>
+        <td><strong>Safe Generation</strong></td>
+        <td class="cat">safety</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="fail">FAIL <span style="font-weight:normal;font-size:11px">(no_commit)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">467↑ / 697↓</td>
+        <td class="mono">8.6s</td>
+        <td class="mono" style="text-align:center">2</td>
+        <td class="commit" title=""></td>
+      </tr>
+      <tr>
+        <td class="mono">08</td>
+        <td><strong>RAG Query</strong></td>
+        <td class="cat">retrieval</td>
+        <td><span class="badge-p">PROMPT</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">gemma3</td>
+        <td class="mono">55↑ / 30↓</td>
+        <td class="mono">2.8s</td>
+        <td class="mono" style="text-align:center">1</td>
+        <td class="commit" title=""></td>
+      </tr>
+      <tr>
+        <td class="mono">09</td>
+        <td><strong>Chain of Thought</strong></td>
+        <td class="cat">reasoning</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">1275↑ / 1355↓</td>
+        <td class="mono">19.1s</td>
+        <td class="mono" style="text-align:center">3</td>
+        <td class="commit" title="Here's a summary of the input:
+
+The input is an analysis of distributed AI inference, a technique used in artificial int">Here's a summary of the input:
+
+The input is an analysis of distributed AI inference, a technique used in artificial int</td>
+      </tr>
+      <tr>
+        <td class="mono">10</td>
+        <td><strong>Batch Test</strong></td>
+        <td class="cat">benchmarking</td>
+        <td><span class="badge-p">PROMPT</span></td>
+        <td class="fail">FAIL <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">0↑ / 0↓</td>
+        <td class="mono">0ms</td>
+        <td class="mono" style="text-align:center">1</td>
+        <td class="commit" title=""></td>
+      </tr>
+      <tr>
+        <td class="mono">11</td>
+        <td><strong>Debate Arena</strong></td>
+        <td class="cat">multi-agent</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">12808↑ / 5345↓</td>
+        <td class="mono">89.7s</td>
+        <td class="mono" style="text-align:center">9</td>
+        <td class="commit" title="While open-sourcing AI has many benefits, such as accelerating innovation and ensuring transparency, there are also pote">While open-sourcing AI has many benefits, such as accelerating innovation and ensuring transparency, there are also pote</td>
+      </tr>
+      <tr>
+        <td class="mono">12</td>
+        <td><strong>Plan and Execute</strong></td>
+        <td class="cat">agentic</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">941↑ / 2819↓</td>
+        <td class="mono">37.8s</td>
+        <td class="mono" style="text-align:center">3</td>
+        <td class="commit" title="**Todo API Documentation**
+
+## Introduction
+This is a RESTful API designed to manage tasks and users for a simple Todo a">**Todo API Documentation**
+
+## Introduction
+This is a RESTful API designed to manage tasks and users for a simple Todo a</td>
+      </tr>
+      <tr>
+        <td class="mono">13</td>
+        <td><strong>Map-Reduce Summarizer</strong></td>
+        <td class="cat">application</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">440↑ / 727↓</td>
+        <td class="mono">9.9s</td>
+        <td class="mono" style="text-align:center">4</td>
+        <td class="commit" title="Here's an improved version of the summary:
+
+**Summary of Input 1**
+
+No text is available for Input 1. Please provide the">Here's an improved version of the summary:
+
+**Summary of Input 1**
+
+No text is available for Input 1. Please provide the</td>
+      </tr>
+      <tr>
+        <td class="mono">14</td>
+        <td><strong>Multi-Agent Collaboration</strong></td>
+        <td class="cat">multi-agent</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">6363↑ / 4333↓</td>
+        <td class="mono">64.3s</td>
+        <td class="mono" style="text-align:center">8</td>
+        <td class="commit" title="Here is a revised version of the code, addressing the issues mentioned earlier:
+
+```python
+import re
+
+def find_opportuni">Here is a revised version of the code, addressing the issues mentioned earlier:
+
+```python
+import re
+
+def find_opportuni</td>
+      </tr>
+      <tr>
+        <td class="mono">15</td>
+        <td><strong>Code Review</strong></td>
+        <td class="cat">application</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">3376↑ / 2250↓</td>
+        <td class="mono">29.9s</td>
+        <td class="mono" style="text-align:center">8</td>
+        <td class="commit" title="def safety_review(code):
+    """
+    This function assesses the safety of a given code snippet.
+    
+    Args:
+        c">def safety_review(code):
+    """
+    This function assesses the safety of a given code snippet.
+    
+    Args:
+        c</td>
+      </tr>
+      <tr>
+        <td class="mono">16</td>
+        <td><strong>Reflection Agent</strong></td>
+        <td class="cat">agentic</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">13299↑ / 7896↓</td>
+        <td class="mono">123.0s</td>
+        <td class="mono" style="text-align:center">13</td>
+        <td class="commit" title="Here's a revised design for the URL shortener system that addresses the issues and suggestions mentioned earlier:
+
+**Sys">Here's a revised design for the URL shortener system that addresses the issues and suggestions mentioned earlier:
+
+**Sys</td>
+      </tr>
+      <tr>
+        <td class="mono">17</td>
+        <td><strong>Tree of Thought</strong></td>
+        <td class="cat">reasoning</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">8415↑ / 5194↓</td>
+        <td class="mono">73.9s</td>
+        <td class="mono" style="text-align:center">14</td>
+        <td class="commit" title="Based on your inputs, I would recommend **Approach 2: Rewrite from Scratch (Legacy System Redesign)**. Here's why:
+
+1.  ">Based on your inputs, I would recommend **Approach 2: Rewrite from Scratch (Legacy System Redesign)**. Here's why:
+
+1.  </td>
+      </tr>
+      <tr>
+        <td class="mono">18</td>
+        <td><strong>Guardrails Pipeline</strong></td>
+        <td class="cat">safety</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">391↑ / 130↓</td>
+        <td class="mono">1.7s</td>
+        <td class="mono" style="text-align:center">3</td>
+        <td class="commit" title="That question is outside my scope. Please ask something relevant.">That question is outside my scope. Please ask something relevant.</td>
+      </tr>
+      <tr>
+        <td class="mono">19</td>
+        <td><strong>Memory Conversation</strong></td>
+        <td class="cat">application</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">278↑ / 141↓</td>
+        <td class="mono">1.9s</td>
+        <td class="mono" style="text-align:center">4</td>
+        <td class="commit" title="It's nice to meet you, Alice. As a data scientist, I'm sure you've encountered various challenges in your career. What s">It's nice to meet you, Alice. As a data scientist, I'm sure you've encountered various challenges in your career. What s</td>
+      </tr>
+      <tr>
+        <td class="mono">20</td>
+        <td><strong>Ensemble Voting</strong></td>
+        <td class="cat">multi-agent</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">6110↑ / 3210↓</td>
+        <td class="mono">47.8s</td>
+        <td class="mono" style="text-align:center">13</td>
+        <td class="commit" title="Based on Input 1, the causes of inflation can be summarized as follows:
+
+*   Monetary policy: An increase in the money s">Based on Input 1, the causes of inflation can be summarized as follows:
+
+*   Monetary policy: An increase in the money s</td>
+      </tr>
+      <tr>
+        <td class="mono">21</td>
+        <td><strong>Multi-Model Pipeline</strong></td>
+        <td class="cat">agentic</td>
+        <td><span class="badge-w">WORKFLOW</span></td>
+        <td class="ok">OK <span style="font-weight:normal;font-size:11px">(complete)</span></td>
+        <td class="mono">-</td>
+        <td class="mono">565↑ / 519↓</td>
+        <td class="mono">8.9s</td>
+        <td class="mono" style="text-align:center">9</td>
+        <td class="commit" title="I'm ready to help. However, I don't see any analysis provided for me to base my summary on. Could you please share the a">I'm ready to help. However, I don't see any analysis provided for me to base my summary on. Could you please share the a</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    SPL 2.0 — Declarative Agentic Workflow Orchestration &nbsp;|&nbsp;
+    Digital Duck &copy; 2026 &nbsp;|&nbsp; Apache 2.0
+  </div>
+</body>
+</html>

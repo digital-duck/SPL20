@@ -8,17 +8,17 @@ WORKFLOW safe_generation
 DO
   GENERATE response(@prompt) INTO @result
 
-  -- Quality check
-  GENERATE quality_score(@result) INTO @score
+  -- Quality check via semantic evaluation (LLM-as-judge)
+  GENERATE quality_assess(@result) INTO @quality
 
-  EVALUATE @score
-    WHEN > 0.8 THEN
+  EVALUATE @quality
+    WHEN 'high_quality' THEN
       COMMIT @result WITH status = 'high_quality'
-    WHEN > 0.5 THEN
+    WHEN 'acceptable' THEN
       GENERATE improved(@result, @prompt) INTO @result
       COMMIT @result WITH status = 'refined'
     OTHERWISE
-      RETRY WITH temperature = 0.1
+      COMMIT @result WITH status = 'best_effort'
   END
 
 EXCEPTION

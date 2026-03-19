@@ -533,6 +533,16 @@ class Parser:
                 else:
                     break
 
+        # Parse optional USING MODEL '<model>'
+        model = None
+        if self._check(TokenType.USING):
+            self._advance()
+            self._expect(TokenType.MODEL)
+            if self._check(TokenType.STRING):
+                model = self._advance().value
+            else:
+                model = self._expect(TokenType.IDENTIFIER).value
+
         return GenerateClause(
             function_name=func_name,
             arguments=arguments,
@@ -540,6 +550,7 @@ class Parser:
             temperature=temperature,
             output_format=output_format,
             schema=schema,
+            model=model,
         )
 
     def _parse_store_clause(self) -> StoreClause:

@@ -55,5 +55,35 @@ def _register_builtin_adapters():
     except ImportError:
         pass
 
+    try:
+        from spl2.adapters.anthropic import AnthropicAdapter
+        register_adapter("anthropic", AnthropicAdapter)
+    except ImportError:
+        pass
+
+    try:
+        from spl2.adapters.openai import OpenAIAdapter
+        register_adapter("openai", OpenAIAdapter)
+    except ImportError:
+        pass
+
+    try:
+        from spl2.adapters.google import GoogleAdapter
+        register_adapter("google", GoogleAdapter)
+    except ImportError:
+        pass
+
+    try:
+        from spl2.adapters.deepseek import DeepSeekAdapter
+        register_adapter("deepseek", DeepSeekAdapter)
+    except ImportError:
+        pass
+
+    try:
+        from spl2.adapters.qwen import QwenAdapter
+        register_adapter("qwen", QwenAdapter)
+    except ImportError:
+        pass
+
 
 _register_builtin_adapters()

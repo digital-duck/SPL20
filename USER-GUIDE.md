@@ -26,8 +26,17 @@ pytest tests/   # should show 231 passed
 ### Optional Dependencies
 
 ```bash
-# For OpenRouter, Ollama, or Momagrid adapters:
+# For OpenRouter, Ollama, Momagrid, DeepSeek, or Qwen adapters:
 pip install httpx
+
+# For Anthropic adapter:
+pip install anthropic
+
+# For OpenAI adapter:
+pip install openai
+
+# For Google Gemini adapter:
+pip install google-genai
 
 # For RAG (vector search):
 pip install numpy faiss-cpu
@@ -386,6 +395,19 @@ GENERATE summarize(@document) INTO @summary
 GENERATE translate(@text, 'French') INTO @translated
 ```
 
+#### Per-Step Model Selection
+
+Each GENERATE can target a specific model with `USING MODEL`:
+
+```sql
+-- Use a fast model for research, a reasoning model for analysis
+GENERATE research(@topic) USING MODEL 'gemma3' INTO @facts;
+GENERATE analyze(@facts) USING MODEL 'llama3.2' INTO @analysis;
+GENERATE write_report(@analysis) USING MODEL 'mistral' INTO @report;
+```
+
+This enables multi-model pipelines where each step uses the optimal model for its task, without changing adapters.
+
 ### COMMIT
 
 Finalize the workflow output:
@@ -435,7 +457,17 @@ WHILE @iteration < 5 DO
 END
 ```
 
-Loop terminates when the condition is false or after 100 iterations (safety limit).
+Loop terminates when the condition is false or after 100 iterations (safety limit). Custom limits can be set per-loop via `max_iterations` in the AST.
+
+#### Semantic WHILE Conditions
+
+WHILE loops also support semantic (LLM-judged) conditions. The LLM receives all current `@variables` as context to make informed decisions:
+
+```sql
+WHILE 'the draft needs more detail' DO
+  GENERATE expand(@draft) INTO @draft
+END
+```
 
 ### Exception Handling
 
@@ -656,14 +688,45 @@ executor.close()
 
 ## 9. text2SPL — Natural Language Compiler
 
-Convert plain English to SPL 2.0 code:
+Convert plain English to SPL 2.0 code via the CLI or Python API.
+
+### CLI Usage
+
+```bash
+# Generate a simple prompt
+spl2 text2spl "summarize a document with a 2000 token budget" --adapter ollama
+
+# Generate a workflow
+spl2 text2spl "build a review agent that refines until quality > 0.8" --mode workflow --adapter ollama
+
+# Save to file
+spl2 text2spl "translate text to French" -o translate.spl --adapter ollama
+
+# Compile and execute in one step
+spl2 text2spl "classify user intent" --execute --adapter ollama text="Hello there"
+
+# Use 'compile' as an alias
+spl2 compile "build a chatbot" --adapter anthropic -m claude-sonnet-4-20250514
+```
+
+The compiler includes a **validate-and-retry loop** — if the generated code has syntax errors, the LLM automatically attempts to fix them (up to 2 retries).
+
+### Modes
+
+| Mode | Flag | Behavior |
+|------|------|----------|
+| Auto | `--mode auto` (default) | LLM decides between PROMPT or WORKFLOW |
+| Prompt | `--mode prompt` | Forces a single PROMPT statement |
+| Workflow | `--mode workflow` | Forces a WORKFLOW with control flow |
+
+### Python API
 
 ```python
 import asyncio
 from spl2.text2spl import Text2SPL
-from spl2.adapters.claude_cli import ClaudeCLIAdapter
+from spl2.adapters import get_adapter
 
-compiler = Text2SPL(ClaudeCLIAdapter())
+compiler = Text2SPL(get_adapter("ollama"))
 
 # Generate a PROMPT
 code = asyncio.run(compiler.compile(
@@ -781,17 +844,92 @@ export MOMAGRID_API_KEY="your-key"
 spl2 run my_query.spl --adapter momagrid
 ```
 
+### Anthropic (Claude)
+
+Direct access to Claude models via the Anthropic API.
+
+```bash
+pip install anthropic
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+spl2 run my_query.spl --adapter anthropic
+spl2 run my_query.spl --adapter anthropic -m claude-sonnet-4-20250514
+```
+
+Models: `claude-opus-4-0-20250514`, `claude-sonnet-4-20250514`, `claude-sonnet-4-5-20250514`, `claude-haiku-4-5-20251001`
+
+### OpenAI
+
+Direct access to GPT and o-series models.
+
+```bash
+pip install openai
+export OPENAI_API_KEY="sk-..."
+
+spl2 run my_query.spl --adapter openai
+spl2 run my_query.spl --adapter openai -m gpt-4o
+```
+
+Models: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1`, `o3`, `o3-mini`
+
+### Google (Gemini)
+
+Direct access to Gemini models via Google GenAI SDK.
+
+```bash
+pip install google-genai
+export GOOGLE_API_KEY="AI..."
+
+spl2 run my_query.spl --adapter google
+spl2 run my_query.spl --adapter google -m gemini-2.5-pro
+```
+
+Models: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-flash`
+
+### DeepSeek
+
+Access to DeepSeek chat and reasoning models.
+
+```bash
+pip install httpx
+export DEEPSEEK_API_KEY="sk-..."
+
+spl2 run my_query.spl --adapter deepseek
+spl2 run my_query.spl --adapter deepseek -m deepseek-reasoner
+```
+
+Models: `deepseek-chat`, `deepseek-reasoner`
+
+### Qwen (DashScope)
+
+Access to Alibaba's Qwen models via DashScope.
+
+```bash
+pip install httpx
+export DASHSCOPE_API_KEY="sk-..."
+
+spl2 run my_query.spl --adapter qwen
+spl2 run my_query.spl --adapter qwen -m qwen-max
+```
+
+Models: `qwen-max`, `qwen-plus`, `qwen-turbo`, `qwen-long`, `qwen2.5-72b-instruct`, `qwen2.5-coder-32b-instruct`
+
 ### List All Adapters
 
 ```bash
 $ spl2 adapters
-Available LLM adapters (5):
+Available LLM adapters (10):
 
+  anthropic      Claude models via Anthropic API (requires anthropic, ANTHROPIC_API_KEY)
   claude_cli     Wraps claude -p CLI (requires Claude Code installed)
+  deepseek       DeepSeek models (requires httpx, DEEPSEEK_API_KEY)
   echo           Returns prompt as response (testing, no setup required)
+  google         Gemini models via Google GenAI (requires google-genai, GOOGLE_API_KEY)
   momagrid       Decentralized AI inference grid (requires httpx, MOMAGRID_HUB_URL)
   ollama         Local models via Ollama (requires httpx, ollama running)
+  openai         GPT/o-series via OpenAI API (requires openai, OPENAI_API_KEY)
   openrouter     100+ models via OpenRouter.ai (requires httpx, OPENROUTER_API_KEY)
+  qwen           Qwen models via DashScope (requires httpx, DASHSCOPE_API_KEY)
 ```
 
 ---
@@ -886,7 +1024,189 @@ GENERATE answer(q)
 
 ---
 
-## 14. Project Structure
+## 14. Configuration (`spl2 config`)
+
+SPL 2.0 stores configuration in `~/.spl/config.yaml`. This eliminates repetitive CLI flags — set your preferred adapter, model, and timeouts once, and every `spl2 run` inherits them automatically.
+
+### Why Configuration Matters
+
+- **Eliminates repetitive flags.** Instead of typing `--adapter ollama --model gemma3` on every command, set it once.
+- **Per-adapter defaults are production-critical.** Each provider has different timeouts, model names, and endpoints. Config externalizes these knobs without touching code.
+- **Reproducibility across environments.** Teams can share a `config.yaml` to ensure identical settings.
+
+### Initialize
+
+```bash
+spl2 config init          # create ~/.spl/config.yaml with smart defaults
+spl2 config init --force  # overwrite existing config with defaults
+```
+
+### View Configuration
+
+```bash
+spl2 config show          # show full config as YAML
+spl2 config path          # show config and log directory paths
+```
+
+### Get Values
+
+```bash
+spl2 config get adapter                    # → echo
+spl2 config get adapters.ollama.timeout    # → 120
+spl2 config get adapters.ollama            # → shows all ollama settings
+spl2 config get text2spl.mode              # → auto
+```
+
+### Set Values
+
+Supports `KEY VALUE` pairs, `KEY=VALUE` syntax, and multiple settings at once:
+
+```bash
+# Single setting
+spl2 config set adapter ollama
+spl2 config set model gemma3
+
+# Multiple settings at once
+spl2 config set adapter ollama model gemma3
+
+# KEY=VALUE syntax
+spl2 config set adapter=ollama model=gemma3
+
+# Dot-path for nested values
+spl2 config set adapters.ollama.timeout 300
+spl2 config set text2spl.mode workflow
+
+# Boolean and numeric values auto-detected
+spl2 config set cache true
+spl2 config set log_console false
+```
+
+### Reset to Default
+
+```bash
+spl2 config reset adapter     # reset adapter to 'echo'
+spl2 config reset log_level   # reset log_level to 'info'
+```
+
+### Smart Defaults
+
+The default `~/.spl/config.yaml`:
+
+```yaml
+adapter: echo
+model: ""
+cache: false
+storage_dir: .spl
+log_level: info
+log_console: false
+text2spl:
+  mode: auto
+  validate: true
+  max_retries: 2
+adapters:
+  ollama:
+    base_url: http://localhost:11434
+    default_model: llama3.2
+    timeout: 120
+  openrouter:
+    default_model: anthropic/claude-sonnet-4-5
+    timeout: 180
+  anthropic:
+    default_model: claude-sonnet-4-20250514
+    timeout: 180
+  openai:
+    default_model: gpt-4o
+    timeout: 180
+  google:
+    default_model: gemini-2.5-flash
+    timeout: 180
+  deepseek:
+    default_model: deepseek-chat
+    timeout: 180
+  qwen:
+    default_model: qwen-plus
+    timeout: 180
+```
+
+### How Config Interacts with CLI Flags
+
+CLI flags always override config values. The precedence order:
+
+1. CLI flag (`--adapter ollama`) — highest priority
+2. Config file (`~/.spl/config.yaml`)
+3. Built-in defaults — lowest priority
+
+```bash
+# Config says adapter=ollama, but CLI overrides:
+spl2 run query.spl --adapter echo    # uses echo, not ollama
+```
+
+---
+
+## 15. Logging
+
+Every `spl2 run` and `spl2 text2spl` command automatically writes a log file to `~/.spl/logs/`.
+
+### Why Logging Matters
+
+- **LLM calls are non-deterministic.** Unlike traditional code, you can't re-run and get the same result. Logs capture what adapter was called, what model responded, token counts, and latency — the forensic trail you need when output quality drops or costs spike.
+- **Debugging multi-step workflows.** A WORKFLOW with WHILE loops, EVALUATE branches, and GENERATE steps can take dozens of LLM calls. The log file tells you *which step* diverged.
+- **Cost tracking.** Token counts per run, per script, per adapter — all timestamped. Over time, these logs become your data source for understanding which workflows are expensive.
+
+### Log File Location
+
+```
+~/.spl/logs/<script-name>-<adapter>-<YYYYMMDD-HHMMSS>.log
+```
+
+Example:
+```
+~/.spl/logs/hello-echo-20260318-231355.log
+```
+
+After every run, the log path is printed to stderr:
+```
+Log: /home/user/.spl/logs/hello-ollama-20260318-143022.log
+```
+
+### Log Content
+
+```
+14:30:22  INFO     spl2.cli  spl2 run hello.spl --adapter ollama
+14:30:23  INFO     spl2.cli  Result: model=gemma3 tokens=75 latency=440ms
+```
+
+### Configuration
+
+Control logging behavior via config:
+
+```bash
+# Set log verbosity: debug, info, warning, error
+spl2 config set log_level debug
+
+# Enable console output (logs to both file and terminal)
+spl2 config set log_console true
+
+# Check log directory
+spl2 config path
+```
+
+### Viewing Logs
+
+```bash
+# List recent logs
+ls -lt ~/.spl/logs/ | head
+
+# View a specific log
+cat ~/.spl/logs/hello-ollama-20260318-143022.log
+
+# Search across logs
+grep "ERROR" ~/.spl/logs/*.log
+```
+
+---
+
+## 16. Project Structure
 
 ```
 SPL20/
@@ -902,6 +1222,7 @@ SPL20/
     explain.py           # Plan rendering
     ir.py                # JSON serialization
     cli.py               # CLI (spl2 command)
+    config.py            # Configuration management (~/.spl/config.yaml)
     text2spl.py          # NL -> SPL compiler
     functions.py         # Function registry
     token_counter.py     # Model-aware token counting
@@ -912,6 +1233,11 @@ SPL20/
       openrouter.py      # OpenRouter.ai
       ollama.py          # Local Ollama
       momagrid.py        # Decentralized Momagrid grid
+      anthropic.py       # Anthropic Claude API
+      openai.py          # OpenAI API
+      google.py          # Google Gemini API
+      deepseek.py        # DeepSeek API
+      qwen.py            # Alibaba DashScope API
     storage/
       memory.py          # SQLite key-value store
       vector.py          # FAISS vector store
@@ -926,7 +1252,7 @@ SPL20/
 
 ---
 
-## 15. Type Reference
+## 17. Type Reference
 
 | Type | Description |
 |------|-------------|
@@ -938,7 +1264,7 @@ SPL20/
 
 ---
 
-## 16. Troubleshooting
+## 18. Troubleshooting
 
 **`spl2: command not found`**
 ```bash

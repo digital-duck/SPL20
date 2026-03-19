@@ -143,6 +143,7 @@ class GenerateClause:
     temperature: float | None = None
     output_format: str | None = None
     schema: str | None = None
+    model: str | None = None
 
 
 @dataclass

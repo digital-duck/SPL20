@@ -168,12 +168,14 @@ class Executor:
         adapter: LLMAdapter | None = None,
         storage_dir: str = ".spl",
         cache_enabled: bool = False,
+        cache_ttl: int = 3600,
     ):
         self.adapter = adapter or get_adapter(adapter_name)
         self._storage_dir_base = storage_dir
         self.memory = MemoryStore(f"{storage_dir}/memory.db")
         self.functions = FunctionRegistry()
         self.cache_enabled = cache_enabled
+        self.cache_ttl = cache_ttl
         self._vector_store = None
 
     @property
@@ -306,12 +308,15 @@ class Executor:
 
         # Step 7: Cache result
         if self.cache_enabled:
+            from datetime import datetime, timedelta
+            expires = (datetime.utcnow() + timedelta(seconds=self.cache_ttl)).strftime("%Y-%m-%d %H:%M:%S")
             self.memory.cache_set(
                 prompt_hash, gen_result.content,
                 model=gen_result.model,
                 tokens_used=gen_result.total_tokens,
+                expires_at=expires,
             )
-            _log.info("[%s] cache STORE", plan.prompt_name)
+            _log.info("[%s] cache STORE (ttl=%ds)", plan.prompt_name, self.cache_ttl)
 
         return SPLResult(
             content=gen_result.content,
@@ -532,7 +537,7 @@ class Executor:
 
         gen_result = await self.adapter.generate(
             prompt=prompt,
-            model="",
+            model=gen.model or "",
             max_tokens=gen.output_budget or 1000,
             temperature=gen.temperature or 0.7,
         )
@@ -591,7 +596,7 @@ class Executor:
     async def _exec_while(self, stmt: WhileStatement, state: WorkflowState):
         """Execute WHILE condition DO ... END"""
         iteration = 0
-        max_iter = self.DEFAULT_MAX_ITERATIONS
+        max_iter = stmt.max_iterations or self.DEFAULT_MAX_ITERATIONS
 
         while iteration < max_iter:
             if state.committed:
@@ -609,9 +614,19 @@ class Executor:
                 except (ValueError, TypeError):
                     should_continue = False
             elif isinstance(cond, SemanticCondition):
-                # Semantic while condition
+                # Semantic while condition — provide variable context for informed judgment
+                context_lines = []
+                for var_name, var_val in state.variables.items():
+                    preview = var_val[:500] if len(var_val) > 500 else var_val
+                    context_lines.append(f"  @{var_name} = {preview}")
+                context_str = "\n".join(context_lines) if context_lines else "(no variables)"
+                judge_prompt = (
+                    f"Given the current state:\n{context_str}\n\n"
+                    f"Is the condition '{cond.semantic_value}' still true?\n"
+                    f"Answer with only 'yes' or 'no'."
+                )
                 judge_result = await self.adapter.generate(
-                    prompt=f"Is the condition '{cond.semantic_value}' still true? Answer yes/no.",
+                    prompt=judge_prompt,
                     max_tokens=10, temperature=0.0,
                 )
                 state.record_llm_call(judge_result)

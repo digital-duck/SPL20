@@ -3,14 +3,14 @@
 --
 -- Setup:
 --   pip install numpy faiss-cpu
---   spl2 rag add "Python is a programming language created by Guido van Rossum"
---   spl2 rag add "Rust is a systems programming language focused on safety and performance"
---   spl2 rag add "JavaScript runs in browsers and powers the modern web"
---   spl2 rag add "Go was designed at Google for scalable network services"
+--   spl2 rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
 --
 -- Usage:
---   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What language is best for systems programming?"
---   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="Which language runs in browsers?"
+--   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="Where did Wen grow up?"
+--   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is Momagrid and why was it built?"
+--   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is the Gang of Four in the ZiNets research team?"
+--   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is eta_AI and how is it measured?"
+--   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="How did Wen transition from physics to software engineering?"
 
 PROMPT rag_answer
 SELECT

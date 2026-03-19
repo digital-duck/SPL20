@@ -179,8 +179,9 @@ _MODE_INSTRUCTIONS = {
 class Text2SPL:
     """Compile natural language descriptions into SPL 2.0 source code."""
 
-    def __init__(self, adapter: LLMAdapter) -> None:
+    def __init__(self, adapter: LLMAdapter, max_retries: int = 2) -> None:
         self.adapter = adapter
+        self.max_retries = max_retries
 
     async def compile(self, description: str, mode: str = "auto") -> str:
         """Convert a natural language task description into SPL 2.0 source code.
@@ -217,7 +218,30 @@ class Text2SPL:
             temperature=0.3,
         )
 
-        return self._strip_fences(result.content.strip())
+        spl_code = self._strip_fences(result.content.strip())
+
+        # Compile-validate-retry loop: if the generated code is invalid,
+        # feed the error back to the LLM for correction
+        for attempt in range(self.max_retries):
+            valid, message = self.validate_output(spl_code)
+            if valid:
+                break
+            # Ask the LLM to fix the error
+            fix_prompt = (
+                f"The following SPL 2.0 code has an error:\n\n"
+                f"```\n{spl_code}\n```\n\n"
+                f"Error: {message}\n\n"
+                f"Fix the error and return only the corrected SPL 2.0 code. "
+                f"Do not include markdown fences or explanations."
+            )
+            fix_result = await self.adapter.generate(
+                prompt=fix_prompt,
+                system=SPL2_SYSTEM_PROMPT,
+                temperature=0.2,
+            )
+            spl_code = self._strip_fences(fix_result.content.strip())
+
+        return spl_code
 
     # ------------------------------------------------------------------
     # Validation

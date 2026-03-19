@@ -29,6 +29,18 @@ ollama serve                     # start ollama (if not running)
 | 08 | RAG Query | `rag_query.spl` | Retrieval-augmented generation over indexed documents | - |
 | 09 | Chain of Thought | `chain.spl` | Multi-step reasoning: Research → Analyze → Summarize | - |
 | 10 | Batch Test | `batch_test.sh` | Automated testing of multiple .spl scripts across models | x |
+| 11 | Debate Arena | `debate.spl` | Adversarial debate between two LLM personas with a judge | - |
+| 12 | Plan and Execute | `plan_execute.spl` | Planner decomposes task into steps, executor runs each one | - |
+| 13 | Map-Reduce | `map_reduce.spl` | Split large docs into chunks, summarize each, combine results | - |
+| 14 | Multi-Agent | `multi_agent.spl` | Researcher → Analyst → Writer collaboration via PROCEDURE | - |
+| 15 | Code Review | `code_review.spl` | Multi-pass review: security, performance, style, bugs | - |
+| 16 | Reflection | `reflection.spl` | Meta-cognitive loop: solve → reflect → correct until confident | - |
+| 17 | Tree of Thought | `tree_of_thought.spl` | Explore multiple reasoning paths, score and pick the best | - |
+| 18 | Guardrails | `guardrails.spl` | Input/output safety pipeline with PII detection and filtering | - |
+| 19 | Memory Chat | `memory_chat.spl` | Persistent memory across conversations via memory.get/set | - |
+| 20 | Ensemble Voting | `ensemble.spl` | Generate multiple answers, score and vote for consensus | - |
+| 21 | Multi-Model Pipeline | `multi_model.spl` | Per-step model selection with GENERATE...USING MODEL and quality loop | - |
+| 22 | Text2SPL Demo | `text2spl_demo.sh` | Natural language to SPL 2.0 compiler — prompt, workflow, and auto modes | - |
 
 
 ## Quick Smoke Test
@@ -111,6 +123,24 @@ bash cookbook/04_model_showdown/showdown.sh "What is the meaning of life?"
 ```bash
 spl2 run cookbook/05_self_refine/self_refine.spl --adapter ollama -m gemma3 task="Write a haiku about coding"
 ```
+
+
+### Test — Multi-Model Pipeline (per-step model selection)
+
+```bash
+spl2 run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
+```
+
+This recipe showcases `GENERATE ... USING MODEL` — each step can target a different model within the same workflow.
+
+
+### Test — Text2SPL Demo (NL → SPL compiler)
+
+```bash
+bash cookbook/22_text2spl_demo/text2spl_demo.sh
+```
+
+Demonstrates the `spl2 text2spl` / `spl2 compile` command: natural language descriptions compiled into valid SPL 2.0 code with automatic validation.
 
 
 ### Test — Batch Test (all models x all recipes)
