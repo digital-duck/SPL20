@@ -1,0 +1,78 @@
+-- Recipe 28: Customer Support Triage
+-- Classify → route → draft response in a single workflow.
+-- Demonstrates multi-step pipeline with branching based on classification results.
+--
+-- Usage:
+--   spl2 run cookbook/28_support_triage/support_triage.spl --adapter ollama -m gemma3 \
+--       ticket="My account has been charged twice for the same order #12345"
+--
+--   spl2 run cookbook/28_support_triage/support_triage.spl --adapter ollama \
+--       ticket="I can't log in, password reset email never arrives" \
+--       product="CloudDash" tone="empathetic"
+
+CREATE FUNCTION support_categories()
+RETURNS TEXT AS $$
+Categories and their routing:
+- billing:      finance team, SLA 4h, high priority
+- account:      auth team, SLA 2h, high priority
+- technical:    engineering team, SLA 8h, medium priority
+- product:      product team, SLA 24h, medium priority
+- complaint:    customer success, SLA 1h, urgent
+- general:      first-line support, SLA 48h, low priority
+$$;
+
+CREATE FUNCTION response_tone_guide(tone TEXT DEFAULT 'professional')
+RETURNS TEXT AS $$
+SELECT CASE tone
+  WHEN 'empathetic'   THEN 'Warm and understanding. Acknowledge frustration. Use "I understand" and "I am sorry". Avoid jargon.'
+  WHEN 'formal'       THEN 'Professional and precise. Use formal language. Reference ticket numbers. State next steps clearly.'
+  WHEN 'friendly'     THEN 'Conversational and positive. Use first name. End with an offer to help further.'
+  ELSE                     'Professional but approachable. Concise. Action-oriented. No excessive apologies.'
+END
+$$;
+
+WORKFLOW support_triage
+    INPUT: @ticket TEXT, @product TEXT DEFAULT 'our product', @tone TEXT DEFAULT 'professional'
+    OUTPUT: @drafted_response TEXT
+DO
+    -- Step 1: Classify the ticket
+    GENERATE classify_ticket(@ticket, support_categories()) INTO @classification_json
+
+    -- Step 2: Extract key details
+    GENERATE extract_ticket_details(@ticket) INTO @details_json
+
+    -- Step 3: Check for urgency signals
+    GENERATE detect_urgency(@ticket) INTO @urgency_score
+
+    -- Step 4: Route based on category and urgency
+    EVALUATE @urgency_score
+        WHEN > 8 THEN
+            GENERATE escalation_alert(@ticket, @classification_json) INTO @alert
+            COMMIT @alert WITH status = 'escalated', priority = 'critical'
+        OTHERWISE
+            -- Step 5: Draft the response
+            GENERATE draft_response(
+                @ticket,
+                @classification_json,
+                @details_json,
+                @product,
+                response_tone_guide(@tone)
+            ) INTO @drafted_response
+
+            -- Step 6: Quality check the draft
+            GENERATE check_response_quality(@drafted_response, @ticket) INTO @quality_score
+
+            EVALUATE @quality_score
+                WHEN < 6 THEN
+                    GENERATE improve_response(@drafted_response, @ticket) INTO @drafted_response
+                    COMMIT @drafted_response WITH status = 'drafted_revised'
+                OTHERWISE
+                    COMMIT @drafted_response WITH status = 'drafted', quality = @quality_score
+            END
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        GENERATE fallback_response(@ticket, @product) INTO @drafted_response
+        COMMIT @drafted_response WITH status = 'fallback'
+END

@@ -1,0 +1,97 @@
+-- Recipe 35: Hypothesis Tester
+-- Generate hypothesis → design test → evaluate evidence → conclude.
+-- Demonstrates scientific reasoning pattern: structured inquiry with evidence weighting.
+--
+-- Usage:
+--   spl2 run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama -m gemma3 \
+--       observation="Remote teams show lower productivity in the first month after joining"
+--
+--   spl2 run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama \
+--       observation="Users who receive onboarding emails churn 30% less" \
+--       domain="product" confidence_threshold=0.75
+
+CREATE FUNCTION hypothesis_framework()
+RETURNS TEXT AS $$
+Scientific hypothesis format:
+- Null hypothesis (H0): The effect does not exist / is due to chance
+- Alternative hypothesis (H1): The proposed causal or correlational claim
+- Key variables: independent, dependent, confounding
+- Testability: How would we falsify H0?
+$$;
+
+CREATE FUNCTION evidence_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "supports_h1":   {"type": "array", "items": {"type": "string"}},
+    "supports_h0":   {"type": "array", "items": {"type": "string"}},
+    "inconclusive":  {"type": "array", "items": {"type": "string"}},
+    "confidence":    {"type": "number", "minimum": 0, "maximum": 1},
+    "verdict":       {"type": "string", "enum": ["reject_h0", "fail_to_reject_h0", "inconclusive"]},
+    "caveats":       {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["confidence", "verdict"]
+}
+$$;
+
+WORKFLOW hypothesis_tester
+    INPUT: @observation TEXT, @domain TEXT DEFAULT 'general', @confidence_threshold FLOAT DEFAULT 0.7
+    OUTPUT: @conclusion TEXT
+DO
+    -- Step 1: Formulate hypotheses
+    GENERATE formulate_hypotheses(
+        @observation,
+        @domain,
+        hypothesis_framework()
+    ) INTO @hypotheses
+
+    -- Step 2: Design a test plan
+    GENERATE design_test(
+        @hypotheses,
+        @domain
+    ) INTO @test_plan
+
+    -- Step 3: Gather and evaluate available evidence
+    GENERATE evaluate_evidence(
+        @observation,
+        @hypotheses,
+        @test_plan,
+        evidence_schema()
+    ) INTO @evidence_json
+
+    -- Step 4: Extract confidence score
+    GENERATE extract_confidence(@evidence_json) INTO @confidence
+
+    -- Step 5: Draw conclusion based on evidence strength
+    EVALUATE @confidence
+        WHEN >= @confidence_threshold THEN
+            GENERATE write_conclusion(
+                @hypotheses, @evidence_json, @test_plan, 'confident'
+            ) INTO @conclusion
+            COMMIT @conclusion WITH
+                status = 'concluded',
+                verdict = 'h1_supported',
+                confidence = @confidence
+        WHEN >= 0.4 THEN
+            GENERATE write_conclusion(
+                @hypotheses, @evidence_json, @test_plan, 'uncertain'
+            ) INTO @conclusion
+            COMMIT @conclusion WITH
+                status = 'inconclusive',
+                verdict = 'needs_more_data',
+                confidence = @confidence
+        OTHERWISE
+            GENERATE write_conclusion(
+                @hypotheses, @evidence_json, @test_plan, 'refuted'
+            ) INTO @conclusion
+            COMMIT @conclusion WITH
+                status = 'concluded',
+                verdict = 'h0_not_rejected',
+                confidence = @confidence
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT @hypotheses WITH status = 'hypotheses_only', reason = 'evidence_evaluation_failed'
+END

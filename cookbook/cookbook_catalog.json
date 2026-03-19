@@ -392,6 +392,252 @@
       "is_active": false,
       "approval_status": "new",
       "category": "application"
+    },
+    {
+      "id": "23",
+      "name": "Structured Output",
+      "description": "CREATE FUNCTION with JSON schema \u2014 extract typed data from free text",
+      "args": [
+        "spl2",
+        "run",
+        "./23_structured_output/structured_output.spl",
+        "--adapter",
+        "ollama",
+        "text=John Smith, 42, joined Acme Corp in March 2021 earning $95,000/year"
+      ],
+      "dir": "23_structured_output",
+      "log": "structured_output",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "24",
+      "name": "Few-Shot Prompting",
+      "description": "Gold-standard examples embedded in SELECT context \u2014 in-context learning",
+      "args": [
+        "spl2",
+        "run",
+        "./24_few_shot/few_shot.spl",
+        "--adapter",
+        "ollama",
+        "text=The quarterly results exceeded all analyst forecasts by a significant margin",
+        "domain=finance"
+      ],
+      "dir": "24_few_shot",
+      "log": "few_shot",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "basics"
+    },
+    {
+      "id": "25",
+      "name": "Nested Procedures",
+      "description": "PROCEDURE calling PROCEDURE \u2014 deep composability without external orchestration",
+      "args": [
+        "spl2",
+        "run",
+        "./25_nested_procs/nested_procs.spl",
+        "--adapter",
+        "ollama",
+        "topic=quantum computing",
+        "audience=high school students"
+      ],
+      "dir": "25_nested_procs",
+      "log": "nested_procs",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "agentic"
+    },
+    {
+      "id": "26",
+      "name": "Prompt A/B Test",
+      "description": "CTEs + EVALUATE scoring \u2014 compare two prompt variants, pick winner automatically",
+      "args": [
+        "spl2",
+        "run",
+        "./26_ab_test/ab_test.spl",
+        "--adapter",
+        "ollama",
+        "task=Explain neural networks",
+        "prompt_a=Explain like I'm 5",
+        "prompt_b=Give a technical explanation with analogies"
+      ],
+      "dir": "26_ab_test",
+      "log": "ab_test",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "benchmarking"
+    },
+    {
+      "id": "27",
+      "name": "Data Extraction",
+      "description": "Pull structured fields from messy text \u2014 names, dates, amounts, references",
+      "args": [
+        "spl2",
+        "run",
+        "./27_data_extraction/data_extraction.spl",
+        "--adapter",
+        "ollama",
+        "text=Please process payment of USD 4,250.00 to Riverside Consulting (ref: PO-8821) by end of March.",
+        "format=general"
+      ],
+      "dir": "27_data_extraction",
+      "log": "data_extraction",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "28",
+      "name": "Customer Support Triage",
+      "description": "Classify \u2192 route \u2192 draft response in one workflow",
+      "args": [
+        "spl2",
+        "run",
+        "./28_support_triage/support_triage.spl",
+        "--adapter",
+        "ollama",
+        "ticket=My account has been charged twice for the same order #12345"
+      ],
+      "dir": "28_support_triage",
+      "log": "support_triage",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "29",
+      "name": "Meeting Notes to Actions",
+      "description": "Transcript in, structured TODO list + owners out",
+      "args": [
+        "spl2",
+        "run",
+        "./29_meeting_actions/meeting_actions.spl",
+        "--adapter",
+        "ollama",
+        "transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs",
+        "output_format=markdown"
+      ],
+      "dir": "29_meeting_actions",
+      "log": "meeting_actions",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "30",
+      "name": "Code Generator + Tests",
+      "description": "Generate a function then generate its unit tests in one workflow",
+      "args": [
+        "spl2",
+        "run",
+        "./30_code_gen/code_gen.spl",
+        "--adapter",
+        "ollama",
+        "spec=A function that validates an email address",
+        "language=Python"
+      ],
+      "dir": "30_code_gen",
+      "log": "code_gen",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "31",
+      "name": "Sentiment Pipeline",
+      "description": "Batch sentiment over a list, aggregate trend statistics",
+      "args": [
+        "spl2",
+        "run",
+        "./31_sentiment_pipeline/sentiment.spl",
+        "--adapter",
+        "ollama",
+        "items=Great product, love it! | Terrible experience, never again | It was okay I guess",
+        "domain=product_reviews"
+      ],
+      "dir": "31_sentiment_pipeline",
+      "log": "sentiment",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "32",
+      "name": "Socratic Tutor",
+      "description": "Ask guiding questions rather than giving answers \u2014 persona-constrained generation",
+      "args": [
+        "spl2",
+        "run",
+        "./32_socratic_tutor/socratic_tutor.spl",
+        "--adapter",
+        "ollama",
+        "topic=Why does the sky appear blue?",
+        "student_level=middle school"
+      ],
+      "dir": "32_socratic_tutor",
+      "log": "socratic_tutor",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "multi-agent"
+    },
+    {
+      "id": "33",
+      "name": "Interview Simulator",
+      "description": "Two-persona structured Q&A with per-question scoring and overall evaluation",
+      "args": [
+        "spl2",
+        "run",
+        "./33_interview_sim/interview_sim.spl",
+        "--adapter",
+        "ollama",
+        "role=Senior Software Engineer",
+        "focus=system design"
+      ],
+      "dir": "33_interview_sim",
+      "log": "interview_sim",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "multi-agent"
+    },
+    {
+      "id": "34",
+      "name": "Progressive Summarizer",
+      "description": "Layered summary: sentence \u2192 paragraph \u2192 page with fidelity verification",
+      "args": [
+        "spl2",
+        "run",
+        "./34_progressive_summary/progressive_summary.spl",
+        "--adapter",
+        "ollama",
+        "text=Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work.",
+        "audience=executive"
+      ],
+      "dir": "34_progressive_summary",
+      "log": "progressive_summary",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "35",
+      "name": "Hypothesis Tester",
+      "description": "Generate hypothesis \u2192 design test \u2192 evaluate evidence \u2192 conclude",
+      "args": [
+        "spl2",
+        "run",
+        "./35_hypothesis_tester/hypothesis.spl",
+        "--adapter",
+        "ollama",
+        "observation=Remote teams show lower productivity in the first month after joining",
+        "domain=management"
+      ],
+      "dir": "35_hypothesis_tester",
+      "log": "hypothesis",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "reasoning"
     }
   ]
 }

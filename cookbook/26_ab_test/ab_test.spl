@@ -1,0 +1,91 @@
+-- Recipe 26: Prompt A/B Test
+-- Compare two prompt variants using CTEs + EVALUATE scoring. Pick the winner automatically.
+-- Demonstrates data-driven prompt engineering built into the workflow itself.
+--
+-- Usage:
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--       task="Explain neural networks" \
+--       prompt_a="Explain like I'm 5" \
+--       prompt_b="Give a technical explanation with analogies"
+--
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama \
+--       task="Write a product description for a standing desk" \
+--       prompt_a="Focus on health benefits" \
+--       prompt_b="Focus on productivity and focus"
+
+-- Scoring rubric as a reusable function
+CREATE FUNCTION scoring_rubric()
+RETURNS TEXT AS $$
+Rate the response on a scale of 0–10 for each criterion:
+1. Clarity (0-10): Is it easy to understand?
+2. Completeness (0-10): Does it fully address the task?
+3. Relevance (0-10): Is every sentence on-topic?
+4. Engagement (0-10): Is it interesting to read?
+
+Return JSON: {"clarity": N, "completeness": N, "relevance": N, "engagement": N, "total": N, "rationale": "..."}
+$$;
+
+WORKFLOW ab_test
+    INPUT: @task TEXT, @prompt_a TEXT, @prompt_b TEXT, @winner_threshold FLOAT DEFAULT 1.5
+    OUTPUT: @winner_output TEXT
+DO
+    -- Generate both variants in parallel CTEs (conceptually)
+    WITH
+        variant_a AS (
+            PROMPT run_variant_a
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_a AS instruction
+            GENERATE response(task, instruction)
+        ),
+        variant_b AS (
+            PROMPT run_variant_b
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_b AS instruction
+            GENERATE response(task, instruction)
+        )
+    SELECT
+        variant_a.response AS response_a,
+        variant_b.response AS response_b
+    INTO @response_a, @response_b
+
+    -- Score both variants
+    GENERATE evaluate_response(@response_a, @task, scoring_rubric()) INTO @score_a_json
+    GENERATE evaluate_response(@response_b, @task, scoring_rubric()) INTO @score_b_json
+
+    -- Extract numeric totals
+    GENERATE extract_total(@score_a_json) INTO @score_a
+    GENERATE extract_total(@score_b_json) INTO @score_b
+
+    -- Pick winner or declare tie
+    EVALUATE (@score_a - @score_b)
+        WHEN > @winner_threshold THEN
+            SET @winner_output = @response_a
+            COMMIT @winner_output WITH
+                winner = 'A',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_a - @score_b)
+        WHEN < (0 - @winner_threshold) THEN
+            SET @winner_output = @response_b
+            COMMIT @winner_output WITH
+                winner = 'B',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_b - @score_a)
+        OTHERWISE
+            -- Scores too close — return both with explanation
+            GENERATE compare_outputs(@response_a, @response_b, @score_a_json, @score_b_json) INTO @winner_output
+            COMMIT @winner_output WITH
+                winner = 'tie',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'A/B test failed during generation.' WITH status = 'error'
+END

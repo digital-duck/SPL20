@@ -17,30 +17,98 @@ ollama serve                     # start ollama (if not running)
 
 ## Recipes
 
+Status: `✓` done · `-` parser/runtime pending · `todo` not yet written
+
+### Tier 1 — Core SPL (Language Fundamentals)
+
 | # | Recipe | Script | Description | Status |
 |---|--------|--------|-------------|--------|
-| 01 | Hello World | `hello.spl` | Minimal SPL program — verify spl2 + Ollama work | x |
-| 02 | Ollama Proxy | `proxy.spl` | General-purpose LLM query — proxy any Ollama model | x |
-| 03 | Multilingual | `multilingual.spl` | Greet in any language — parametric `lang` demo | x |
-| 04 | Model Showdown | `showdown.sh` | Same prompt to multiple models, compare output and latency | x |
-| 05 | Self-Refine | `self_refine.spl` | Iterative improvement: draft → critique → refine loop | x |
-| 06 | ReAct Agent | `react_agent.spl` | Reasoning + Acting loop with tool-call pattern | x |
-| 07 | Safe Generation | `safe_generation.spl` | Exception handling for production LLM safety | x |
+| 01 | Hello World | `hello.spl` | Minimal SPL program — verify spl2 + Ollama work | ✓ |
+| 02 | Ollama Proxy | `proxy.spl` | General-purpose LLM query — proxy any Ollama model | ✓ |
+| 03 | Multilingual | `multilingual.spl` | Greet in any language — parametric `lang` demo | ✓ |
+| 04 | Model Showdown | `showdown.spl` | Same prompt to multiple models via CTEs, compare output | ✓ |
+| 05 | Self-Refine | `self_refine.spl` | Iterative improvement: draft → critique → refine loop | ✓ |
+| 06 | ReAct Agent | `react_agent.spl` | Reasoning + Acting loop with tool-call pattern | ✓ |
+| 07 | Safe Generation | `safe_generation.spl` | Exception handling for production LLM safety | ✓ |
 | 08 | RAG Query | `rag_query.spl` | Retrieval-augmented generation over indexed documents | - |
-| 09 | Chain of Thought | `chain.spl` | Multi-step reasoning: Research → Analyze → Summarize | - |
-| 10 | Batch Test | `batch_test.sh` | Automated testing of multiple .spl scripts across models | x |
-| 11 | Debate Arena | `debate.spl` | Adversarial debate between two LLM personas with a judge | - |
-| 12 | Plan and Execute | `plan_execute.spl` | Planner decomposes task into steps, executor runs each one | - |
+| 09 | Chain of Thought | `chain.spl` | Multi-step reasoning: Research → Analyze → Summarize | ✓ |
+| 10 | Batch Test | `batch_test.sh` | Automated testing of multiple .spl scripts across models | ✓ |
+
+### Tier 2 — Agentic Patterns
+
+| # | Recipe | Script | Description | Status |
+|---|--------|--------|-------------|--------|
+| 11 | Debate Arena | `debate.spl` | Adversarial debate between two LLM personas with a judge | ✓ |
+| 12 | Plan and Execute | `plan_execute.spl` | Planner decomposes task into steps, executor runs each one | ✓ |
 | 13 | Map-Reduce | `map_reduce.spl` | Split large docs into chunks, summarize each, combine results | - |
 | 14 | Multi-Agent | `multi_agent.spl` | Researcher → Analyst → Writer collaboration via PROCEDURE | - |
-| 15 | Code Review | `code_review.spl` | Multi-pass review: security, performance, style, bugs | - |
-| 16 | Reflection | `reflection.spl` | Meta-cognitive loop: solve → reflect → correct until confident | - |
-| 17 | Tree of Thought | `tree_of_thought.spl` | Explore multiple reasoning paths, score and pick the best | - |
-| 18 | Guardrails | `guardrails.spl` | Input/output safety pipeline with PII detection and filtering | - |
+| 15 | Code Review | `code_review.spl` | Multi-pass review: security, performance, style, bugs | ✓ |
+| 16 | Reflection | `reflection.spl` | Meta-cognitive loop: solve → reflect → correct until confident | ✓ |
+| 17 | Tree of Thought | `tree_of_thought.spl` | Explore multiple reasoning paths, score and pick the best | ✓ |
+| 18 | Guardrails | `guardrails.spl` | Input/output safety pipeline with PII detection and filtering | ✓ |
 | 19 | Memory Chat | `memory_chat.spl` | Persistent memory across conversations via memory.get/set | - |
-| 20 | Ensemble Voting | `ensemble.spl` | Generate multiple answers, score and vote for consensus | - |
-| 21 | Multi-Model Pipeline | `multi_model.spl` | Per-step model selection with GENERATE...USING MODEL and quality loop | - |
+| 20 | Ensemble Voting | `ensemble.spl` | Generate multiple answers, score and vote for consensus | ✓ |
+| 21 | Multi-Model Pipeline | `multi_model.spl` | Per-step model selection with GENERATE...USING MODEL and quality loop | ✓ |
 | 22 | Text2SPL Demo | `text2spl_demo.sh` | Natural language to SPL 2.0 compiler — prompt, workflow, and auto modes | - |
+
+### Tier 3 — SPL Language Features (Completeness)
+
+| # | Recipe | Script | Key Feature | Status |
+|---|--------|--------|-------------|--------|
+| 23 | Structured Output | `structured_output.spl` | `CREATE FUNCTION` with JSON schema — extract typed data from free text | ✓ |
+| 24 | Few-Shot Prompting | `few_shot.spl` | Gold-standard examples embedded in `SELECT` context | ✓ |
+| 25 | Nested Procedures | `nested_procs.spl` | `PROCEDURE` calling `PROCEDURE` — deep composability | ✓ |
+| 26 | Prompt A/B Test | `ab_test.spl` | CTEs + `EVALUATE` scoring — compare two prompt variants, pick winner | ✓ |
+
+### Tier 4 — Real-World Pipelines
+
+| # | Recipe | Script | Domain | Status |
+|---|--------|--------|--------|--------|
+| 27 | Data Extraction | `data_extraction.spl` | Pull structured fields from messy text (names, dates, amounts) | ✓ |
+| 28 | Customer Support Triage | `support_triage.spl` | Classify → route → draft response in one workflow | ✓ |
+| 29 | Meeting Notes → Actions | `meeting_actions.spl` | Transcript in, structured TODO list + owners out | ✓ |
+| 30 | Code Generator + Tests | `code_gen.spl` | Generate function, then generate its unit tests | ✓ |
+| 31 | Sentiment Pipeline | `sentiment.spl` | Batch sentiment over a list, aggregate trends | ✓ |
+
+### Tier 5 — Advanced Agentic Patterns
+
+| # | Recipe | Script | Pattern | Status |
+|---|--------|--------|---------|--------|
+| 32 | Socratic Tutor | `socratic_tutor.spl` | Ask guiding questions rather than giving answers directly | ✓ |
+| 33 | Interview Simulator | `interview_sim.spl` | Two-persona structured Q&A with evaluation | ✓ |
+| 34 | Progressive Summarizer | `progressive_summary.spl` | Layered summary: sentence → paragraph → page | ✓ |
+| 35 | Hypothesis Tester | `hypothesis.spl` | Generate hypothesis → design test → evaluate evidence | ✓ |
+
+### Tier 6 — Tool Connectors (Multimodal)
+
+Tool connectors mirror the LLM adapter pattern. `backend` is to connectors what `model` is to adapters.
+Local and online backends are interchangeable — declared in `config.yaml` or overridden via `--connector`.
+
+```yaml
+# .spl/config.yaml
+connectors:
+  pdf:
+    backend: pymupdf          # local default
+    # backend: adobe-api      # online alternative
+  transcribe:
+    backend: whisper          # local
+    model: base
+    # backend: assemblyai     # online alternative
+  tts:
+    backend: piper            # local
+    # backend: elevenlabs     # online alternative
+```
+
+```bash
+# CLI override — same pattern as --adapter
+spl2 run script.spl --connector pdf=pymupdf
+spl2 run script.spl --connector transcribe=assemblyai
+```
+
+| # | Recipe | Script | Connector | Status |
+|---|--------|--------|-----------|--------|
+| 36 | PDF Analyst | `pdf_analyst.spl` | `tool.pdf_to_md` — ingest PDF, extract insights | todo |
+| 37 | Audio → Action Items | `audio_actions.spl` | `tool.transcribe` — meeting recording → structured tasks | todo |
 
 
 ## Quick Smoke Test

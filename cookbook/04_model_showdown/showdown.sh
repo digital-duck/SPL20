@@ -10,7 +10,7 @@
 PROMPT="${1:-What is the meaning of life?}"
 MODELS="${MODELS:-gemma3 llama3.2 mistral}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROXY="$SCRIPT_DIR/../02_ollama_proxy/proxy.spl"
+PROXY="$SCRIPT_DIR/../../scripts/ollama_proxy.spl"
 
 echo "=============================================="
 echo "  SPL 2.0 Model Showdown"

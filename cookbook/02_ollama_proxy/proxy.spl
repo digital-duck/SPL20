@@ -1,14 +1,1 @@
--- Recipe 02: Ollama Proxy
--- General-purpose LLM query — use any Ollama model from the command line.
--- The --model (-m) flag overrides the model at runtime without editing this file.
---
--- Usage:
---   spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
---   spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
---   spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
-
-PROMPT ollama_proxy
-SELECT
-    system_role('You are a helpful, knowledgeable assistant.'),
-    context.prompt AS prompt
-GENERATE answer(prompt)
+../../scripts/ollama_proxy.spl
