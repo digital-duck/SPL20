@@ -29,6 +29,16 @@ python cookbook/run_all.py --ids "04,10, 25,26, 29,30, 32,33" 2>&1 | tee cookboo
 
 ```
 
+## Code-RAG
+
+Run 
+```bash
+spl2 code-rag parse-log cookbook/out/run_all_20260320_052826.md 
+```
+once the run finishes to capture all 30 new  (prompt, SPL) pairs into Code-RAG       
+
+
+
 ## Recipes
 
 Status: `✓` done · `-` parser/runtime pending · `todo` not yet written

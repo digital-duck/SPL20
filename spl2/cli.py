@@ -138,7 +138,7 @@ def _print_result(result) -> None:
         if result.cost_usd is not None:
             click.echo(f"Cost: ${result.cost_usd:.6f}")
         click.echo("-" * 60)
-        click.echo(result.content)
+        click.echo(f"```output\n{result.content}\n```")
         click.echo("=" * 60)
     elif isinstance(result, WorkflowResult):
         click.echo("=" * 60)
@@ -148,7 +148,7 @@ def _print_result(result) -> None:
         click.echo(f"Latency: {result.total_latency_ms:.0f}ms")
         if result.committed_value:
             click.echo("-" * 60)
-            click.echo(f"Committed: {result.committed_value}")
+            click.echo(f"```output\n{result.committed_value}\n```")
         if result.output:
             click.echo("-" * 60)
             click.echo("Variables:")
@@ -283,7 +283,9 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
         cmd_parts += ["-m", model]
     cmd_parts += [f"{k}={v}" for k, v in params.items()]
     click.echo(f"\n```bash\n{' '.join(cmd_parts)}\n```\n")
-    click.echo(f"```sql\n{source.rstrip()}\n```\n")
+    if "prompt" in params:
+        click.echo(f"```prompt\n{params['prompt']}\n```\n")
+    click.echo(f"```spl2\n{source.rstrip()}\n```\n")
 
     _ensure_workspace(storage_dir)
 
@@ -851,7 +853,7 @@ def code_rag_query(description: str, top_k: int, storage_dir: str | None, show_s
         click.echo(f"\n{i}. [{h['source']}]  score={h['score']:.4f}  {label}")
         click.echo(f"   {h['description']}")
         if show_spl:
-            click.echo(f"\n```sql\n{h['spl_source']}\n```")
+            click.echo(f"\n```spl2\n{h['spl_source']}\n```")
 
 
 @cmd_code_rag.command("count")
@@ -871,6 +873,203 @@ def code_rag_export(output: str, storage_dir: str | None) -> None:
     store = _get_code_rag_store(storage_dir)
     n = store.export_jsonl(output)
     click.echo(f"Exported {n} pair(s) to {output}")
+
+
+def _parse_log_for_pairs(text: str) -> list[dict]:
+    """Extract (command, spl_source) pairs from a spl2 run log.
+
+    Scans for ```bash and ```spl2 fence blocks and pairs them in order.
+    Works on both per-recipe log files (clean) and tee'd run_all.py output
+    (which prefixes normal lines with '     | ').
+    """
+    import re
+
+    # Normalise: strip the '     | ' run_all.py prefix so both formats parse identically.
+    # Pattern: optional leading whitespace + '|' + optional space at start of line.
+    prefix_re = re.compile(r'^\s*\|\s?', re.MULTILINE)
+    # Only strip if the majority of lines have the prefix (tee'd output)
+    prefixed_lines = len(prefix_re.findall(text))
+    total_lines = text.count("\n") + 1
+    if total_lines > 0 and prefixed_lines / total_lines > 0.3:
+        text = prefix_re.sub("", text)
+
+    fence_re = re.compile(
+        r'^[ \t]*```(\w+)\n(.*?)\n[ \t]*```',
+        re.MULTILINE | re.DOTALL,
+    )
+    pairs: list[dict] = []
+    pending_bash: str | None = None
+    pending_prompt: str | None = None
+    for m in fence_re.finditer(text):
+        lang    = m.group(1)
+        content = m.group(2).strip()
+        if lang == "bash":
+            pending_bash = content
+            pending_prompt = None
+        elif lang == "prompt" and pending_bash is not None:
+            pending_prompt = content
+        elif lang in ("spl2", "spl") and pending_bash is not None:
+            pairs.append({
+                "command": pending_bash,
+                "prompt": pending_prompt,
+                "spl_source": content,
+            })
+            pending_bash = None
+            pending_prompt = None
+        elif lang == "output":
+            pending_bash = None
+            pending_prompt = None
+    return pairs
+
+
+def _load_catalog_map(cookbook_dir: str) -> dict[str, str]:
+    """Return {recipe_dir_or_stem → description} from cookbook catalog."""
+    try:
+        catalog_path = Path(cookbook_dir) / "cookbook_catalog.json"
+        with catalog_path.open(encoding="utf-8") as f:
+            catalog = json.load(f)
+        result: dict[str, str] = {}
+        for recipe in catalog.get("recipes", []):
+            desc = recipe.get("description", "").strip()
+            if not desc:
+                continue
+            # Key by relative recipe dir (e.g. "01_hello_world")
+            d = recipe.get("dir", "")
+            if d:
+                result[d] = desc
+                result[d.lstrip("0123456789_")] = desc  # also without leading id
+        return result
+    except Exception:
+        return {}
+
+
+def _description_from_spl(spl_source: str) -> str:
+    """Derive a description from a PROMPT or WORKFLOW name in SPL source."""
+    import re
+    m = re.search(r'\b(?:PROMPT|WORKFLOW)\s+(\w+)', spl_source, re.IGNORECASE)
+    if m:
+        return m.group(1).replace("_", " ")
+    return ""
+
+
+def _description_from_command(cmd: str, catalog_map: dict[str, str]) -> str:
+    """Derive a description from a `spl2 run <file>` bash command."""
+    import re
+    # Extract the .spl file path from the command
+    m = re.search(r'spl2\s+run\s+(\S+\.spl)', cmd)
+    if not m:
+        return ""
+    spl_path = m.group(1)
+
+    # Try all sub-paths as catalog keys (handle relative/absolute paths)
+    parts = Path(spl_path).parts
+    for i in range(len(parts)):
+        key = str(Path(*parts[i:]))
+        # Try directory component
+        for d in parts:
+            if d in catalog_map:
+                return catalog_map[d]
+        if key in catalog_map:
+            return catalog_map[key]
+
+    # Try the file stem
+    stem = Path(spl_path).stem
+    if stem in catalog_map:
+        return catalog_map[stem]
+
+    return ""
+
+
+@cmd_code_rag.command("parse-log")
+@click.argument("log_files", nargs=-1, required=True, metavar="LOG_FILE...")
+@click.option("--cookbook-dir", default="./cookbook", show_default=True,
+              help="Cookbook directory for description lookup via catalog.")
+@click.option("--source", default="log", show_default=True,
+              help="Provenance tag stored with each imported pair.")
+@click.option("--validate/--no-validate", default=True, show_default=True,
+              help="Validate SPL syntax before importing.")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show what would be imported without writing to the store.")
+@click.option("--storage-dir", default=None, help="Code-RAG DB directory (default from config).")
+def code_rag_parse_log(
+    log_files: tuple[str, ...],
+    cookbook_dir: str,
+    source: str,
+    validate: bool,
+    dry_run: bool,
+    storage_dir: str | None,
+) -> None:
+    """Parse spl2 run log files and import valid (description, SPL) pairs.
+
+    Scans LOG_FILE(s) for ```spl2 blocks (SPL source) paired with the
+    preceding ```bash block (run command), derives a description from the
+    cookbook catalog or the PROMPT/WORKFLOW name, validates the SPL, and
+    adds each valid pair to the Code-RAG store.
+
+    \b
+    Works on both per-recipe logs (.spl/logs/*.log) and tee'd run_all output:
+
+    \b
+      spl2 code-rag parse-log .spl/logs/run_*.log
+      spl2 code-rag parse-log cookbook/out/run_all_20260320.md
+      spl2 code-rag parse-log cookbook/out/run_all_20260320.md --dry-run
+    """
+    from spl2.text2spl import Text2SPL
+
+    catalog_map = _load_catalog_map(cookbook_dir)
+    store = None if dry_run else _get_code_rag_store(storage_dir)
+
+    total_found = total_added = total_skipped = total_invalid = 0
+
+    for log_path_str in log_files:
+        log_path = Path(log_path_str)
+        text = log_path.read_text(encoding="utf-8")
+        pairs = _parse_log_for_pairs(text)
+        click.echo(f"\n{log_path.name}: {len(pairs)} pair(s) found")
+
+        for pair in pairs:
+            total_found += 1
+            spl_source = pair["spl_source"]
+            cmd = pair["command"]
+
+            # Derive description: prompt block → catalog → SPL name → file stem
+            prompt_val = pair.get("prompt") or ""
+            description = (
+                prompt_val
+                or _description_from_command(cmd, catalog_map)
+                or _description_from_spl(spl_source)
+                or (Path(cmd.split()[2]).stem.replace("_", " ") if len(cmd.split()) > 2 else "")
+            )
+            if not description:
+                click.echo(f"  [skip] no description — cmd: {cmd[:60]}")
+                total_skipped += 1
+                continue
+
+            if validate:
+                valid, message = Text2SPL.validate_output(spl_source)
+                if not valid:
+                    click.echo(f"  [invalid] {message[:80]} — {description[:50]}")
+                    total_invalid += 1
+                    continue
+
+            if dry_run:
+                click.echo(f"  [dry-run] would add: {description[:70]}")
+            elif store is not None:
+                store.add_pair(
+                    description=description,
+                    spl_source=spl_source,
+                    metadata={"source": source, "log_file": log_path.name},
+                )
+                click.echo(f"  [added] {description[:70]}")
+            total_added += 1
+
+    click.echo(
+        f"\nDone: found={total_found}  "
+        f"{'would add' if dry_run else 'added'}={total_added}  "
+        f"skipped={total_skipped}  invalid={total_invalid}"
+    )
+    if store is not None:
+        click.echo(f"Total in store: {store.count()}")
 
 
 # ── spl2 text2spl / compile ──────────────────────────────────────────────────

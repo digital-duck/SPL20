@@ -116,6 +116,15 @@ def print_catalog(recipes: list[dict], cat_filter: str, status_filter: str) -> N
 
 
 def run_recipe(args: list[str], log_path: Path, cwd: Path) -> tuple[bool, float]:
+    """Run a recipe subprocess and stream output with smart formatting.
+
+    Two rendering modes applied line-by-line:
+      - in_fence : inside any ```lang...``` block → printed as-is (no prefix)
+      - normal   : everything else → printed with '     | ' prefix
+
+    The ```output``` block for LLM results is emitted by `spl2 run` itself
+    (via _print_result in cli.py), so run_all only needs to pass it through.
+    """
     log_path.parent.mkdir(parents=True, exist_ok=True)
     start = datetime.now()
     try:
@@ -124,9 +133,24 @@ def run_recipe(args: list[str], log_path: Path, cwd: Path) -> tuple[bool, float]
                 args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, cwd=str(cwd),
             )
+
+            state = "normal"   # "normal" | "in_fence"
+
             for line in (process.stdout or []):
-                sys.stdout.write(f"     | {line}")
                 log_file.write(line)
+                s = line.rstrip("\n")
+
+                if state == "in_fence":
+                    sys.stdout.write(s + "\n")
+                    if s.strip() == "```":          # closing fence
+                        state = "normal"
+                else:
+                    if s.strip().startswith("```") and s.strip() != "```":
+                        sys.stdout.write(s + "\n")  # opening fence — no prefix
+                        state = "in_fence"
+                    else:
+                        sys.stdout.write(f"     | {s}\n")
+
             process.wait()
             ok = process.returncode == 0
     except Exception as e:

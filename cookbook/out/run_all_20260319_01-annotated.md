@@ -24,7 +24,7 @@ GENERATE greeting()
 spl2 run ./01_hello_world/hello.spl --adapter ollama -m gemma3
 ```
      log : /home/gongai/projects/digital-duck/SPL20/cookbook/01_hello_world/hello_20260319_022640.log
-```text
+```output
 ============================================================
 Model: gemma3
 Tokens: 45 in / 54 out
@@ -41,7 +41,7 @@ Log: /home/gongai/.spl/logs/hello-ollama-20260319-022640.log
 
 [02] Ollama Proxy
 
-```sql
+```spl
 -- Recipe 02: Ollama Proxy
 -- General-purpose LLM query — use any Ollama model from the command line.
 -- The --model (-m) flag overrides the model at runtime without editing this file.
@@ -78,7 +78,7 @@ Log: /home/gongai/.spl/logs/proxy-ollama-20260319-022642.log
 
 [03] Multilingual Greeting
 
-```sql
+```spl
 -- Recipe 03: Multilingual Greeting
 -- Greet in any language — demonstrates parametric context with lang.
 --
