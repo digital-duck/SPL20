@@ -15,6 +15,20 @@ ollama pull gemma3               # at least one model
 ollama serve                     # start ollama (if not running)
 ```
 
+## Run All
+
+```bash
+
+python cookbook/run_all.py 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md 
+
+# retry failed recipes
+python cookbook/run_all.py --ids "04,10, 23-35" 2>&1 | tee cookbook/out/run_all_failed-$(date +%Y%m%d_%H%M%S).md 
+
+python cookbook/run_all.py --ids "04,10, 25,26, 29,30, 32,33" 2>&1 | tee cookbook/out/run_all_failed-$(date +%Y%m%d_%H%M%S).md 
+
+
+```
+
 ## Recipes
 
 Status: `✓` done · `-` parser/runtime pending · `todo` not yet written
@@ -122,6 +136,8 @@ spl2 run cookbook/01_hello_world/hello.spl
 
 # Run with Ollama
 spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
+
+
 ```
 
 

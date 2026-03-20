@@ -22,7 +22,7 @@ _log = logging.getLogger("spl2.executor")
 from spl2.ast_nodes import (
     PromptStatement, SelectItem, SystemRoleCall, ContextRef,
     RagQuery, MemoryGet, Identifier, Literal, ParamRef,
-    BinaryOp, FunctionCall, DottedName,
+    BinaryOp, FunctionCall, DottedName, NamedArg,
     WorkflowStatement, ProcedureStatement,
     EvaluateStatement, WhileStatement, DoBlock,
     AssignmentStatement, GenerateIntoStatement, CommitStatement,
@@ -501,13 +501,78 @@ class Executor:
         elif isinstance(stmt, DoBlock):
             await self._exec_do_block(stmt, state)
         elif isinstance(stmt, SelectIntoStatement):
-            pass  # SELECT INTO resolved from context
+            await self._exec_select_into(stmt, state)
         else:
             _log.warning("Unknown statement type in workflow body: %s", type(stmt).__name__)
 
     # ================================================================
     # Statement Executors
     # ================================================================
+
+    async def _exec_select_into(self, stmt: SelectIntoStatement, state: WorkflowState):
+        """Execute WITH CTEs ... SELECT ... INTO @v1, @v2, ... (workflow fan-out)."""
+        # Run each CTE and collect its generated content keyed by cte_name.field
+        cte_results: dict[str, str] = {}
+        for cte in stmt.ctes:
+            if cte.nested_prompt:
+                result = await self._exec_generate_into_prompt(cte.nested_prompt, state)
+                # Key by cte_name.function_name (e.g. variant_a.response)
+                gen = cte.nested_prompt.generate_clause
+                field = gen.function_name if gen else "result"
+                cte_results[f"{cte.name}.{field}"] = result
+                cte_results[cte.name] = result  # also accessible by bare name
+
+        # Evaluate SELECT items against cte_results
+        selected: list[str] = []
+        for item in stmt.select_items:
+            alias = getattr(item, 'alias', None)
+            expr = item.expression if hasattr(item, 'expression') else None
+            # Resolve dotted names like variant_a.response from cte_results
+            val = ""
+            if expr is not None:
+                expr_str = self._eval_expression(expr, state)
+                val = cte_results.get(expr_str, cte_results.get(expr_str.replace(".", "."), expr_str))
+            # Direct lookup by alias or dotted name
+            if not val:
+                key = str(alias) if alias else ""
+                val = cte_results.get(key, "")
+            selected.append(val)
+
+        # Assign to target variables (multi-var INTO)
+        targets = stmt.target_variables or ([stmt.target_variable] if stmt.target_variable else [])
+        for var, val in zip(targets, selected):
+            state.set_var(var, val)
+            _log.debug("SELECT INTO: @%s = %s...", var, val[:80] if val else "")
+
+    async def _exec_generate_into_prompt(self, prompt_stmt, state: WorkflowState) -> str:
+        """Execute an inner PROMPT+GENERATE (from a CTE) and return the generated text."""
+        gen = prompt_stmt.generate_clause
+        if not gen:
+            return ""
+
+        args_text = [self._eval_expression(a, state) for a in gen.arguments]
+        func_def = self.functions.get(gen.function_name)
+        if func_def:
+            prompt_text = func_def.body
+            for param, arg_val in zip(func_def.parameters, args_text):
+                prompt_text = prompt_text.replace("{" + param.name + "}", arg_val)
+        else:
+            prompt_text = f"Task: {gen.function_name}\n\n"
+            for i, arg_text in enumerate(args_text):
+                prompt_text += f"Input {i+1}:\n{arg_text}\n\n"
+
+        model = gen.model or ""
+        if model.startswith('@'):
+            model = state.get_var(model[1:])
+
+        gen_result = await self.adapter.generate(
+            prompt=prompt_text,
+            model=model,
+            max_tokens=gen.output_budget or 1000,
+            temperature=gen.temperature or 0.7,
+        )
+        state.record_llm_call(gen_result)
+        return gen_result.content
 
     async def _exec_assignment(self, stmt: AssignmentStatement, state: WorkflowState):
         """Execute @var := expr"""
@@ -535,9 +600,13 @@ class Executor:
             for param, arg_val in zip(func_def.parameters, args_text):
                 prompt = prompt.replace("{" + param.name + "}", arg_val)
 
+        model = gen.model or ""
+        if model.startswith('@'):
+            model = state.get_var(model[1:])
+
         gen_result = await self.adapter.generate(
             prompt=prompt,
-            model=gen.model or "",
+            model=model,
             max_tokens=gen.output_budget or 1000,
             temperature=gen.temperature or 0.7,
         )
@@ -557,21 +626,29 @@ class Executor:
             matched = False
 
             if isinstance(cond, SemanticCondition):
-                # Use LLM to evaluate semantic condition
-                judge_prompt = (
-                    f"Evaluate the following text and determine if it matches "
-                    f"the condition '{cond.semantic_value}'.\n\n"
-                    f"Text: {eval_value}\n\n"
-                    f"Answer with only 'yes' or 'no'."
-                )
-                judge_result = await self.adapter.generate(
-                    prompt=judge_prompt,
-                    max_tokens=10,
-                    temperature=0.0,
-                )
-                state.record_llm_call(judge_result)
-                matched = 'yes' in judge_result.content.lower()
-                _log.debug("EVALUATE semantic '%s' -> %s", cond.semantic_value, matched)
+                sv = cond.semantic_value
+                if sv.startswith('contains:'):
+                    # Deterministic substring check: contains:val1|val2|...
+                    needles = sv[len('contains:'):].split('|')
+                    lower_val = eval_value.lower()
+                    matched = any(n.lower() in lower_val for n in needles)
+                    _log.debug("EVALUATE contains %s -> %s", needles, matched)
+                else:
+                    # Use LLM to evaluate semantic condition
+                    judge_prompt = (
+                        f"Evaluate the following text and determine if it matches "
+                        f"the condition '{sv}'.\n\n"
+                        f"Text: {eval_value}\n\n"
+                        f"Answer with only 'yes' or 'no'."
+                    )
+                    judge_result = await self.adapter.generate(
+                        prompt=judge_prompt,
+                        max_tokens=10,
+                        temperature=0.0,
+                    )
+                    state.record_llm_call(judge_result)
+                    matched = 'yes' in judge_result.content.lower()
+                    _log.debug("EVALUATE semantic '%s' -> %s", sv, matched)
 
             elif isinstance(cond, ComparisonCondition):
                 # Deterministic comparison
@@ -678,8 +755,18 @@ class Executor:
 
         # Execute the procedure body with its own state
         proc_state = WorkflowState()
-        for param, arg in zip(proc.parameters, stmt.arguments):
-            proc_state.set_var(param.name, self._eval_expression(arg, state))
+        # Bind arguments: named args by name, positional args by position
+        named_args = {a.name: a.value for a in stmt.arguments if isinstance(a, NamedArg)}
+        positional_args = [a for a in stmt.arguments if not isinstance(a, NamedArg)]
+        pos_idx = 0
+        for param in proc.parameters:
+            if param.name in named_args:
+                proc_state.set_var(param.name, self._eval_expression(named_args[param.name], state))
+            elif pos_idx < len(positional_args):
+                proc_state.set_var(param.name, self._eval_expression(positional_args[pos_idx], state))
+                pos_idx += 1
+            elif param.default_value is not None:
+                proc_state.set_var(param.name, self._eval_expression(param.default_value, state))
 
         try:
             await self._execute_body(proc.body, proc_state)
@@ -760,6 +847,8 @@ class Executor:
             return f"[{expr.name}(...)]"
         elif isinstance(expr, DottedName):
             return state.get_var(expr.full_name)
+        elif isinstance(expr, NamedArg):
+            return self._eval_expression(expr.value, state)
         return str(expr)
 
     def _compare(self, left: float, op: str, right: float) -> bool:

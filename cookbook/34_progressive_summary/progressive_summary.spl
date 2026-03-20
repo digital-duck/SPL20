@@ -48,7 +48,7 @@ DO
                 @audience
             ) INTO @page_summary
         OTHERWISE
-            SET @page_summary = ''
+            @page_summary := ''
     END
 
     -- Quality check: does each layer faithfully represent the original?

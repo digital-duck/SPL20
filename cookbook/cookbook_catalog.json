@@ -63,11 +63,14 @@
     {
       "id": "04",
       "name": "Model Showdown",
-      "description": "Same prompt to multiple models \u2014 compare output and latency",
+      "description": "Same prompt to multiple models \u2014 compare output and latency via parallel CTEs",
       "args": [
-        "bash",
-        "./04_model_showdown/showdown.sh",
-        "What is the meaning of life?"
+        "spl2",
+        "run",
+        "./04_model_showdown/showdown.spl",
+        "--adapter",
+        "ollama",
+        "prompt=What is the meaning of life?"
       ],
       "dir": "04_model_showdown",
       "log": "showdown",
@@ -168,10 +171,13 @@
     {
       "id": "10",
       "name": "Batch Test",
-      "description": "Automated testing of all .spl recipes across models",
+      "description": "Automated testing of cookbook recipes across models via parallel CTEs",
       "args": [
-        "bash",
-        "./10_batch_test/batch_test.sh"
+        "spl2",
+        "run",
+        "./10_batch_test/batch_test.spl",
+        "--adapter",
+        "ollama"
       ],
       "dir": "10_batch_test",
       "log": "batch_test",

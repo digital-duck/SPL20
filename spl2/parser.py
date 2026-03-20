@@ -96,6 +96,10 @@ class Parser:
         if self._check(TokenType.AT):
             return self._parse_assignment_statement()
 
+        # SET @var = expr  (alias for assignment)
+        if self._check(TokenType.SET):
+            return self._parse_set_statement()
+
         raise ParseError(
             f"Expected statement keyword, got {self._current().type.name} ({self._current().value!r})",
             self._current()
@@ -121,11 +125,45 @@ class Parser:
     # SPL 1.0: PROMPT Statement (unchanged)
     # ================================================================
 
-    def _parse_prompt_statement(self) -> PromptStatement:
+    def _parse_cte_select_into(self, ctes: list) -> SelectIntoStatement:
+        """Parse SELECT ... INTO @v1, @v2, ... after a CTE block (workflow pattern)."""
+        select_items = self._parse_select_clause()
+
+        from_clause = None
+        if self._check(TokenType.FROM):
+            from_clause = self._parse_from_clause()
+
+        where_clause = None
+        if self._check(TokenType.WHERE):
+            where_clause = self._parse_where_clause()
+
+        target_variables: list[str] = []
+        if self._check(TokenType.INTO):
+            self._advance()
+            self._expect(TokenType.AT)
+            target_variables.append(self._expect_identifier_or_keyword().value)
+            while self._check(TokenType.COMMA):
+                self._advance()
+                self._expect(TokenType.AT)
+                target_variables.append(self._expect_identifier_or_keyword().value)
+
+        return SelectIntoStatement(
+            select_items=select_items,
+            from_clause=from_clause,
+            where_clause=where_clause,
+            target_variables=target_variables,
+            ctes=ctes,
+        )
+
+    def _parse_prompt_statement(self):
         # Optional CTEs at the start: WITH <name> AS (...)
         ctes = []
         if self._check(TokenType.WITH) and not self._peek_is(TokenType.BUDGET) and not self._peek_is(TokenType.VRAM):
             ctes = self._parse_cte_block()
+
+        # SPL 2.0: CTEs followed by SELECT ... INTO (workflow fan-out pattern)
+        if ctes and self._check(TokenType.SELECT):
+            return self._parse_cte_select_into(ctes)
 
         self._expect(TokenType.PROMPT)
         name = self._expect(TokenType.IDENTIFIER).value
@@ -488,7 +526,7 @@ class Parser:
 
     def _parse_generate_clause(self) -> GenerateClause:
         self._expect(TokenType.GENERATE)
-        func_name = self._expect(TokenType.IDENTIFIER).value
+        func_name = self._expect_identifier_or_keyword().value
 
         self._expect(TokenType.LPAREN)
         arguments: list[Expression] = []
@@ -533,13 +571,16 @@ class Parser:
                 else:
                     break
 
-        # Parse optional USING MODEL '<model>'
+        # Parse optional USING MODEL '<model>' or USING MODEL @var
         model = None
         if self._check(TokenType.USING):
             self._advance()
             self._expect(TokenType.MODEL)
             if self._check(TokenType.STRING):
                 model = self._advance().value
+            elif self._check(TokenType.AT):
+                self._advance()
+                model = '@' + self._expect_identifier_or_keyword().value
             else:
                 model = self._expect(TokenType.IDENTIFIER).value
 
@@ -589,13 +630,7 @@ class Parser:
 
         self._expect(TokenType.AS)
         self._expect(TokenType.DOLLAR_DOLLAR)
-
-        body_tokens: list[str] = []
-        while not self._check(TokenType.DOLLAR_DOLLAR) and not self._check(TokenType.EOF):
-            body_tokens.append(self._advance().value)
-        body = ' '.join(body_tokens)
-
-        self._expect(TokenType.DOLLAR_DOLLAR)
+        body = self._expect(TokenType.STRING).value
 
         return CreateFunctionStatement(
             name=name, parameters=parameters,
@@ -605,9 +640,13 @@ class Parser:
     def _parse_parameter(self) -> Parameter:
         name = self._expect_identifier_or_keyword().value
         param_type = None
-        if self._check(TokenType.IDENTIFIER) and not self._check_any(TokenType.COMMA, TokenType.RPAREN):
+        default_value = None
+        if self._check(TokenType.IDENTIFIER) and not self._check_any(TokenType.COMMA, TokenType.RPAREN, TokenType.DEFAULT):
             param_type = self._advance().value
-        return Parameter(name=name, param_type=param_type)
+        if self._check(TokenType.DEFAULT):
+            self._advance()
+            default_value = self._parse_expression()
+        return Parameter(name=name, param_type=param_type, default_value=default_value)
 
     def _parse_explain(self) -> ExplainStatement:
         self._expect(TokenType.EXPLAIN)
@@ -896,6 +935,20 @@ class Parser:
             right = self._parse_expression()
             return ComparisonCondition(operator=op, right=right)
 
+        # contains('value') [OR contains('value')]* — semantic substring condition
+        if tok.type == TokenType.IDENTIFIER and tok.value.lower() == 'contains':
+            values: list[str] = []
+            while self._check(TokenType.IDENTIFIER) and self._current().value.lower() == 'contains':
+                self._advance()  # contains
+                self._expect(TokenType.LPAREN)
+                values.append(self._expect(TokenType.STRING).value)
+                self._expect(TokenType.RPAREN)
+                if not self._check(TokenType.OR):
+                    break
+                self._advance()  # OR
+            # Encode as a semantic condition with all values joined
+            return SemanticCondition(semantic_value='contains:' + '|'.join(values))
+
         # Fall through: could be an expression-based condition
         raise ParseError(
             f"Expected condition (string literal or comparison operator), got {tok.type.name}",
@@ -1038,6 +1091,15 @@ class Parser:
     # SPL 2.0: Assignment Statement
     # ================================================================
 
+    def _parse_set_statement(self) -> AssignmentStatement:
+        """Parse SET @var = expr  (SQL-style assignment alias)."""
+        self._expect(TokenType.SET)
+        self._expect(TokenType.AT)
+        var_name = self._expect_identifier_or_keyword().value
+        self._expect(TokenType.EQ)
+        value = self._parse_expression()
+        return AssignmentStatement(variable=var_name, expression=value)
+
     def _parse_assignment_statement(self) -> AssignmentStatement:
         """Parse @var := expr"""
         self._expect(TokenType.AT)
@@ -1078,10 +1140,10 @@ class Parser:
         self._expect(TokenType.LPAREN)
         arguments: list[Expression] = []
         if not self._check(TokenType.RPAREN):
-            arguments.append(self._parse_expression())
+            arguments.append(self._parse_call_argument())
             while self._check(TokenType.COMMA):
                 self._advance()
-                arguments.append(self._parse_expression())
+                arguments.append(self._parse_call_argument())
         self._expect(TokenType.RPAREN)
 
         target = None

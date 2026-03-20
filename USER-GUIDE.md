@@ -41,6 +41,9 @@ pip install google-genai
 # For RAG (vector search):
 pip install numpy faiss-cpu
 
+# For Code-RAG (text2SPL example retrieval):
+pip install chromadb onnxruntime
+
 # For accurate OpenAI token counting:
 pip install tiktoken
 ```
@@ -690,26 +693,59 @@ executor.close()
 
 Convert plain English to SPL 2.0 code via the CLI or Python API.
 
+### Dedicated Compiler Adapter
+
+text2SPL uses its own adapter and model, **separate from the runtime adapter** used by `spl2 run`. This lets you use a powerful code-generation model for compilation while keeping a different (e.g. faster or local) model for execution.
+
+The recommended setup uses the `claude_cli` adapter with `claude-sonnet-4-6`, which runs against your Claude subscription (zero marginal cost, no VRAM required):
+
+```bash
+# No flags needed — picks up text2spl.adapter and text2spl.model from config
+spl2 compile "summarize a document and store the result"
+```
+
+The config section that controls this (in `~/.spl/config.yaml`):
+
+```yaml
+text2spl:
+  adapter: claude_cli          # dedicated compiler adapter
+  model: claude-sonnet-4-6     # dedicated compiler model
+  mode: auto
+  validate: true
+  max_retries: 2
+```
+
+To override the compiler adapter/model for a single call:
+```bash
+spl2 compile "..." --adapter ollama -m qwen2.5-coder   # benchmark another compiler
+```
+
+To switch the compiler globally:
+```bash
+spl2 config set text2spl.adapter ollama
+spl2 config set text2spl.model qwen2.5-coder
+```
+
 ### CLI Usage
 
 ```bash
-# Generate a simple prompt
-spl2 text2spl "summarize a document with a 2000 token budget" --adapter ollama
+# Compile (uses text2spl.adapter from config — claude_cli by default)
+spl2 compile "summarize a document and store the result"
 
-# Generate a workflow
-spl2 text2spl "build a review agent that refines until quality > 0.8" --mode workflow --adapter ollama
+# Force a workflow
+spl2 compile "build a review agent that refines until quality > 0.8" --mode workflow
 
 # Save to file
-spl2 text2spl "translate text to French" -o translate.spl --adapter ollama
+spl2 compile "translate text to French" -o translate.spl
 
 # Compile and execute in one step
-spl2 text2spl "classify user intent" --execute --adapter ollama text="Hello there"
+spl2 compile "classify user intent" --execute text="Hello there"
 
-# Use 'compile' as an alias
-spl2 compile "build a chatbot" --adapter anthropic -m claude-sonnet-4-20250514
+# text2spl and compile are aliases for the same command
+spl2 text2spl "summarize a document"
 ```
 
-The compiler includes a **validate-and-retry loop** — if the generated code has syntax errors, the LLM automatically attempts to fix them (up to 2 retries).
+The compiler includes a **validate-and-retry loop** — if the generated code has syntax errors, the LLM automatically attempts to fix them (up to 2 retries at lower temperature).
 
 ### Modes
 
@@ -726,7 +762,7 @@ import asyncio
 from spl2.text2spl import Text2SPL
 from spl2.adapters import get_adapter
 
-compiler = Text2SPL(get_adapter("ollama"))
+compiler = Text2SPL(get_adapter("claude_cli"))
 
 # Generate a PROMPT
 code = asyncio.run(compiler.compile(
@@ -749,7 +785,166 @@ print(f"Valid: {valid}, Message: {msg}")
 
 ---
 
-## 10. Adapter Setup Details
+## 10. Code-RAG — Self-Improving Example Retrieval for text2SPL
+
+Code-RAG is a ChromaDB-backed vector store of `(description, SPL source)` pairs. When you run `spl2 compile`, it retrieves the most semantically similar SPL examples from the store and injects them into the compiler's context — replacing the handful of static hand-written examples with the full richness of your cookbook and any other pairs you have collected.
+
+### Why Code-RAG
+
+Without Code-RAG, the text2SPL compiler uses 4 fixed examples in its system prompt. This works for simple cases but misses patterns like multi-CTE fan-out, EVALUATE branching, PROCEDURE composition, or exception handling. With Code-RAG:
+
+- **Better coverage** — every cookbook recipe (35+) is available as a retrieval target
+- **Semantic matching** — if you ask for "a loop that refines until quality is high", the WHILE-quality-gate recipe is retrieved, not a generic summariser
+- **Self-learning** — every successful `spl2 compile` call automatically adds its validated `(description, SPL)` pair back into the store, making the next compile better
+
+### First-Time Setup
+
+```bash
+# Install dependency
+pip install chromadb onnxruntime
+
+# Prime the store with all cookbook recipes (run once)
+spl2 code-rag import
+
+# Verify
+spl2 code-rag count
+# → Code-RAG pairs indexed: 34
+```
+
+After this, every `spl2 compile` call automatically uses the store. You will see a status line on stderr:
+
+```
+Code-RAG: 34 examples indexed
+```
+
+### Commands
+
+```bash
+# Import cookbook recipes (initial priming)
+spl2 code-rag import
+spl2 code-rag import --cookbook-dir /path/to/cookbook
+
+# Import additional pairs from a JSONL file
+spl2 code-rag import --from ./my_pairs.jsonl
+spl2 code-rag import --from ./research_pairs.jsonl --source synthetic --no-validate
+
+# Add a single pair from a .spl file
+spl2 code-rag add "classify a support ticket and route to the right team" ./route.spl
+
+# Query — inspect what would be retrieved for a given description
+spl2 code-rag query "summarize a long document into bullet points"
+spl2 code-rag query "build an agent with quality loop" --top-k 5 --show-spl
+
+# Count total pairs
+spl2 code-rag count
+
+# Export all pairs as JSONL (for fine-tuning or backup)
+spl2 code-rag export
+spl2 code-rag export --output ./my_backup.jsonl
+```
+
+### JSONL Import Format
+
+Each line is a JSON object. The minimal required fields are `description` and either `spl_source` or `spl_file`:
+
+```jsonl
+{"description": "summarize a PDF", "spl_source": "PROMPT summarize_pdf\nSELECT ..."}
+{"description": "route a support ticket", "spl_file": "./route.spl", "category": "agentic"}
+{"description": "extract action items", "spl_source": "...", "name": "Action Extractor", "category": "application", "source": "research"}
+# comment lines are skipped
+```
+
+Optional fields:
+
+| Field | Description |
+|-------|-------------|
+| `name` | Human-readable name (shown in query results) |
+| `category` | Recipe category (`basics`, `agentic`, `application`, etc.) |
+| `source` | Provenance tag (`cookbook`, `user`, `synthetic`, `research`) |
+| `spl_file` | Path to an external `.spl` file instead of inline `spl_source` |
+
+The JSONL format is identical to `spl2 code-rag export` output — exported pairs can be re-imported into another project or after a DB reset.
+
+### Validation on Import
+
+By default, every pair in a JSONL import is validated through the SPL parser before being added. Invalid pairs are reported and skipped:
+
+```
+  line 3: invalid SPL (Parse error at 2:1: Expected PROMPT) — skipped
+Imported 2 pair(s)  |  skipped 0  |  invalid 1
+Total in store: 36
+```
+
+Use `--no-validate` to skip validation (e.g. when importing pairs already known to be valid, for speed):
+
+```bash
+spl2 code-rag import --from ./large_dataset.jsonl --no-validate
+```
+
+### Auto-Capture
+
+When Code-RAG is enabled (the default), every `spl2 compile` invocation that produces valid SPL automatically adds the `(description, SPL)` pair to the store. The store grows as you use the compiler — no manual curation needed.
+
+To disable auto-capture:
+```bash
+spl2 config set code_rag.auto_capture false
+```
+
+### Configuration
+
+The `code_rag` section in `~/.spl/config.yaml`:
+
+```yaml
+code_rag:
+  enabled: true            # set to false to disable Code-RAG entirely
+  storage_dir: .spl/code_rag
+  collection: spl_code_rag
+  top_k: 4                 # number of examples retrieved per compile call
+  auto_capture: true       # auto-add validated compile results to the store
+```
+
+### Self-Learning Flywheel
+
+Code-RAG implements a continuous improvement loop:
+
+```
+Cookbook recipes
+    +
+User compile calls  ──► validated (description, SPL) pair
+    +
+JSONL imports                    │
+                                 ▼
+                        Code-RAG Vector DB
+                                 │
+                    ┌────────────┴───────────┐
+                    ▼                        ▼
+          Retrieval at compile time     Export JSONL
+          (top-k injected into prompt)       │
+                                             ▼
+                                   Fine-tune dataset
+                                   for specialty SPL model
+```
+
+Every new cookbook recipe and every user compile call automatically improves future code generation — with no manual labelling, because the SPL parser/analyzer is the oracle.
+
+### Export for Fine-Tuning
+
+When the store is large enough, export as a JSONL fine-tuning dataset:
+
+```bash
+spl2 code-rag export --output .spl/code_rag/training_data.jsonl
+```
+
+Each exported record:
+```json
+{"description": "summarize a document", "spl_source": "PROMPT ...", "name": "...", "category": "application", "source": "compile"}
+```
+
+This dataset is suitable for fine-tuning a code-specialised model (e.g. `qwen2.5-coder`) on SPL syntax — the long-term path to a dedicated SPL compiler model that no longer needs RAG at all.
+
+---
+
+## 11. Adapter Setup Details
 
 ### Echo (Default)
 
@@ -934,7 +1129,7 @@ Available LLM adapters (10):
 
 ---
 
-## 11. RAG (Retrieval-Augmented Generation)
+## 12. RAG (Retrieval-Augmented Generation)
 
 ### Setup
 
@@ -975,7 +1170,7 @@ The RAG results are automatically formatted and injected into the prompt context
 
 ---
 
-## 12. RAG via CLI
+## 13. RAG via CLI
 
 You can also manage the vector store directly from the command line:
 
@@ -993,7 +1188,7 @@ spl2 rag query "What language runs in browsers?" --top-k 3
 
 ---
 
-## 13. Memory via CLI
+## 14. Memory via CLI
 
 Manage the persistent key-value store:
 
@@ -1024,7 +1219,7 @@ GENERATE answer(q)
 
 ---
 
-## 14. Configuration (`spl2 config`)
+## 15. Configuration (`spl2 config`)
 
 SPL 2.0 stores configuration in `~/.spl/config.yaml`. This eliminates repetitive CLI flags — set your preferred adapter, model, and timeouts once, and every `spl2 run` inherits them automatically.
 
@@ -1100,9 +1295,17 @@ storage_dir: .spl
 log_level: info
 log_console: false
 text2spl:
+  adapter: claude_cli        # dedicated compiler adapter (independent of spl2 run)
+  model: claude-sonnet-4-6   # dedicated compiler model
   mode: auto
   validate: true
   max_retries: 2
+code_rag:
+  enabled: true              # use Code-RAG for text2SPL example retrieval
+  storage_dir: .spl/code_rag
+  collection: spl_code_rag
+  top_k: 4                   # examples retrieved per compile call
+  auto_capture: true         # auto-add validated compile results to store
 adapters:
   ollama:
     base_url: http://localhost:11434
@@ -1143,7 +1346,7 @@ spl2 run query.spl --adapter echo    # uses echo, not ollama
 
 ---
 
-## 15. Logging
+## 16. Logging
 
 Every `spl2 run` and `spl2 text2spl` command automatically writes a log file to `~/.spl/logs/`.
 
@@ -1206,7 +1409,7 @@ grep "ERROR" ~/.spl/logs/*.log
 
 ---
 
-## 16. Project Structure
+## 17. Project Structure
 
 ```
 SPL20/
@@ -1224,6 +1427,7 @@ SPL20/
     cli.py               # CLI (spl2 command)
     config.py            # Configuration management (~/.spl/config.yaml)
     text2spl.py          # NL -> SPL compiler
+    code_rag.py          # Code-RAG: ChromaDB store for (description, SPL) pairs
     functions.py         # Function registry
     token_counter.py     # Model-aware token counting
     adapters/
@@ -1252,7 +1456,7 @@ SPL20/
 
 ---
 
-## 17. Type Reference
+## 18. Type Reference
 
 | Type | Description |
 |------|-------------|
@@ -1264,7 +1468,7 @@ SPL20/
 
 ---
 
-## 18. Troubleshooting
+## 19. Troubleshooting
 
 **`spl2: command not found`**
 ```bash
@@ -1283,6 +1487,21 @@ This usually means the Claude CLI can't run nested inside another Claude session
 ```bash
 pip install numpy faiss-cpu
 ```
+
+**`Code-RAG: store empty — run spl2 code-rag import`**
+Run `spl2 code-rag import` once to prime the store with cookbook recipes. After that, every `spl2 compile` call auto-captures pairs.
+
+**`chromadb` or `onnxruntime` import errors**
+```bash
+pip install chromadb onnxruntime
+```
+If onnxruntime crashes with a NumPy version error, upgrade it:
+```bash
+pip install "onnxruntime>=1.18"
+```
+
+**`ANTHROPIC_API_KEY` billing concern with `claude_cli` adapter**
+The `claude_cli` adapter strips `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL` from the subprocess environment before invoking `claude -p`, forcing use of your Claude subscription. It will never silently fall back to the paid API.
 
 **Parse error on keyword as variable name**
 Keywords like `input`, `output`, `result`, `prompt` can be used as `@variable` names and function arguments. If you hit a parse error, check that the keyword isn't being used in an unsupported position.

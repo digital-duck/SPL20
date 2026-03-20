@@ -231,9 +231,23 @@ class Lexer:
         self.tokens.append(Token(token_type, value, start_line, start_col))
 
     def _read_dollar_dollar(self):
-        """Read $$ delimiter (used in function body delimiters)."""
+        """Read $$...$$  — emit opening DOLLAR_DOLLAR, then body as raw STRING."""
         start_line = self.line
         start_col = self.column
         self._advance()  # skip first $
         self._advance()  # skip second $
         self.tokens.append(Token(TokenType.DOLLAR_DOLLAR, '$$', start_line, start_col))
+
+        # Consume everything until the closing $$ as a single raw string
+        body_chars: list[str] = []
+        body_line = self.line
+        body_col = self.column
+        while self.pos < len(self.source):
+            if self.source[self.pos] == '$' and self._peek(1) == '$':
+                self.tokens.append(Token(TokenType.STRING, ''.join(body_chars), body_line, body_col))
+                self._advance()  # skip first closing $
+                self._advance()  # skip second closing $
+                return
+            body_chars.append(self.source[self.pos])
+            self._advance()
+        raise LexerError("Unterminated $$ string", start_line, start_col)

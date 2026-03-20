@@ -21,7 +21,7 @@ Rules:
 4. Celebrate partial insights: "Good observation! Now what does that imply about...?"
 5. Never say "The answer is..." or "You should know that..."
 
-Student level: $$|| student_level ||$$
+Student level: {student_level}
 Adjust vocabulary and question complexity accordingly.
 $$;
 

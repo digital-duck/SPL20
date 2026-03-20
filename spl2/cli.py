@@ -277,6 +277,14 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
     source = _read_file(file)
     params = _parse_params(param + extra_args)
 
+    # Print the invocation and script source for easy review / log readability
+    cmd_parts = ["spl2", "run", file, "--adapter", adapter]
+    if model:
+        cmd_parts += ["-m", model]
+    cmd_parts += [f"{k}={v}" for k, v in params.items()]
+    click.echo(f"\n```bash\n{' '.join(cmd_parts)}\n```\n")
+    click.echo(f"```sql\n{source.rstrip()}\n```\n")
+
     _ensure_workspace(storage_dir)
 
     # Set up logging
@@ -683,14 +691,196 @@ def rag_count(storage_dir: str) -> None:
     click.echo(f"Documents indexed: {n}")
 
 
+# ── spl2 code-rag ────────────────────────────────────────────────────────────
+
+@cli.group("code-rag")
+def cmd_code_rag() -> None:
+    """Manage the Code-RAG store for text2SPL generation (.spl/code_rag)."""
+
+
+def _get_code_rag_store(storage_dir: str | None = None, collection: str | None = None):
+    """Return a CodeRAGStore using config defaults."""
+    from spl2.code_rag import CodeRAGStore
+    sd  = storage_dir or _cfg_default("code_rag.storage_dir", ".spl/code_rag")
+    col = collection  or _cfg_default("code_rag.collection",  CodeRAGStore.COLLECTION_NAME)
+    return CodeRAGStore(storage_dir=sd, collection_name=col)
+
+
+@cmd_code_rag.command("import")
+@click.option("--cookbook-dir", default="./cookbook", show_default=True,
+              help="Import all cookbook recipes (default source).")
+@click.option("--catalog", default=None, metavar="FILE",
+              help="Path to cookbook_catalog.json (default: <cookbook-dir>/cookbook_catalog.json).")
+@click.option("--from", "from_file", default=None, metavar="FILE",
+              help="Import (description, SPL) pairs from a JSONL file instead of cookbook.")
+@click.option("--source", default="external", show_default=True,
+              help="Provenance tag for JSONL imports (e.g. 'research', 'synthetic').")
+@click.option("--validate/--no-validate", default=True, show_default=True,
+              help="Validate each SPL pair before importing (JSONL mode only).")
+@click.option("--storage-dir", default=None, help="Code-RAG DB directory (default from config).")
+def code_rag_import(cookbook_dir: str, catalog: str | None, from_file: str | None,
+                    source: str, validate: bool, storage_dir: str | None) -> None:
+    """Prime the Code-RAG store with (description, SPL) pairs.
+
+    Without --from: imports all cookbook recipes (run this first to prime the DB).
+
+    \b
+      spl2 code-rag import
+      spl2 code-rag import --cookbook-dir /path/to/cookbook
+
+    With --from FILE: bulk-imports pairs from a JSONL file. Each line must be:
+
+    \b
+      {"description": "summarize a PDF", "spl_source": "PROMPT ..."}
+
+    Optional fields: name, category, source. Or reference an external file:
+
+    \b
+      {"description": "...", "spl_file": "./my_recipe.spl"}
+
+    The JSONL format matches `spl2 code-rag export` output exactly, so
+    exported pairs can be re-imported into another project or after a DB reset.
+
+    \b
+      spl2 code-rag import --from ./my_pairs.jsonl
+      spl2 code-rag import --from ./my_pairs.jsonl --source synthetic --no-validate
+    """
+    store = _get_code_rag_store(storage_dir)
+
+    if from_file:
+        # ── JSONL import ──────────────────────────────────────────────────
+        from spl2.text2spl import Text2SPL
+        path = Path(from_file)
+        if not path.exists():
+            raise click.ClickException(f"File not found: {from_file}")
+
+        added = skipped = invalid = 0
+        with path.open(encoding="utf-8") as f:
+            for lineno, line in enumerate(f, 1):
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    click.echo(f"  line {lineno}: JSON parse error — {exc}", err=True)
+                    skipped += 1
+                    continue
+
+                description = record.get("description", "").strip()
+                if not description:
+                    click.echo(f"  line {lineno}: missing 'description' — skipped", err=True)
+                    skipped += 1
+                    continue
+
+                spl_source = record.get("spl_source", "").strip()
+                if not spl_source:
+                    spl_file_ref = record.get("spl_file", "").strip()
+                    if spl_file_ref:
+                        ref = Path(spl_file_ref)
+                        if not ref.exists():
+                            click.echo(f"  line {lineno}: spl_file not found: {spl_file_ref} — skipped", err=True)
+                            skipped += 1
+                            continue
+                        spl_source = ref.read_text(encoding="utf-8").strip()
+                    else:
+                        click.echo(f"  line {lineno}: missing 'spl_source' or 'spl_file' — skipped", err=True)
+                        skipped += 1
+                        continue
+
+                if validate:
+                    valid, message = Text2SPL.validate_output(spl_source)
+                    if not valid:
+                        click.echo(f"  line {lineno}: invalid SPL ({message}) — skipped", err=True)
+                        invalid += 1
+                        continue
+
+                meta = {
+                    "name":     record.get("name", ""),
+                    "category": record.get("category", ""),
+                    "source":   record.get("source", source),
+                }
+                store.add_pair(description=description, spl_source=spl_source, metadata=meta)
+                added += 1
+
+        click.echo(f"Imported {added} pair(s)  |  skipped {skipped}  |  invalid {invalid}")
+
+    else:
+        # ── Cookbook import ───────────────────────────────────────────────
+        click.echo(f"Importing cookbook recipes from {cookbook_dir} ...")
+        added = store.index_recipes(cookbook_dir=cookbook_dir, catalog_path=catalog)
+        if added == 0 and store.count() > 0:
+            click.echo("(All recipes already imported — nothing to do)")
+        else:
+            click.echo(f"Imported {added} new recipe(s).")
+
+    click.echo(f"Total in store: {store.count()}")
+
+
+# Alias for discoverability
+cmd_code_rag.add_command(code_rag_import, name="index")
+
+
+@cmd_code_rag.command("add")
+@click.argument("description")
+@click.argument("spl_file", type=click.Path(dir_okay=False))
+@click.option("--storage-dir", default=None, help="Code-RAG DB directory (default from config).")
+def code_rag_add(description: str, spl_file: str, storage_dir: str | None) -> None:
+    """Add a (DESCRIPTION, SPL_FILE) pair to the Code-RAG store."""
+    spl_source = _read_file(spl_file)
+    store = _get_code_rag_store(storage_dir)
+    doc_id = store.add_pair(description=description, spl_source=spl_source,
+                            metadata={"source": "manual", "file": spl_file})
+    click.echo(f"Added pair (id={doc_id}).  Total in store: {store.count()}")
+
+
+@cmd_code_rag.command("query")
+@click.argument("description")
+@click.option("--top-k", default=4, show_default=True, help="Number of results.")
+@click.option("--storage-dir", default=None, help="Code-RAG DB directory (default from config).")
+@click.option("--show-spl", is_flag=True, default=False, help="Print full SPL source for each hit.")
+def code_rag_query(description: str, top_k: int, storage_dir: str | None, show_spl: bool) -> None:
+    """Retrieve the top-k most similar SPL examples for DESCRIPTION."""
+    store = _get_code_rag_store(storage_dir)
+    hits = store.retrieve(description, top_k=top_k)
+    if not hits:
+        click.echo("No results (store may be empty — run: spl2 code-rag index)")
+        return
+    for i, h in enumerate(hits, 1):
+        label = h["name"] or h["description"][:60]
+        click.echo(f"\n{i}. [{h['source']}]  score={h['score']:.4f}  {label}")
+        click.echo(f"   {h['description']}")
+        if show_spl:
+            click.echo(f"\n```sql\n{h['spl_source']}\n```")
+
+
+@cmd_code_rag.command("count")
+@click.option("--storage-dir", default=None, help="Code-RAG DB directory (default from config).")
+def code_rag_count(storage_dir: str | None) -> None:
+    """Show the number of (description, SPL) pairs in the Code-RAG store."""
+    store = _get_code_rag_store(storage_dir)
+    click.echo(f"Code-RAG pairs indexed: {store.count()}")
+
+
+@cmd_code_rag.command("export")
+@click.option("--output", "-o", default=".spl/code_rag/training_data.jsonl", show_default=True,
+              help="Output JSONL file path.")
+@click.option("--storage-dir", default=None, help="Code-RAG DB directory (default from config).")
+def code_rag_export(output: str, storage_dir: str | None) -> None:
+    """Export all pairs as JSONL for model fine-tuning."""
+    store = _get_code_rag_store(storage_dir)
+    n = store.export_jsonl(output)
+    click.echo(f"Exported {n} pair(s) to {output}")
+
+
 # ── spl2 text2spl / compile ──────────────────────────────────────────────────
 
 @cli.command("text2spl", context_settings={"ignore_unknown_options": True})
 @click.argument("description")
 @click.option("--adapter", default=None, metavar="NAME",
-              help="LLM adapter for code generation (default from config or 'ollama').")
+              help="Compiler adapter (default: text2spl.adapter from config).")
 @click.option("--model", "-m", default=None, metavar="MODEL",
-              help="Override model for the compiler LLM.")
+              help="Compiler model (default: text2spl.model from config).")
 @click.option("--mode", type=click.Choice(["auto", "prompt", "workflow"]),
               default=None,
               help="Generation mode: prompt, workflow, or auto (default from config).")
@@ -709,16 +899,24 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
                  extra_args: tuple[str, ...]) -> None:
     """Compile natural language DESCRIPTION into SPL 2.0 code.
 
+    Uses the dedicated text2spl compiler adapter/model from config
+    (text2spl.adapter / text2spl.model) — independent of the runtime
+    adapter used by `spl2 run`.
+
     \b
     Examples:
-      spl2 text2spl "summarize a document" --adapter ollama
+      spl2 text2spl "summarize a document"
       spl2 text2spl "build a review agent" --mode workflow
       spl2 text2spl "translate text to French" -o translate.spl
       spl2 text2spl "classify user intent" --execute text="Hello there"
+      spl2 text2spl "..." --adapter ollama -m qwen2.5-coder  # override compiler
     """
-    # Apply config defaults
-    adapter = adapter or _cfg_default("adapter", "ollama")
-    mode = mode or _cfg_default("text2spl.mode", "auto")
+    # text2spl has its own adapter/model config section, separate from runtime.
+    # Priority: CLI flag > text2spl config section > global adapter fallback.
+    adapter = adapter or _cfg_default("text2spl.adapter", None) or _cfg_default("adapter", "claude_cli")
+    adapter = adapter or "claude_cli"
+    model   = model   or _cfg_default("text2spl.model",   None) or None
+    mode    = mode    or _cfg_default("text2spl.mode",    "auto") or "auto"
 
     # Set up logging
     log_path = _setup_logging(run_name="text2spl", adapter=adapter)
@@ -734,7 +932,30 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
-    compiler = Text2SPL(llm)
+    # Wire up Code-RAG if enabled in config
+    code_rag = None
+    if _cfg_default("code_rag.enabled", True):
+        try:
+            from spl2.code_rag import CodeRAGStore
+            code_rag = CodeRAGStore(
+                storage_dir=_cfg_default("code_rag.storage_dir", ".spl/code_rag"),
+                collection_name=_cfg_default("code_rag.collection", CodeRAGStore.COLLECTION_NAME),
+            )
+            if code_rag.count() > 0:
+                click.echo(f"Code-RAG: {code_rag.count()} examples indexed", err=True)
+            else:
+                click.echo("Code-RAG: store empty — run `spl2 code-rag index` to populate", err=True)
+                code_rag = None
+        except Exception as exc:
+            log.warning("Code-RAG unavailable: %s", exc)
+
+    compiler = Text2SPL(
+        adapter=llm,
+        max_retries=_cfg_default("text2spl.max_retries", 2),
+        code_rag=code_rag,
+        rag_top_k=_cfg_default("code_rag.top_k", 4),
+        auto_capture=_cfg_default("code_rag.auto_capture", True),
+    )
 
     try:
         spl_code = asyncio.run(compiler.compile(description, mode=mode))

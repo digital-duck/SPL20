@@ -13,6 +13,8 @@ Usage:
     python cookbook/run_all.py --catalog                  # full catalog table
     python cookbook/run_all.py --catalog --category agentic
     python cookbook/run_all.py --catalog --status new
+
+    python cookbook/run_all.py 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md 
 """
 
 import argparse
@@ -189,10 +191,17 @@ def main() -> None:
         print_list(recipes, args.category, args.status)
         return
 
-    # Build ID filter set
+    # Build ID filter set — supports "1-4, 10" ranges and plain lists
     id_filter: set[str] = set()
     if args.ids:
-        id_filter = {i.strip() for i in args.ids.split(",")}
+        for part in args.ids.split(","):
+            part = part.strip()
+            if "-" in part:
+                lo, hi = part.split("-", 1)
+                for n in range(int(lo.strip()), int(hi.strip()) + 1):
+                    id_filter.add(f"{n:02d}")
+            else:
+                id_filter.add(f"{int(part):02d}" if part.isdigit() else part)
 
     start_all = datetime.now()
     print(f"=== SPL 2.0 Cookbook Batch Run — {start_all.strftime('%Y-%m-%d %H:%M:%S')} ===")

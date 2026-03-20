@@ -22,13 +22,17 @@ class ClaudeCLIAdapter(LLMAdapter):
     Claude Code subscription (flat billing = zero marginal cost per call).
     """
 
+    DEFAULT_MODEL = "claude-sonnet-4-6"
+
     def __init__(
         self,
         cli_path: str = "claude",
+        default_model: str = DEFAULT_MODEL,
         timeout: int = 300,
         allowed_tools: list[str] | None = None,
     ):
         self.cli_path = cli_path
+        self.default_model = default_model
         self.timeout = timeout
         self.allowed_tools = allowed_tools or []
 
@@ -49,7 +53,9 @@ class ClaudeCLIAdapter(LLMAdapter):
             full_prompt = f"System: {system}\n\nUser: {prompt}"
 
         # Build CLI command
-        cmd = [self.cli_path, "-p", full_prompt, "--no-session-persistence"]
+        effective_model = model or self.default_model
+        cmd = [self.cli_path, "-p", full_prompt, "--no-session-persistence",
+               "--model", effective_model]
         if self.allowed_tools:
             cmd += ["--allowedTools", ",".join(self.allowed_tools)]
         else:
@@ -57,11 +63,18 @@ class ClaudeCLIAdapter(LLMAdapter):
             # permission checks, which cuts ~50s of startup overhead.
             cmd += ["--tools", ""]
 
-        # Strip Claude Code session markers so the CLI accepts nested invocations.
-        # Without this, running inside an active Claude Code session causes
-        # `claude -p` to exit silently with rc=1 (nested-session protection).
-        _CLAUDE_SESSION_VARS = {"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"}
-        env = {k: v for k, v in os.environ.items() if k not in _CLAUDE_SESSION_VARS}
+        # Strip vars that would route requests to the paid API instead of
+        # the Claude Code subscription.  If ANTHROPIC_API_KEY is present in
+        # the environment, claude -p uses the API (and charges per token).
+        # Removing it forces the CLI to use its locally-stored OAuth token.
+        # Also strip session markers so nested invocations are accepted.
+        _STRIP_VARS = {
+            "ANTHROPIC_API_KEY",       # paid API — must NOT be used here
+            "ANTHROPIC_BASE_URL",      # API base URL — not needed for CLI auth
+            "CLAUDECODE",              # nested-session guard
+            "CLAUDE_CODE_ENTRYPOINT",  # nested-session guard
+        }
+        env = {k: v for k, v in os.environ.items() if k not in _STRIP_VARS}
 
         # Run subprocess asynchronously
         try:
@@ -103,7 +116,7 @@ class ClaudeCLIAdapter(LLMAdapter):
 
         return GenerationResult(
             content=content,
-            model="claude-cli",
+            model=effective_model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens,
@@ -118,5 +131,5 @@ class ClaudeCLIAdapter(LLMAdapter):
         return max(1, len(text) // 4)
 
     def list_models(self) -> list[str]:
-        """Claude CLI uses whatever model is configured in the subscription."""
-        return ["claude-cli"]
+        """Return the default model; any Claude model ID can be passed to generate()."""
+        return [self.default_model]

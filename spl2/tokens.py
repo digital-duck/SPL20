@@ -75,6 +75,7 @@ class TokenType(Enum):
     INTO = auto()
     CALL = auto()
     DEFAULT = auto()
+    SET = auto()
 
     # Security / Accounting / Labels keywords
     SECURITY = auto()
@@ -192,6 +193,7 @@ KEYWORDS: dict[str, TokenType] = {
     "into": TokenType.INTO,
     "call": TokenType.CALL,
     "default": TokenType.DEFAULT,
+    "set": TokenType.SET,
     "security": TokenType.SECURITY,
     "accounting": TokenType.ACCOUNTING,
     "classification": TokenType.CLASSIFICATION,

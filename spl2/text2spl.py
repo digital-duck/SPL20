@@ -6,10 +6,14 @@ into valid SPL 2.0 source code.
 
 from __future__ import annotations
 
+import logging
+
 from spl2.adapters.base import LLMAdapter
 from spl2.lexer import Lexer, LexerError
 from spl2.parser import Parser, ParseError
 from spl2.analyzer import Analyzer, AnalysisError
+
+_log = logging.getLogger("spl2.text2spl")
 
 
 SPL2_SYSTEM_PROMPT = """\
@@ -31,7 +35,7 @@ SELECT <expr> [AS <alias>] [LIMIT <n> TOKENS], ...
 [WHERE <condition>]
 [ORDER BY <field> ASC|DESC]
 GENERATE <function>(<args>) [WITH TEMPERATURE <t>] [WITH OUTPUT BUDGET <n> TOKENS]
-[STORE IN <target>];
+[STORE RESULT IN memory.<key>];
 
 --- WORKFLOW statement ---
 Multi-step orchestration with control flow:
@@ -158,6 +162,9 @@ GENERATE translate(source, target_language) WITH OUTPUT BUDGET 1200 TOKENS;
 """
 
 
+_EXAMPLES_MARKER = "== EXAMPLES =="
+
+
 _MODE_INSTRUCTIONS = {
     "prompt": (
         "Generate a single PROMPT statement. Do not use WORKFLOW or CREATE FUNCTION "
@@ -179,9 +186,19 @@ _MODE_INSTRUCTIONS = {
 class Text2SPL:
     """Compile natural language descriptions into SPL 2.0 source code."""
 
-    def __init__(self, adapter: LLMAdapter, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        adapter: LLMAdapter,
+        max_retries: int = 2,
+        code_rag=None,          # CodeRAGStore | None
+        rag_top_k: int = 4,
+        auto_capture: bool = True,
+    ) -> None:
         self.adapter = adapter
         self.max_retries = max_retries
+        self.code_rag = code_rag
+        self.rag_top_k = rag_top_k
+        self.auto_capture = auto_capture
 
     async def compile(self, description: str, mode: str = "auto") -> str:
         """Convert a natural language task description into SPL 2.0 source code.
@@ -206,6 +223,9 @@ class Text2SPL:
                 f"{', '.join(sorted(_MODE_INSTRUCTIONS))}"
             )
 
+        # Build system prompt — replace static examples with RAG hits when available
+        system = self._build_system_prompt(description)
+
         user_prompt = (
             f"Task: {description}\n\n"
             f"Mode instruction: {_MODE_INSTRUCTIONS[mode]}\n\n"
@@ -214,7 +234,7 @@ class Text2SPL:
 
         result = await self.adapter.generate(
             prompt=user_prompt,
-            system=SPL2_SYSTEM_PROMPT,
+            system=system,
             temperature=0.3,
         )
 
@@ -222,11 +242,13 @@ class Text2SPL:
 
         # Compile-validate-retry loop: if the generated code is invalid,
         # feed the error back to the LLM for correction
-        for attempt in range(self.max_retries):
+        retry_count = 0
+        for _ in range(self.max_retries):
             valid, message = self.validate_output(spl_code)
             if valid:
                 break
-            # Ask the LLM to fix the error
+            retry_count += 1
+            _log.debug("Validation failed (attempt %d): %s", retry_count, message)
             fix_prompt = (
                 f"The following SPL 2.0 code has an error:\n\n"
                 f"```\n{spl_code}\n```\n\n"
@@ -236,12 +258,54 @@ class Text2SPL:
             )
             fix_result = await self.adapter.generate(
                 prompt=fix_prompt,
-                system=SPL2_SYSTEM_PROMPT,
+                system=system,
                 temperature=0.2,
             )
             spl_code = self._strip_fences(fix_result.content.strip())
 
+        # Auto-capture validated pair into Code-RAG for future retrieval
+        valid, _ = self.validate_output(spl_code)
+        if valid and self.auto_capture and self.code_rag is not None:
+            try:
+                self.code_rag.add_pair(
+                    description=description,
+                    spl_source=spl_code,
+                    metadata={"source": "compile", "retries": retry_count},
+                )
+                _log.debug("Auto-captured pair into Code-RAG: %s", description[:60])
+            except Exception as exc:
+                _log.warning("Code-RAG auto-capture failed: %s", exc)
+
         return spl_code
+
+    # ------------------------------------------------------------------
+    # System prompt construction
+    # ------------------------------------------------------------------
+
+    def _build_system_prompt(self, description: str) -> str:
+        """Build the system prompt, replacing static examples with RAG hits."""
+        if self.code_rag is None or self.code_rag.count() == 0:
+            return SPL2_SYSTEM_PROMPT
+
+        hits = self.code_rag.retrieve(description, top_k=self.rag_top_k)
+        if not hits:
+            return SPL2_SYSTEM_PROMPT
+
+        # Build dynamic examples block from retrieved pairs
+        examples_block = "== EXAMPLES ==\n"
+        for i, hit in enumerate(hits, 1):
+            label = hit["name"] or hit["description"][:60]
+            examples_block += f"\nExample {i} -- {label}:\n\n{hit['spl_source']}\n"
+
+        _log.debug("Code-RAG: injected %d examples for %r", len(hits), description[:50])
+
+        # Swap the static examples section for the retrieved ones
+        marker = _EXAMPLES_MARKER
+        if marker in SPL2_SYSTEM_PROMPT:
+            prefix = SPL2_SYSTEM_PROMPT[: SPL2_SYSTEM_PROMPT.index(marker)]
+            return prefix + examples_block
+        # Fallback: append retrieved examples after the static prompt
+        return SPL2_SYSTEM_PROMPT + "\n\n" + examples_block
 
     # ------------------------------------------------------------------
     # Validation

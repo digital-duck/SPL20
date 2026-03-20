@@ -320,11 +320,13 @@ class CallStatement:
 
 @dataclass
 class SelectIntoStatement:
-    """SELECT ... FROM ... INTO @var (used inside workflows)"""
+    """SELECT ... FROM ... INTO @var (used inside workflows), optional CTE block"""
     select_items: list[SelectItem] = field(default_factory=list)
     from_clause: FromClause | None = None
     where_clause: WhereClause | None = None
-    target_variable: str | None = None
+    target_variable: str | None = None           # single-var (backward compat)
+    target_variables: list[str] = field(default_factory=list)  # multi-var INTO
+    ctes: list = field(default_factory=list)     # list[CTEClause]
 
 
 @dataclass

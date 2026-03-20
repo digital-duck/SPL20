@@ -67,8 +67,8 @@ class TestLexerSPL1Compat:
     def test_dollar_dollar(self):
         tokens = Lexer('$$ body $$').tokenize()
         assert tokens[0].type == TokenType.DOLLAR_DOLLAR
-        assert tokens[1].type == TokenType.IDENTIFIER
-        assert tokens[2].type == TokenType.DOLLAR_DOLLAR
+        assert tokens[1].type == TokenType.STRING
+        assert tokens[1].value == ' body '
 
     def test_dot_notation(self):
         tokens = Lexer("context.user").tokenize()
