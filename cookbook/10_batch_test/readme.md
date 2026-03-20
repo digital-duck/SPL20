@@ -54,7 +54,8 @@ MODELS="gemma3" bash cookbook/10_batch_test/batch_test.sh
 ADAPTER=echo bash cookbook/10_batch_test/batch_test.sh
 
 # Custom model set
-MODELS="gemma3 llama3.2 mistral phi3" bash cookbook/10_batch_test/batch_test.sh
+MODELS="gemma3 llama3.2 phi3" bash cookbook/10_batch_test/batch_test.sh \
+    2>&1 | tee cookbook/out/10_batch_test-$(date +%Y%m%d_%H%M%S).md 
 ```
 
 Output:

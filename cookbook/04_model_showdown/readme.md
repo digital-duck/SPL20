@@ -16,9 +16,7 @@ spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
 
 Override the models:
 ```bash
-spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
-    prompt="Write a haiku" \
-    model_1=gemma3 model_2=phi3 model_3=qwen2.5
+spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama prompt="Write a poem about Spring season" model_1=gemma3 model_2=phi3 model_3=qwen2.5
 ```
 
 ## Parameters

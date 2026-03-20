@@ -23,14 +23,18 @@ def calc_growth_rate(pop_prev: str, pop_curr: str) -> str:
         Growth rate as a string rounded to 4 decimal places, e.g. "0.8726"
     """
     def parse_pop(s: str) -> float:
-        # Strip commas, spaces, and any trailing text like "(est.)"
-        clean = ""
-        for ch in s:
-            if ch.isdigit() or ch == ".":
-                clean += ch
-        if not clean:
-            raise ValueError(f"Could not parse population from: {s!r}")
-        return float(clean)
+        # Find the first sequence of digits (with optional commas) — the population number.
+        # Using regex avoids grabbing stray digits from surrounding prose/years/decimals.
+        import re
+        # First try: a bare integer run (possibly comma-separated), at least 4 digits
+        m = re.search(r"\b(\d[\d,]{3,})\b", s)
+        if m:
+            return float(m.group(1).replace(",", ""))
+        # Fallback: any run of 4+ digits
+        m = re.search(r"\d{4,}", s)
+        if m:
+            return float(m.group(0))
+        raise ValueError(f"Could not parse population from: {s!r}")
 
     prev = parse_pop(pop_prev)
     curr = parse_pop(pop_curr)

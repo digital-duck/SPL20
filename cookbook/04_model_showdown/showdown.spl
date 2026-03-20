@@ -17,8 +17,9 @@ CREATE FUNCTION compare_responses(
 ) RETURNS TEXT AS $$
 You are a neutral evaluator comparing responses from three AI models.
 
-Prompt given to all models:
-"{prompt}"
+Prompt given to all models: "{prompt}"
+
+First, reproduce each model's raw response exactly as given, formatted like this:
 
 === {model_1} ===
 {answer_1}
@@ -29,10 +30,9 @@ Prompt given to all models:
 === {model_3} ===
 {answer_3}
 
-For each model, briefly assess:
-- Response quality and accuracy
+Then provide your evaluation. For each model briefly assess:
+- Response quality
 - Key strengths or weaknesses
-- Notable differences from the others
 
 Conclude with which model gave the most helpful answer and why.
 $$;
@@ -41,8 +41,8 @@ WORKFLOW model_showdown
     INPUT:
         @prompt  TEXT DEFAULT 'What is the meaning of life?',
         @model_1 TEXT DEFAULT 'gemma3',
-        @model_2 TEXT DEFAULT 'llama3.2',
-        @model_3 TEXT DEFAULT 'mistral'
+        @model_2 TEXT DEFAULT 'phi3',
+        @model_3 TEXT DEFAULT 'qwen2.5'
     OUTPUT: @comparison TEXT
 DO
     -- Run the same prompt against all three models in parallel CTEs

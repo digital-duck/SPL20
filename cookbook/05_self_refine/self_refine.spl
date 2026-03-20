@@ -2,11 +2,13 @@
 -- Iteratively improves output through critique and refinement
 
 WORKFLOW self_refine
-  INPUT: @task text
+  INPUT: 
+    @task text,
+    @max_iterations integer default 5
   OUTPUT: @result text
 DO
   @iteration := 0
-  @max_iterations := 5
+  --  @max_iterations := 5
 
   -- Initial draft
   GENERATE draft(@task) INTO @current

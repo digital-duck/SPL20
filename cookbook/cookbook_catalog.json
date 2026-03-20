@@ -51,7 +51,7 @@
         "./03_multilingual/multilingual.spl",
         "--adapter",
         "ollama",
-        "user_input=hello wen",
+        "user_input=Hello Wen-Guang",
         "lang=Chinese"
       ],
       "dir": "03_multilingual",
@@ -70,7 +70,7 @@
         "./04_model_showdown/showdown.spl",
         "--adapter",
         "ollama",
-        "prompt=What is the meaning of life?"
+        "prompt=Write a poem about Spring season"
       ],
       "dir": "04_model_showdown",
       "log": "showdown",

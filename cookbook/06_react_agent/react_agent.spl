@@ -29,12 +29,26 @@ END
 -- calc_growth_rate is a Python tool registered from tools.py via --tools.
 -- CALL routes to Python directly — deterministic, zero LLM cost.
 
+-- Tight prompt for growth_report: plain narrative, no tool use, no file writes.
+CREATE FUNCTION growth_report(country TEXT, year_prev TEXT, pop_prev TEXT, year_curr TEXT, pop_curr TEXT, growth_rate TEXT) RETURNS TEXT AS $$
+Write a concise 2-3 sentence population growth report for {country}.
+
+Data:
+- {year_prev} population: {pop_prev}
+- {year_curr} population: {pop_curr}
+- Year-over-year growth rate: {growth_rate}%
+
+Plain prose only. No markdown headers. No file creation. No tool use. Just the narrative.
+$$;
+
 WORKFLOW population_growth
-  INPUT: @country TEXT DEFAULT 'France'
+  INPUT: 
+    @country TEXT DEFAULT 'China',
+    @year_curr integer default 2023
   OUTPUT: @report TEXT
 DO
-  @year_prev := 2023
-  @year_curr := 2024
+  @year_prev := @year_curr - 1
+  -- @year_curr := 2024
 
   -- Step 1: Fetch population for each year via WebSearch
   CALL search_population(@country, @year_prev) INTO @pop_prev

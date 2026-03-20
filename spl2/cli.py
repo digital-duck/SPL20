@@ -149,12 +149,17 @@ def _print_result(result) -> None:
         if result.committed_value:
             click.echo("-" * 60)
             click.echo(f"```output\n{result.committed_value}\n```")
-        if result.output:
+        # Show intermediate variables: skip empty values and skip any variable
+        # whose value duplicates the committed output (already shown above).
+        intermediate = {
+            k: v for k, v in result.output.items()
+            if v and v != result.committed_value
+        }
+        if intermediate:
             click.echo("-" * 60)
             click.echo("Variables:")
-            for k, v in result.output.items():
-                val_preview = v[:200] if len(v) > 200 else v
-                click.echo(f"  @{k} = {val_preview}")
+            for k, v in intermediate.items():
+                click.echo(f"  @{k} = {v}")
         click.echo("=" * 60)
 
 
@@ -673,12 +678,37 @@ def cmd_rag() -> None:
 @cmd_rag.command("add")
 @click.argument("text")
 @click.option("--storage-dir", default=".spl", show_default=True)
-def rag_add(text: str, storage_dir: str) -> None:
-    """Add TEXT to the vector store."""
+@click.option("--chunk/--no-chunk", default=None,
+              help="Split file into paragraphs and index each separately. "
+                   "Auto-enabled when TEXT is a file path.")
+def rag_add(text: str, storage_dir: str, chunk: bool | None) -> None:
+    """Add TEXT (or a file path) to the vector store.
+
+    When TEXT is a file path, the file is read automatically.
+    Paragraph chunking is enabled by default for files (use --no-chunk to disable).
+    """
+    import os, re
     from spl2.storage import get_vector_store
+
+    if os.path.isfile(text):
+        with open(text, "r", encoding="utf-8") as f:
+            content = f.read()
+        click.echo(f"Reading file: {text} ({len(content):,} chars)")
+        do_chunk = chunk if chunk is not None else True  # default ON for files
+    else:
+        content = text
+        do_chunk = chunk or False  # default OFF for inline text
+
     store = get_vector_store("faiss", storage_dir)
-    doc_id = store.add(text)
-    click.echo(f"Added document (id={doc_id}), total: {store.count()}")
+
+    if do_chunk:
+        chunks = [c.strip() for c in re.split(r"\n{2,}", content) if c.strip()]
+        ids = store.add_batch(chunks)
+        click.echo(f"Indexed {len(ids)} paragraphs (model: {store.model_name}), total: {store.count()}")
+    else:
+        doc_id = store.add(content)
+        click.echo(f"Added document (id={doc_id}), total: {store.count()}")
+
     store.close()
 
 

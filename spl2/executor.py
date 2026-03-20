@@ -258,7 +258,7 @@ class Executor:
             elif step.operation == "memory_get":
                 context_parts[step.alias] = self._resolve_memory(step)
             elif step.operation == "rag_query":
-                context_parts[step.alias] = self._resolve_rag(step, stmt)
+                context_parts[step.alias] = self._resolve_rag(step, stmt, params)
             elif step.operation == "cte" and step.alias not in context_parts:
                 context_parts[step.alias] = f"[CTE '{step.alias}' not resolved]"
 
@@ -370,7 +370,8 @@ class Executor:
         value = self.memory.get(key)
         return value or f"[Memory key '{key}' not found]"
 
-    def _resolve_rag(self, step: ExecutionStep, stmt: PromptStatement | None) -> str:
+    def _resolve_rag(self, step: ExecutionStep, stmt: PromptStatement | None,
+                     params: dict[str, str] | None = None) -> str:
         """Resolve a rag_query step by searching the vector store."""
         try:
             query_text = ""
@@ -381,6 +382,16 @@ class Executor:
                         rq = item.expression
                         if isinstance(rq.query_text, Literal):
                             query_text = str(rq.query_text.value)
+                        elif isinstance(rq.query_text, (DottedName, Identifier, ParamRef)):
+                            # Resolve variable/param reference to its runtime value
+                            ref_name = (
+                                rq.query_text.full_name
+                                if isinstance(rq.query_text, DottedName)
+                                else rq.query_text.name
+                            )
+                            # DottedName like context.question → look up "question"
+                            lookup = ref_name.split(".")[-1]
+                            query_text = (params or {}).get(lookup, "")
                         else:
                             query_text = str(rq.query_text)
                         if rq.top_k is not None:
@@ -392,8 +403,8 @@ class Executor:
             results = self.vector_store.query(query_text, top_k=top_k)
             if not results:
                 return "[No RAG results found]"
-            return "\n".join(
-                f"[Document {r['id']}]: {r['text']}" for r in results
+            return "\n\n---\n\n".join(
+                f"Document {i+1}:\n{r['text']}" for i, r in enumerate(results)
             )
         except Exception:
             _log.exception("RAG query failed")
@@ -452,10 +463,12 @@ class Executor:
         state = WorkflowState(params)
         start = time.perf_counter()
 
-        # Initialize input variables from params
+        # Initialize input variables: explicit params override defaults
         for inp in stmt.inputs:
             if params and inp.name in params:
                 state.set_var(inp.name, str(params[inp.name]))
+            elif inp.default_value is not None:
+                state.set_var(inp.name, self._eval_expression(inp.default_value, state))
 
         try:
             await self._execute_body(stmt.body, state)
@@ -528,27 +541,36 @@ class Executor:
                 cte_results[f"{cte.name}.{field}"] = result
                 cte_results[cte.name] = result  # also accessible by bare name
 
-        # Evaluate SELECT items against cte_results
+        # Evaluate SELECT items against cte_results.
+        # DottedName expressions (e.g. response_1.answer) must be resolved
+        # against cte_results, not state.variables — _eval_expression would
+        # look in the wrong place and always return "".
         selected: list[str] = []
         for item in stmt.select_items:
             alias = getattr(item, 'alias', None)
             expr = item.expression if hasattr(item, 'expression') else None
-            # Resolve dotted names like variant_a.response from cte_results
             val = ""
             if expr is not None:
-                expr_str = self._eval_expression(expr, state)
-                val = cte_results.get(expr_str, cte_results.get(expr_str.replace(".", "."), expr_str))
-            # Direct lookup by alias or dotted name
-            if not val:
-                key = str(alias) if alias else ""
-                val = cte_results.get(key, "")
+                if isinstance(expr, DottedName):
+                    # e.g. response_1.answer -> cte_results["response_1.answer"]
+                    # fall back to bare cte name if field-qualified key not found
+                    val = cte_results.get(
+                        expr.full_name,
+                        cte_results.get(expr.full_name.split(".")[0], ""),
+                    )
+                else:
+                    expr_str = self._eval_expression(expr, state)
+                    val = cte_results.get(expr_str, "")
+            # Direct lookup by alias as last resort
+            if not val and alias:
+                val = cte_results.get(str(alias), "")
             selected.append(val)
 
         # Assign to target variables (multi-var INTO)
         targets = stmt.target_variables or ([stmt.target_variable] if stmt.target_variable else [])
         for var, val in zip(targets, selected):
             state.set_var(var, val)
-            _log.debug("SELECT INTO: @%s = %s...", var, val[:80] if val else "")
+            _log.info("SELECT INTO: @%s (%d chars)", var, len(val) if val else 0)
 
     async def _exec_generate_into_prompt(self, prompt_stmt, state: WorkflowState) -> str:
         """Execute an inner PROMPT+GENERATE (from a CTE) and return the generated text."""
@@ -571,6 +593,7 @@ class Executor:
         if model.startswith('@'):
             model = state.get_var(model[1:])
 
+        _log.info("CTE GENERATE %s (model=%s)", gen.function_name, model or "default")
         gen_result = await self.adapter.generate(
             prompt=prompt_text,
             model=model,
@@ -578,6 +601,8 @@ class Executor:
             temperature=gen.temperature or 0.7,
         )
         state.record_llm_call(gen_result)
+        _log.info("CTE GENERATE %s done (%d tokens, %.0fms)",
+                  gen.function_name, gen_result.output_tokens, gen_result.latency_ms)
         return gen_result.content
 
     async def _exec_assignment(self, stmt: AssignmentStatement, state: WorkflowState):
@@ -620,8 +645,9 @@ class Executor:
 
         if stmt.target_variable:
             state.set_var(stmt.target_variable, gen_result.content)
-            _log.debug("GENERATE %s -> @%s (%d tokens)",
-                       gen.function_name, stmt.target_variable, gen_result.output_tokens)
+            _log.info("GENERATE %s -> @%s (%d tokens, %.0fms)",
+                      gen.function_name, stmt.target_variable,
+                      gen_result.output_tokens, gen_result.latency_ms)
 
     async def _exec_evaluate(self, stmt: EvaluateStatement, state: WorkflowState):
         """Execute EVALUATE expr WHEN ... END"""
@@ -738,9 +764,10 @@ class Executor:
         state.committed = True
         state.committed_value = value
         state.committed_options = options
-        _log.info("COMMIT: %s (options: %s)", value[:100] if len(value) > 100 else value, options)
+        opts_str = ", ".join(f"{k}={v}" for k, v in options.items()) if options else "none"
+        _log.info("COMMIT: %d chars | %s", len(value), opts_str)
 
-    async def _exec_raise(self, stmt: RaiseStatement, state: WorkflowState):
+    async def _exec_raise(self, stmt: RaiseStatement, state: WorkflowState):  # noqa: ARG002
         """Execute RAISE exception_type"""
         exc_cls = EXCEPTION_CLASSES.get(stmt.exception_type, SPLWorkflowError)
         raise exc_cls(stmt.message or stmt.exception_type)
@@ -854,12 +881,14 @@ class Executor:
             if expr.op == '+':
                 # Try numeric addition, fall back to string concatenation
                 try:
-                    return str(float(left) + float(right))
+                    result = float(left) + float(right)
+                    return str(int(result)) if result == int(result) else str(result)
                 except (ValueError, TypeError):
                     return left + right
             elif expr.op == '-':
                 try:
-                    return str(float(left) - float(right))
+                    result = float(left) - float(right)
+                    return str(int(result)) if result == int(result) else str(result)
                 except (ValueError, TypeError):
                     return left
         elif isinstance(expr, FunctionCall):

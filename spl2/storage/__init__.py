@@ -3,7 +3,8 @@
 from spl2.storage.memory import MemoryStore
 
 
-def get_vector_store(backend: str = "faiss", storage_dir: str = ".spl", **kwargs):
+def get_vector_store(backend: str = "faiss", storage_dir: str = ".spl",
+                     embedding_model: str | None = None, **kwargs):
     """Factory for vector store backends.
 
     Parameters
@@ -36,5 +37,5 @@ def get_vector_store(backend: str = "faiss", storage_dir: str = ".spl", **kwargs
                 "FAISS vector store requires numpy and faiss-cpu. "
                 "Install them with: pip install numpy faiss-cpu"
             ) from exc
-        return VectorStore(storage_dir=storage_dir, **kwargs)
+        return VectorStore(storage_dir=storage_dir, embedding_model=embedding_model, **kwargs)
     raise ValueError(f"Unknown vector store backend: {backend!r}. Supported: 'faiss'")
