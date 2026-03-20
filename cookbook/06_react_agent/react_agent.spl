@@ -1,43 +1,55 @@
--- SPL 2.0: ReAct Agent Pattern
--- Reasoning + Acting loop with tool use
+-- SPL 2.0: ReAct Agent — Population Growth
+-- Fetch a country's population for the past two years via WebSearch,
+-- then compute year-over-year growth rate using a Python tool (no LLM math).
+--
+-- Usage:
+--   spl2 run cookbook/06_react_agent/react_agent.spl \
+--       --adapter claude_cli -m claude-sonnet-4-6 \
+--       --allowed-tools WebSearch \
+--       --tools cookbook/06_react_agent/tools.py \
+--       country="France"
 
-WORKFLOW react_agent
-  INPUT: @task text
-  OUTPUT: @answer text
+-- Tight prompt for search_population: return only the number, no narration.
+CREATE FUNCTION search_population(country TEXT, year INT) RETURNS TEXT AS $$
+Use WebSearch to find the total population of {country} for the year {year}.
+
+Return ONLY the population as a plain integer with no commas, spaces, or text.
+Example of valid output: 1409670000
+No explanation. No units. No markdown. Just the number.
+$$;
+
+-- SPL PROCEDURE: search the web for a country's population in a specific year.
+PROCEDURE search_population(country TEXT, year INT)
+RETURNS TEXT
 DO
-  @iteration := 0
-  @history := ''
-  @context := ''
+  GENERATE search_population(country, year) INTO @result
+  COMMIT @result
+END
 
-  WHILE @iteration < 10 DO
+-- calc_growth_rate is a Python tool registered from tools.py via --tools.
+-- CALL routes to Python directly — deterministic, zero LLM cost.
 
-    -- Reasoning step
-    GENERATE thought(@task, @history, @context) INTO @current_thought
+WORKFLOW population_growth
+  INPUT: @country TEXT DEFAULT 'France'
+  OUTPUT: @report TEXT
+DO
+  @year_prev := 2023
+  @year_curr := 2024
 
-    -- Action decision
-    GENERATE action_decision(@current_thought) INTO @action
+  -- Step 1: Fetch population for each year via WebSearch
+  CALL search_population(@country, @year_prev) INTO @pop_prev
+  CALL search_population(@country, @year_curr) INTO @pop_curr
 
-    -- Execute action based on classification
-    EVALUATE @action
-      WHEN 'search' THEN
-        CALL search_tool(@action) INTO @observation
-      WHEN 'calculate' THEN
-        CALL calculator(@action) INTO @observation
-      WHEN 'answer' THEN
-        GENERATE final_answer(@history) INTO @answer
-        COMMIT @answer WITH status = 'complete'
-    END
+  -- Step 2: Compute growth rate — routed to Python tool, not LLM
+  CALL calc_growth_rate(@pop_prev, @pop_curr) INTO @growth_rate
 
-    -- Accumulate history
-    @history := @history + @current_thought
-    @iteration := @iteration + 1
+  -- Step 3: Compose the final human-readable report
+  GENERATE growth_report(@country, @year_prev, @pop_prev, @year_curr, @pop_curr, @growth_rate) INTO @report
 
-  END
+  COMMIT @report WITH status = 'complete'
 
 EXCEPTION
-  WHEN MaxIterationsReached THEN
-    GENERATE best_answer(@history) INTO @answer
-    COMMIT @answer WITH status = 'partial'
-  WHEN HallucinationDetected THEN
-    RETRY WITH temperature = 0.1
+  WHEN SearchFailed THEN
+    GENERATE search_error_report(@country) INTO @report
+    COMMIT @report WITH status = 'error'
 END

@@ -166,17 +166,23 @@ class Executor:
         self,
         adapter_name: str = "echo",
         adapter: LLMAdapter | None = None,
+        adapter_kwargs: dict | None = None,
         storage_dir: str = ".spl",
         cache_enabled: bool = False,
         cache_ttl: int = 3600,
     ):
-        self.adapter = adapter or get_adapter(adapter_name)
+        self.adapter = adapter or get_adapter(adapter_name, **(adapter_kwargs or {}))
         self._storage_dir_base = storage_dir
         self.memory = MemoryStore(f"{storage_dir}/memory.db")
         self.functions = FunctionRegistry()
         self.cache_enabled = cache_enabled
         self.cache_ttl = cache_ttl
         self._vector_store = None
+
+    def register_tool(self, name: str, fn) -> "Executor":
+        """Register a Python callable as a CALL-able tool. Returns self for chaining."""
+        self.functions.register_tool(name, fn)
+        return self
 
     @property
     def vector_store(self):
@@ -741,6 +747,22 @@ class Executor:
 
     async def _exec_call(self, stmt: CallStatement, state: WorkflowState):
         """Execute CALL procedure(args) INTO @var"""
+        import inspect
+
+        # 1. Python tool takes priority — deterministic, no LLM cost
+        tool = self.functions.get_tool(stmt.procedure_name)
+        if tool is not None:
+            args_text = [self._eval_expression(a, state) for a in stmt.arguments]
+            if inspect.iscoroutinefunction(tool):
+                result_str = await tool(*args_text)
+            else:
+                result_str = tool(*args_text)
+            if stmt.target_variable:
+                state.set_var(stmt.target_variable, str(result_str))
+            _log.debug("Tool '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
+            return
+
+        # 2. SPL PROCEDURE
         proc = self.functions.get_procedure(stmt.procedure_name)
         if proc is None:
             _log.warning("Procedure '%s' not found, using LLM fallback", stmt.procedure_name)

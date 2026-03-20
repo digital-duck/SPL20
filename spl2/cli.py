@@ -254,10 +254,19 @@ def cmd_explain(file: str) -> None:
               help="Enable/disable prompt caching (default from config).")
 @click.option("--storage-dir", default=None, show_default=True,
               help="Storage directory for memory/cache (default from config or '.spl').")
+@click.option("--allowed-tools", default=None, metavar="TOOLS",
+              help="Comma-separated tools for claude_cli adapter (e.g. WebSearch,Bash).")
+@click.option("--tools", "tools_module", default=None, metavar="FILE",
+              help="Python module to load as CALL-able tools (e.g. tools/my_tools.py).")
+@click.option("--timeout", default=None, type=int, metavar="SECONDS",
+              help="Per-call timeout in seconds (default: 600 with --allowed-tools, 300 otherwise).")
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 def cmd_execute(file: str, adapter: str | None, model: str | None,
                 param: tuple[str, ...],
                 cache: bool | None, storage_dir: str | None,
+                allowed_tools: str | None,
+                tools_module: str | None,
+                timeout: int | None,
                 extra_args: tuple[str, ...]) -> None:
     """Execute FILE and print each PROMPT/WORKFLOW result.
 
@@ -313,12 +322,24 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
         analysis = Analyzer().analyze(ast)
 
         cache_ttl = _cfg_default("cache_ttl", 3600)
+        adapter_kwargs = {}
+        if allowed_tools:
+            adapter_kwargs["allowed_tools"] = [t.strip() for t in allowed_tools.split(",")]
+        if timeout is not None:
+            adapter_kwargs["timeout"] = timeout
         executor = Executor(
             adapter_name=adapter,
+            adapter_kwargs=adapter_kwargs,
             storage_dir=storage_dir,
             cache_enabled=cache,
             cache_ttl=cache_ttl,
         )
+        if tools_module:
+            from spl2.tools import load_tools_module
+            loaded = load_tools_module(tools_module)
+            for tool_name, tool_fn in loaded.items():
+                executor.register_tool(tool_name, tool_fn)
+            log.info("Loaded %d tool(s) from %s", len(loaded), tools_module)
         try:
             results = asyncio.run(executor.execute_program(analysis, params=params))
             for result in results:

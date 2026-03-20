@@ -28,12 +28,13 @@ class ClaudeCLIAdapter(LLMAdapter):
         self,
         cli_path: str = "claude",
         default_model: str = DEFAULT_MODEL,
-        timeout: int = 300,
+        timeout: int | None = None,
         allowed_tools: list[str] | None = None,
     ):
         self.cli_path = cli_path
         self.default_model = default_model
-        self.timeout = timeout
+        # WebSearch and other tools add latency — use a larger default when tools are active
+        self.timeout = timeout if timeout is not None else (600 if allowed_tools else 300)
         self.allowed_tools = allowed_tools or []
 
     async def generate(

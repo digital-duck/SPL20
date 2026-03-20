@@ -1,6 +1,7 @@
 """SPL 2.0 built-in and user-defined function registry."""
 
 from __future__ import annotations
+from typing import Any, Callable
 from spl2.ast_nodes import CreateFunctionStatement, ProcedureStatement
 
 
@@ -10,7 +11,8 @@ class FunctionRegistry:
     def __init__(self):
         self._functions: dict[str, CreateFunctionStatement] = {}
         self._procedures: dict[str, ProcedureStatement] = {}
-        self._builtins: dict[str, callable] = {}
+        self._builtins: dict[str, Callable[..., Any]] = {}
+        self._tools: dict[str, Callable[..., Any]] = {}  # Python Callables invokable via CALL
         self._register_builtins()
 
     def _register_builtins(self):
@@ -29,6 +31,14 @@ class FunctionRegistry:
         """Register a user-defined procedure."""
         self._procedures[proc_stmt.name] = proc_stmt
 
+    def register_tool(self, name: str, fn: Callable):
+        """Register a Python Callable as a CALL-able tool.
+
+        The Callable receives all CALL arguments as strings and must return a str.
+        Both sync and async Callables are supported.
+        """
+        self._tools[name] = fn
+
     def get(self, name: str) -> CreateFunctionStatement | None:
         """Get a user-defined function by name."""
         return self._functions.get(name)
@@ -36,6 +46,10 @@ class FunctionRegistry:
     def get_procedure(self, name: str) -> ProcedureStatement | None:
         """Get a user-defined procedure by name."""
         return self._procedures.get(name)
+
+    def get_tool(self, name: str) -> Callable | None:
+        """Get a registered Python tool by name."""
+        return self._tools.get(name)
 
     def is_builtin(self, name: str) -> bool:
         return name.lower() in self._builtins

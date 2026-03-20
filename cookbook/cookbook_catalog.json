@@ -644,6 +644,28 @@
       "is_active": true,
       "approval_status": "new",
       "category": "reasoning"
+    },
+    {
+      "id": "36",
+      "name": "Tool-Use / Function-Call",
+      "description": "Register Python functions as CALL-able tools \u2014 deterministic math, zero LLM cost",
+      "args": [
+        "spl2",
+        "run",
+        "./36_tool_use/tool_use.spl",
+        "--adapter",
+        "ollama",
+        "--tools",
+        "./36_tool_use/tools.py",
+        "sales=1200,1450,1380,1600,1750,1900",
+        "prev_total=7800",
+        "period=H1 2025"
+      ],
+      "dir": "36_tool_use",
+      "log": "tool_use",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "agentic"
     }
   ]
 }

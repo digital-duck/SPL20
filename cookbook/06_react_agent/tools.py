@@ -1,0 +1,42 @@
+"""Python tools for recipe 06: Population Growth.
+
+Registered via @spl_tool and loaded with:
+    spl2 run ... --tools cookbook/06_react_agent/tools.py
+
+CALL calc_growth_rate(@pop_prev, @pop_curr) INTO @rate
+"""
+
+from spl2.tools import spl_tool
+
+
+@spl_tool
+def calc_growth_rate(pop_prev: str, pop_curr: str) -> str:
+    """Compute year-over-year population growth rate.
+
+    Formula: ((pop_curr - pop_prev) / pop_prev) * 100
+
+    Args:
+        pop_prev: Population in the previous year (may contain commas, spaces)
+        pop_curr: Population in the current year (may contain commas, spaces)
+
+    Returns:
+        Growth rate as a string rounded to 4 decimal places, e.g. "0.8726"
+    """
+    def parse_pop(s: str) -> float:
+        # Strip commas, spaces, and any trailing text like "(est.)"
+        clean = ""
+        for ch in s:
+            if ch.isdigit() or ch == ".":
+                clean += ch
+        if not clean:
+            raise ValueError(f"Could not parse population from: {s!r}")
+        return float(clean)
+
+    prev = parse_pop(pop_prev)
+    curr = parse_pop(pop_curr)
+
+    if prev == 0:
+        raise ValueError("Previous population is zero — cannot compute growth rate")
+
+    rate = ((curr - prev) / prev) * 100
+    return f"{rate:.4f}"
