@@ -1,79 +1,145 @@
 -- Recipe 32: Socratic Tutor
 -- Ask guiding questions rather than giving answers directly.
--- Demonstrates persona-constrained generation + iterative dialogue simulation.
+-- Demonstrates persona-constrained generation + iterative dialogue simulation,
+-- with deterministic tools for topic loading, level guidance, and dialogue formatting.
 --
--- Usage:
---   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl --adapter ollama -m gemma3 \
---       topic="Why does the sky appear blue?" student_level="middle school"
+-- Usage (topic from catalog):
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic_id=sky_blue subject=science student_level="middle school"
 --
---   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl --adapter ollama \
---       topic="Prove that sqrt(2) is irrational" student_level="undergraduate" \
---       max_questions=5
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic_id=sqrt2_irrational subject=math student_level=undergraduate
+--
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic_id=recursion subject=programming student_level="high school"
+--
+-- Usage (freeform topic, no catalog):
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic="Why is the speed of light constant?" student_level=undergraduate
+--
+-- List available topics:
+--   spl2 run ... topic_id=list subject=science    (or math, programming)
+
+-- ── Socratic persona (zero LLM cost — injected as system context) ───────────
 
 CREATE FUNCTION socratic_persona(student_level TEXT DEFAULT 'high school')
 RETURNS TEXT AS $$
-You are a Socratic tutor. Your role is to guide the student to discover answers themselves — never give direct answers.
+You are a Socratic tutor. Your role is to guide the student to discover answers themselves.
 
-Rules:
-1. Ask ONE clear question at a time that leads toward understanding
-2. Build on what the student already knows
-3. If the student is stuck, give a hint in the form of another question
-4. Celebrate partial insights: "Good observation! Now what does that imply about...?"
-5. Never say "The answer is..." or "You should know that..."
+Core rules — NEVER break these:
+1. Ask exactly ONE clear question at a time. Never give two questions in one turn.
+2. Never state facts or give direct answers. All knowledge must come from the student.
+3. Build on what the student just said — start from their words, not a script.
+4. If a student is stuck, give a hint as another question: "What if you considered...?"
+5. Celebrate partial insights: "Good instinct! Now what does that suggest about...?"
+6. Never say "The answer is...", "You should know that...", or "Actually, it's...".
 
 Student level: {student_level}
-Adjust vocabulary and question complexity accordingly.
+Adjust vocabulary, abstraction level, and question complexity accordingly.
 $$;
 
+-- ── Main workflow ───────────────────────────────────────────────────────────
+
 WORKFLOW socratic_tutor
-    INPUT: @topic TEXT, @student_level TEXT DEFAULT 'high school', @max_questions INT DEFAULT 5
+    INPUT:  @topic         TEXT DEFAULT '',
+            @topic_id      TEXT DEFAULT '',
+            @subject       TEXT DEFAULT '',
+            @student_level TEXT DEFAULT 'high school',
+            @max_questions INT  DEFAULT 5
     OUTPUT: @dialogue TEXT
 DO
-    -- Generate the opening Socratic question
+    -- Step 1: Load structured topic context from catalog (deterministic — no LLM)
+    CALL load_topic(@topic_id, @subject) INTO @topic_context
+
+    -- Step 2: Get level-appropriate vocabulary and scaffolding guidance (deterministic — no LLM)
+    CALL get_level_guidance(@student_level) INTO @level_guide
+
+    -- Step 3: Opening Socratic question — grounded by topic context and level guide (LLM)
     GENERATE opening_question(
         @topic,
-        socratic_persona(@student_level)
+        @topic_context,
+        socratic_persona(@student_level),
+        @level_guide
     ) INTO @question_1
 
-    -- Simulate student's first response (what a typical student might say)
-    GENERATE simulate_student_response(@question_1, @topic, @student_level) INTO @student_1
+    -- Step 4: Simulate a typical student response at the given level (LLM)
+    GENERATE simulate_student_response(
+        @question_1,
+        @topic,
+        @topic_context,
+        @student_level
+    ) INTO @student_1
 
-    -- Follow-up question based on student response
+    -- Step 5: Follow-up question that builds on the student's actual response (LLM)
     GENERATE followup_question(
         @question_1,
         @student_1,
         @topic,
+        @topic_context,
         socratic_persona(@student_level)
     ) INTO @question_2
 
-    -- Student works toward understanding
-    GENERATE simulate_student_response(@question_2, @topic, @student_level) INTO @student_2
+    -- Step 6: Student works further toward understanding (LLM)
+    GENERATE simulate_student_response(
+        @question_2,
+        @topic,
+        @topic_context,
+        @student_level
+    ) INTO @student_2
 
-    -- Check if understanding is emerging
-    GENERATE assess_understanding(@student_1, @student_2, @topic) INTO @understanding_score
+    -- Step 7: Assess whether understanding is emerging (LLM — returns 0-10 score)
+    GENERATE assess_understanding(
+        @student_1,
+        @student_2,
+        @topic,
+        @topic_context
+    ) INTO @understanding_score
 
+    -- Step 8: Adapt the third question based on understanding score
     EVALUATE @understanding_score
         WHEN > 7 THEN
-            -- Student is getting it — consolidation question
-            GENERATE consolidation_question(@topic, @student_2, socratic_persona(@student_level)) INTO @question_3
-            GENERATE simulate_student_response(@question_3, @topic, @student_level) INTO @student_3
-            GENERATE compile_dialogue(
-                @question_1, @student_1,
-                @question_2, @student_2,
-                @question_3, @student_3,
-                @topic
-            ) INTO @dialogue
+            -- Student is getting it — consolidation question to cement understanding
+            GENERATE consolidation_question(
+                @topic,
+                @topic_context,
+                @student_2,
+                socratic_persona(@student_level)
+            ) INTO @question_3
         OTHERWISE
-            -- Student needs more scaffolding
-            GENERATE hint_question(@question_2, @topic, socratic_persona(@student_level)) INTO @question_3
-            GENERATE simulate_student_response(@question_3, @topic, @student_level) INTO @student_3
-            GENERATE compile_dialogue(
-                @question_1, @student_1,
-                @question_2, @student_2,
-                @question_3, @student_3,
-                @topic
-            ) INTO @dialogue
+            -- Student needs more scaffolding — hint question to unblock
+            GENERATE hint_question(
+                @question_2,
+                @topic,
+                @topic_context,
+                socratic_persona(@student_level),
+                @level_guide
+            ) INTO @question_3
     END
+
+    -- Step 9: Final student response to the third question (LLM)
+    GENERATE simulate_student_response(
+        @question_3,
+        @topic,
+        @topic_context,
+        @student_level
+    ) INTO @student_3
+
+    -- Step 10: Format the complete dialogue (deterministic — no LLM)
+    CALL compile_dialogue(
+        @question_1, @student_1,
+        @question_2, @student_2,
+        @question_3, @student_3,
+        @topic,
+        @understanding_score
+    ) INTO @dialogue
 
     COMMIT @dialogue WITH status = 'complete', understanding_score = @understanding_score
 END

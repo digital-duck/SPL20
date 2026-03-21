@@ -1,0 +1,239 @@
+-- Recipe 00: Recipe Maker (Meta-Recipe)
+-- SPL 2.0 eating its own cake.
+-- Takes a recipe concept and generates a complete, runnable recipe:
+-- workflow (.spl), tools (tools.py), sample data (data.json), and documentation (readme.md).
+--
+-- The recipe-maker is itself structured as a recipe:
+--   CALL (load patterns + data + resources) → GENERATE (plan + components) → CALL (write + notify)
+--
+-- Usage:
+--   spl2 run cookbook/00_recipe_maker/recipe_maker.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/00_recipe_maker/tools.py \
+--       concept="Customer churn predictor with SHAP explainability" \
+--       output_dir="cookbook/38_churn_predictor/"
+--
+--   spl2 run cookbook/00_recipe_maker/recipe_maker.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/00_recipe_maker/tools.py \
+--       concept="Resume screener for software engineering roles" \
+--       dataset="data/resumes.json" \
+--       output_dir="cookbook/39_resume_screener/"
+--
+--   spl2 run cookbook/00_recipe_maker/recipe_maker.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/00_recipe_maker/tools.py \
+--       concept="Legal contract risk analyser" \
+--       resources="references/legal_risk_taxonomy.md" \
+--       output_dir="cookbook/40_contract_risk/"
+--
+-- Flags (v1 — generate phase only):
+--   concept      The recipe concept or description (required)
+--   output_dir   Where to write generated artifacts (default: cookbook/output/)
+--   dataset      Path to a local .json / .csv / .txt file the recipe will operate on
+--   resources    Path to reference material, docs, or related work
+--   feedback     'human' (default) or 'llm-judge' (v2)
+--
+-- Placeholders (v2+):
+--   --reflect    Document lessons learned after successful taste test
+--   --publish    Write publication-quality docs + upload to cookbook/registry.json
+
+-- ── System context functions (zero LLM cost) ─────────────────────────────────
+
+CREATE FUNCTION spl_syntax_guide()
+RETURNS TEXT AS $$
+SPL 2.0 Workflow Syntax Reference:
+
+WORKFLOW name
+    INPUT:  @param_name TYPE DEFAULT value, ...
+    OUTPUT: @output_param TEXT
+DO
+    -- Deterministic tool call (zero LLM cost):
+    CALL tool_function(arg1, arg2) INTO @variable
+
+    -- LLM generation step:
+    GENERATE step_name(arg1, arg2, context_function()) INTO @variable
+
+    -- Reusable system context (injected as LLM system prompt):
+    CREATE FUNCTION context_name() RETURNS TEXT AS $$ ... $$;
+
+    -- Conditional branching:
+    EVALUATE @variable
+        WHEN 'value' THEN ...
+        WHEN > threshold THEN ...
+        OTHERWISE ...
+    END
+
+    -- Commit output:
+    COMMIT @output WITH key = 'value', status = 'complete'
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'error message' WITH status = 'error'
+END
+
+Key rules:
+- CALL = deterministic Python tool from tools.py (no LLM, no hallucination)
+- GENERATE = LLM call (use only when reasoning or generation is required)
+- All tools must be decorated with @spl_tool in tools.py
+- CALL tools always return TEXT; parse JSON results in tools.py, not in .spl
+$$;
+
+CREATE FUNCTION tools_py_guide()
+RETURNS TEXT AS $$
+SPL 2.0 tools.py Pattern:
+
+from spl2.tools import spl_tool
+
+@spl_tool
+def tool_name(param1: str, param2: str = "default") -> str:
+    """
+    One-line description of what this tool does.
+    All parameters and return values must be strings.
+    """
+    # deterministic logic here
+    return result_string
+
+Rules:
+- All parameters must be typed as str (even numbers — convert inside the function)
+- Return type must be str
+- No LLM calls inside tools — tools are purely deterministic
+- File I/O, regex, JSON parsing, maths, formatting all belong here
+- Always include: a load_X() tool, a list_X() tool, processing tools
+$$;
+
+CREATE FUNCTION recipe_quality_rubric()
+RETURNS TEXT AS $$
+A well-formed SPL recipe has ALL of the following:
+
+1. WORKFLOW file (.spl):
+   - Clear INPUT parameters with sensible defaults
+   - CALL steps for all deterministic operations (data loading, parsing, formatting)
+   - GENERATE steps only for tasks requiring LLM reasoning or generation
+   - EXCEPTION handling for GenerationError at minimum
+   - Meaningful COMMIT with status metadata
+
+2. Tools file (tools.py):
+   - load_X(id) — loads from the data catalog, returns structured text
+   - list_X() — discovery, returns available IDs
+   - At least one deterministic processing tool replacing a GENERATE call
+   - All tools decorated with @spl_tool, all params/returns as str
+
+3. Sample data file (data.json or similar):
+   - 5–10 realistic records covering happy path + edge cases
+   - Schema matches what load_X() expects to read
+
+4. Documentation (readme.md):
+   - What the recipe does (1 paragraph)
+   - File table
+   - Parameters table
+   - Usage examples with full CLI commands
+   - Workflow diagram (text)
+   - Tool descriptions
+   - Output status table
+$$;
+
+-- ── Main workflow ─────────────────────────────────────────────────────────────
+
+WORKFLOW recipe_maker
+    INPUT:  @concept     TEXT DEFAULT '',
+            @output_dir  TEXT DEFAULT 'cookbook/output/',
+            @dataset     TEXT DEFAULT '',
+            @resources   TEXT DEFAULT '',
+            @feedback    TEXT DEFAULT 'human'
+    OUTPUT: @review_notification TEXT
+DO
+    -- Step 1: Load pattern catalog (deterministic — no LLM)
+    CALL load_patterns('') INTO @patterns_catalog
+
+    -- Step 2: Load user-supplied dataset if provided (deterministic — no LLM)
+    CALL load_dataset(@dataset) INTO @dataset_context
+
+    -- Step 3: Load user-supplied resources if provided (deterministic — no LLM)
+    CALL load_resources(@resources) INTO @resources_context
+
+    -- Step 4: Plan the recipe — understand intent, choose pattern, design structure (LLM)
+    GENERATE plan_recipe(
+        @concept,
+        @patterns_catalog,
+        @dataset_context,
+        @resources_context,
+        recipe_quality_rubric()
+    ) INTO @recipe_plan
+
+    -- Step 5: Generate the SPL workflow file (LLM, grounded by plan + syntax guide)
+    GENERATE generate_spl_workflow(
+        @recipe_plan,
+        @concept,
+        spl_syntax_guide()
+    ) INTO @spl_content
+
+    -- Step 6: Generate the tools.py file (LLM, grounded by plan + tools guide)
+    GENERATE generate_tools_py(
+        @recipe_plan,
+        @concept,
+        @dataset_context,
+        tools_py_guide()
+    ) INTO @tools_content
+
+    -- Step 7: Generate sample data file (LLM, grounded by plan + dataset context)
+    GENERATE generate_sample_data(
+        @recipe_plan,
+        @concept,
+        @dataset_context
+    ) INTO @data_content
+
+    -- Step 8: Generate readme documentation (LLM, grounded by all generated artifacts)
+    GENERATE generate_readme(
+        @recipe_plan,
+        @concept,
+        @spl_content,
+        @tools_content,
+        recipe_quality_rubric()
+    ) INTO @readme_content
+
+    -- Step 9: Write all artifacts to output_dir (deterministic — no LLM)
+    CALL write_artifact(@output_dir, 'workflow.spl', @spl_content)   INTO @write_spl
+    CALL write_artifact(@output_dir, 'tools.py',     @tools_content) INTO @write_tools
+    CALL write_artifact(@output_dir, 'data.json',    @data_content)  INTO @write_data
+    CALL write_artifact(@output_dir, 'readme.md',    @readme_content) INTO @write_readme
+    CALL write_artifact(@output_dir, 'recipe_plan.md', @recipe_plan) INTO @write_plan
+
+    -- Step 10: List generated artifacts (deterministic — no LLM)
+    CALL list_artifacts(@output_dir) INTO @artifact_list
+
+    -- Step 11: Notify for review (deterministic — no LLM)
+    -- Default: human review. Workflow stops here and awaits human taste test.
+    -- v2: --feedback llm-judge will auto-validate and trigger iterate/reflect/publish.
+    CALL notify_review(@output_dir, @artifact_list, @feedback) INTO @review_notification
+
+    COMMIT @review_notification WITH
+        status     = 'awaiting_review',
+        concept    = @concept,
+        output_dir = @output_dir,
+        feedback   = @feedback
+
+    -- ── v2 Placeholders ─────────────────────────────────────────────────────
+    -- FEEDBACK GATE: validate generated artifacts (human or llm-judge)
+    -- Only if feedback passes → REFLECT → PUBLISH
+    --
+    -- [v2] GENERATE validate_artifacts(@artifact_list, @output_dir, @feedback) INTO @validation
+    -- [v2] EVALUATE @validation
+    --          WHEN 'pass' THEN
+    --              -- REFLECT: document lessons learned
+    --              GENERATE reflect(@recipe_plan, @artifact_list, @concept) INTO @reflection
+    --              CALL write_artifact(@output_dir, 'reflection.md', @reflection) INTO @_
+    --              -- PUBLISH: write publication docs + upload to registry
+    --              GENERATE publish_writeup(@recipe_plan, @reflection, @concept) INTO @writeup
+    --              CALL register_recipe(@output_dir, @writeup, @concept) INTO @registry_entry
+    --              COMMIT @registry_entry WITH status = 'published'
+    --          WHEN 'fail' THEN
+    --              RETRY (with corrected artifacts)
+    -- [v2] END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'Recipe generation failed. Check the concept description and try again.' WITH
+            status  = 'error',
+            concept = @concept
+END

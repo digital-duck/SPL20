@@ -1,0 +1,149 @@
+{
+  "subject": "math",
+  "topics": [
+    {
+      "id": "sqrt2_irrational",
+      "title": "Prove that sqrt(2) is irrational",
+      "domain": "number theory / proof",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "A rational number can be written as p/q where p and q are integers with no common factors",
+        "An irrational number cannot be written as a ratio of two integers",
+        "Even numbers are divisible by 2; odd numbers are not",
+        "If a number squared is even, the number itself must be even"
+      ],
+      "learning_objectives": [
+        "Construct a proof by contradiction",
+        "Understand why assuming rationality leads to an impossible conclusion",
+        "Recognize that the proof technique (contradiction) is widely applicable"
+      ],
+      "common_misconceptions": [
+        "sqrt(2) is approximately rational so it is close enough to rational",
+        "You can prove something is irrational by just computing many decimal places",
+        "Proof by contradiction is circular reasoning"
+      ],
+      "key_concepts": ["rational number", "irrational number", "proof by contradiction", "even/odd", "common factor", "infinite descent"],
+      "socratic_path": [
+        "What would it mean for sqrt(2) to be rational? Can you write that down as an equation?",
+        "If sqrt(2) = p/q in lowest terms and we square both sides, what do we get?",
+        "If 2q² = p², what does that tell you about whether p² is even or odd?",
+        "If p² is even, must p itself be even? Why?",
+        "If p is even, write p = 2k and substitute. What happens to q?"
+      ]
+    },
+    {
+      "id": "monty_hall",
+      "title": "Why should you always switch doors in the Monty Hall problem?",
+      "domain": "probability / statistics",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "Basic probability: probability of an event = favorable outcomes / total outcomes",
+        "Conditional probability: the probability of A given that B has occurred",
+        "Three doors, one prize, two goats"
+      ],
+      "learning_objectives": [
+        "Understand how new information (a revealed door) changes conditional probabilities",
+        "Recognize that the host's knowledge matters — the host never reveals the prize",
+        "Calculate the switching vs staying probability correctly (2/3 vs 1/3)"
+      ],
+      "common_misconceptions": [
+        "After one door is revealed there are only two doors so it is 50/50",
+        "It does not matter whether you switch or stay",
+        "The host revealing a door gives you no information"
+      ],
+      "key_concepts": ["conditional probability", "prior probability", "information update", "sample space", "Bayes theorem"],
+      "socratic_path": [
+        "When you first pick a door, what is the probability the prize is behind it?",
+        "What is the probability the prize is behind one of the OTHER two doors?",
+        "When Monty opens one of those other doors (always showing a goat), does the probability behind YOUR door change?",
+        "If your door still has 1/3 probability, and one of the other doors is now open (0%), where must the remaining 2/3 go?",
+        "Imagine playing this game 300 times — roughly how many times would switching win?"
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "What is a limit in calculus and why does it matter?",
+      "domain": "calculus / analysis",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "Functions map inputs to outputs",
+        "Division by zero is undefined",
+        "Graphs of functions can approach a value without reaching it"
+      ],
+      "learning_objectives": [
+        "Understand limits as the value a function approaches (not necessarily reaches)",
+        "Recognize that limits make sense of instantaneous rate of change",
+        "Connect limits to derivatives and the slope of a tangent line"
+      ],
+      "common_misconceptions": [
+        "The limit equals the function value at that point",
+        "Limits only matter when a function is undefined",
+        "You cannot divide by zero so calculus with infinitesimals is invalid"
+      ],
+      "key_concepts": ["approaching", "instantaneous rate", "tangent line", "derivative", "epsilon-delta", "continuity"],
+      "socratic_path": [
+        "If a car travels 100 km in 2 hours, what is its average speed? But what was its speed at exactly 1:00:00 pm?",
+        "How would you find the slope of a curve at a single point — not between two points?",
+        "If you shrink the interval between two points on a curve smaller and smaller, what happens to the slope between them?",
+        "What does it mean for something to approach zero without actually reaching it?"
+      ]
+    },
+    {
+      "id": "infinity_sizes",
+      "title": "Are some infinities bigger than others?",
+      "domain": "set theory / logic",
+      "recommended_levels": ["undergraduate", "expert"],
+      "prerequisites": [
+        "The natural numbers go on forever: 1, 2, 3, 4...",
+        "The real numbers include all decimals including irrationals",
+        "A bijection (one-to-one correspondence) between two sets means they have the same size",
+        "Cantor's diagonal argument concept"
+      ],
+      "learning_objectives": [
+        "Understand that infinite sets can have different cardinalities",
+        "Recognize that the natural numbers and even numbers have the same cardinality (countable)",
+        "Appreciate Cantor's diagonal argument showing real numbers are uncountable"
+      ],
+      "common_misconceptions": [
+        "All infinities are the same size",
+        "There are more even numbers than there are natural numbers (there are the same amount)",
+        "Infinity plus one is bigger than infinity"
+      ],
+      "key_concepts": ["cardinality", "bijection", "countably infinite", "uncountably infinite", "Cantor diagonal", "aleph-null"],
+      "socratic_path": [
+        "Can you match every natural number (1,2,3...) with an even number (2,4,6...)? What does that tell you?",
+        "If we can pair them up perfectly, are there more natural numbers or more even numbers?",
+        "Now try to list ALL real numbers between 0 and 1 in a single infinite list. Can you?",
+        "Cantor showed you can always construct a real number NOT on any such list — what does that prove?"
+      ]
+    },
+    {
+      "id": "pythagorean_theorem",
+      "title": "Why does a² + b² = c² for right triangles?",
+      "domain": "geometry / proof",
+      "recommended_levels": ["middle school", "high school"],
+      "prerequisites": [
+        "Area of a square is side × side",
+        "Area of a triangle is (base × height) / 2",
+        "A right angle is exactly 90 degrees"
+      ],
+      "learning_objectives": [
+        "Understand at least one visual/geometric proof of the Pythagorean theorem",
+        "Recognize that the theorem is about areas of squares, not just side lengths",
+        "Apply the theorem to find unknown side lengths"
+      ],
+      "common_misconceptions": [
+        "The theorem only works for the specific 3-4-5 triangle",
+        "c is always the longest number in the formula",
+        "The theorem is just a formula to memorize, not something that can be proven"
+      ],
+      "key_concepts": ["hypotenuse", "legs", "area", "square", "geometric proof", "right angle"],
+      "socratic_path": [
+        "If you draw a square on each side of a right triangle, what are the areas of those squares?",
+        "Can you arrange four identical right triangles inside a larger square and see what area is left over?",
+        "If the big square has side (a+b), what is its area? What are the areas of the four triangles inside it?",
+        "After removing the four triangles, what shapes remain, and what must their combined area equal?"
+      ]
+    }
+  ]
+}

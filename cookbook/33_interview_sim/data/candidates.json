@@ -1,0 +1,135 @@
+{
+  "candidates": [
+    {
+      "id": "alice_senior_swe",
+      "name": "Alice Chen",
+      "role_applying": "senior_swe",
+      "years_experience": 6,
+      "current_title": "Software Engineer II at a fintech startup",
+      "background": "Alice spent four years at a Series B fintech company building payment processing APIs, then moved to a mid-size SaaS company where she became the tech lead for a team of five. She has strong backend Python and Go experience, has designed two high-throughput data pipelines, and led the migration of a monolith to microservices.",
+      "education": "BSc Computer Science, UC Davis",
+      "strong_areas": [
+        "distributed systems and API design",
+        "mentoring junior engineers",
+        "Python and Go backend development",
+        "incident response and post-mortems",
+        "articulating trade-offs clearly"
+      ],
+      "weak_areas": [
+        "frontend development (limited React experience)",
+        "formal algorithms (can solve medium LeetCode but struggles with hard)",
+        "Kubernetes internals (uses it but has not operated clusters)"
+      ],
+      "communication_style": "Thoughtful and structured. Tends to over-explain. Uses concrete examples from past projects naturally. Can be slow to get to the point.",
+      "typical_gaps": [
+        "May not quantify scale estimates precisely (says 'millions of requests' instead of computing QPS)",
+        "Behavioral answers are strong but sometimes forgets to state the outcome clearly"
+      ]
+    },
+    {
+      "id": "bob_mid_swe",
+      "name": "Bob Ramirez",
+      "role_applying": "senior_swe",
+      "years_experience": 3,
+      "current_title": "Software Engineer at a large e-commerce company",
+      "background": "Bob joined a large e-commerce company straight from a bootcamp, then transitioned to a computer science degree via evening courses. He has worked primarily on recommendation systems and has good Python and SQL skills. He is ambitious but sometimes overestimates his depth in system design.",
+      "education": "Self-taught + evening BSc (in progress), coding bootcamp graduate",
+      "strong_areas": [
+        "Python and SQL",
+        "machine learning pipelines",
+        "fast learner and self-motivated",
+        "collaborative and enthusiastic"
+      ],
+      "weak_areas": [
+        "system design at scale (limited exposure to high-throughput systems)",
+        "formal CS algorithms (gaps in graph algorithms and dynamic programming)",
+        "leadership and cross-team collaboration (limited experience)"
+      ],
+      "communication_style": "Enthusiastic and fast-talking. Sometimes rushes to an answer before thinking it through. Gets nervous when pushed on depth and can become defensive.",
+      "typical_gaps": [
+        "Proposes solutions without considering failure modes",
+        "Complexity analysis is often incorrect or missing",
+        "Behavioral answers lack specificity and tend to be hypothetical"
+      ]
+    },
+    {
+      "id": "carol_data_scientist",
+      "name": "Carol Osei",
+      "role_applying": "data_scientist",
+      "years_experience": 5,
+      "current_title": "Senior Data Scientist at a retail analytics company",
+      "background": "Carol has a statistics PhD and spent two years in academia before moving to industry. She built churn models, customer segmentation pipelines, and A/B testing frameworks at her current company. She is rigorous in statistical thinking but sometimes over-engineers solutions.",
+      "education": "PhD Statistics, University of Michigan",
+      "strong_areas": [
+        "statistical rigor and experimental design",
+        "A/B testing and causal inference",
+        "scikit-learn, pandas, R",
+        "communicating results to non-technical stakeholders",
+        "writing clean, reproducible analysis code"
+      ],
+      "weak_areas": [
+        "deep learning (limited PyTorch/TensorFlow experience)",
+        "large-scale data engineering (Spark experience is minimal)",
+        "deployment and MLOps (models handed off to engineering)"
+      ],
+      "communication_style": "Precise and academic. Uses statistical terminology naturally. Very good at simplifying for non-technical audiences when asked. Can be overly cautious about stating conclusions.",
+      "typical_gaps": [
+        "May add unnecessary statistical caveats that obscure the main point",
+        "Production deployment and monitoring blind spots"
+      ]
+    },
+    {
+      "id": "dave_devops",
+      "name": "Dave Kim",
+      "role_applying": "devops_engineer",
+      "years_experience": 4,
+      "current_title": "DevOps Engineer at a cloud consulting firm",
+      "background": "Dave has worked across multiple client environments setting up CI/CD pipelines, Kubernetes clusters, and AWS infrastructure. He is strong with Terraform and GitHub Actions and has handled on-call rotations. He is opinionated about tooling and can struggle to justify choices beyond personal preference.",
+      "education": "BSc Information Technology, Georgia Tech",
+      "strong_areas": [
+        "Terraform and infrastructure as code",
+        "GitHub Actions and Jenkins CI/CD pipelines",
+        "AWS (EC2, EKS, RDS, S3, CloudWatch)",
+        "Kubernetes day-to-day operations",
+        "incident response and runbook documentation"
+      ],
+      "weak_areas": [
+        "Kubernetes internals (networking and scheduling theory)",
+        "multi-region and disaster recovery architecture",
+        "cost optimization strategy (tends to over-provision)"
+      ],
+      "communication_style": "Direct and confident. Can come across as dismissive of alternatives. Good at explaining operational steps but weaker on architectural reasoning.",
+      "typical_gaps": [
+        "Justifies tool choices with 'it is what I am used to' rather than objective reasons",
+        "Security answers focus on perimeter security, misses secrets management",
+        "DR designs default to active-passive without considering active-active"
+      ]
+    },
+    {
+      "id": "eve_junior_swe",
+      "name": "Eve Johansson",
+      "role_applying": "senior_swe",
+      "years_experience": 2,
+      "current_title": "Software Engineer at a B2B SaaS startup",
+      "background": "Eve graduated with a CS degree two years ago and has been working on a small team building internal tools. She has good fundamentals and writes clean code but has limited exposure to distributed systems or production incidents.",
+      "education": "BSc Computer Science, University of Washington",
+      "strong_areas": [
+        "clean code and software craftsmanship",
+        "JavaScript and TypeScript (full-stack)",
+        "solid CS fundamentals (algorithms, data structures)",
+        "eager to learn and asks good clarifying questions"
+      ],
+      "weak_areas": [
+        "system design at scale (limited production experience)",
+        "behavioral answers (limited work experience to draw from)",
+        "leadership and ambiguity (has not faced complex org situations)"
+      ],
+      "communication_style": "Thoughtful and honest. Will admit gaps rather than bluff. Asks clarifying questions before answering, which interviewers appreciate. Can undersell herself.",
+      "typical_gaps": [
+        "System design answers stay at a high level without drilling into specifics",
+        "Behavioral answers often describe hypotheticals rather than real experiences",
+        "Scale estimates missing (unfamiliar with back-of-envelope calculations)"
+      ]
+    }
+  ]
+}

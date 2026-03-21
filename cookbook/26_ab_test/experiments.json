@@ -1,0 +1,60 @@
+{
+  "experiments": [
+    {
+      "id": "neural_networks",
+      "task": "Explain how neural networks learn from data",
+      "prompt_a": "Explain this like the reader is 10 years old. Use a single everyday analogy and no technical terms.",
+      "prompt_b": "Give a precise technical explanation covering forward propagation, loss functions, and gradient descent. Include mathematical intuition.",
+      "expected_winner": "audience-dependent",
+      "notes": "Classic readability vs depth trade-off. Prompt A should score higher on clarity and engagement; Prompt B on completeness and accuracy."
+    },
+    {
+      "id": "standing_desk",
+      "task": "Write a 3-sentence product description for a height-adjustable standing desk",
+      "prompt_a": "Focus exclusively on health benefits: posture improvement, back pain reduction, and long-term wellbeing.",
+      "prompt_b": "Focus on productivity and focus: sustained energy, sharper concentration, and getting more done in less time.",
+      "expected_winner": "context-dependent",
+      "notes": "Tests value proposition framing. Health angle may resonate more broadly; productivity angle stronger for B2B."
+    },
+    {
+      "id": "email_subject",
+      "task": "Write an email subject line for a product launch announcement for a new project management app called TaskFlow",
+      "prompt_a": "Write in a professional, formal tone suitable for enterprise buyers. Emphasise reliability and ROI.",
+      "prompt_b": "Write in a friendly, conversational tone. Create curiosity and urgency. Use an informal style.",
+      "expected_winner": "audience-dependent",
+      "notes": "Tests formal vs casual copywriting. Enterprise audiences may prefer A; consumer/startup audiences prefer B."
+    },
+    {
+      "id": "code_review",
+      "task": "Give feedback on this Python function that reads a CSV file and returns a list of dictionaries:\n\ndef read_csv(path):\n    rows = []\n    f = open(path)\n    for line in f:\n        rows.append(line.split(','))\n    return rows",
+      "prompt_a": "Give direct, blunt technical feedback. Point out every flaw. Be concise and do not soften criticism.",
+      "prompt_b": "Give encouraging, constructive feedback. Acknowledge what works, then suggest specific improvements with explanations.",
+      "expected_winner": "context-dependent",
+      "notes": "Tests direct vs coaching communication style. Both should find the same bugs (no context manager, returns list of lists not dicts, no header handling)."
+    },
+    {
+      "id": "error_message",
+      "task": "Write an error message for when a user tries to upload a file that is too large (limit is 10 MB)",
+      "prompt_a": "Write a technical error message suitable for developer-facing logs. Include the file size, limit, and error code.",
+      "prompt_b": "Write a friendly user-facing error message. Be clear about what went wrong and what the user should do next.",
+      "expected_winner": "depends on context",
+      "notes": "Tests technical precision vs user-friendly clarity. Neither is universally better — context determines which wins."
+    },
+    {
+      "id": "onboarding_email",
+      "task": "Write the first onboarding email for a new CloudDash user who just signed up for a free trial",
+      "prompt_a": "Lead with the most important features. Use bullet points. Keep it under 150 words. No fluff.",
+      "prompt_b": "Tell a short story about a user who achieved something with the product. Then introduce the first step. Warm and personal.",
+      "expected_winner": "audience-dependent",
+      "notes": "Tests information-first vs story-first email structure. Story-based emails often have higher engagement; feature-first may convert faster."
+    },
+    {
+      "id": "sql_explanation",
+      "task": "Explain what a SQL JOIN does and when to use INNER vs LEFT JOIN",
+      "prompt_a": "Use a visual table example to show what rows appear in the result. Walk through step by step.",
+      "prompt_b": "Use a real-world analogy (no code or tables). Explain the concept intuitively as if to a business analyst with no SQL background.",
+      "expected_winner": "audience-dependent",
+      "notes": "Tests example-driven vs analogy-driven explanation styles for technical concepts."
+    }
+  ]
+}

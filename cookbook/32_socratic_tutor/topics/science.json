@@ -1,0 +1,147 @@
+{
+  "subject": "science",
+  "topics": [
+    {
+      "id": "sky_blue",
+      "title": "Why does the sky appear blue?",
+      "domain": "physics / optics",
+      "recommended_levels": ["middle school", "high school"],
+      "prerequisites": [
+        "Light travels as waves",
+        "White sunlight contains all colors of the rainbow",
+        "Different colors of light have different wavelengths (violet shortest, red longest)"
+      ],
+      "learning_objectives": [
+        "Understand that sunlight scatters when it hits gas molecules in the atmosphere",
+        "Recognize that shorter wavelengths (blue/violet) scatter more than longer ones",
+        "Explain why the sky looks red/orange at sunset"
+      ],
+      "common_misconceptions": [
+        "The sky is blue because it reflects the ocean",
+        "The atmosphere absorbs the non-blue colors",
+        "All colors scatter equally but our eyes prefer blue"
+      ],
+      "key_concepts": ["scattering", "wavelength", "Rayleigh scattering", "atmosphere", "spectrum"],
+      "socratic_path": [
+        "What do you know about what sunlight is made of?",
+        "If sunlight contains all colors, why do we only see blue up above?",
+        "What do you think happens when light hits a tiny particle like a gas molecule?",
+        "Which colors of light have shorter wavelengths — closer to violet or closer to red?",
+        "If shorter wavelengths scatter more, what color would dominate the scattered light we see?"
+      ]
+    },
+    {
+      "id": "photosynthesis",
+      "title": "How do plants make food from sunlight?",
+      "domain": "biology / biochemistry",
+      "recommended_levels": ["middle school", "high school"],
+      "prerequisites": [
+        "Plants are living organisms that need energy",
+        "Carbon dioxide is a gas in the air",
+        "Water is absorbed through roots",
+        "Glucose is a type of sugar used for energy"
+      ],
+      "learning_objectives": [
+        "Identify the inputs (CO2, water, light) and outputs (glucose, oxygen) of photosynthesis",
+        "Understand chlorophyll's role in capturing light energy",
+        "Recognize that plants are the base of most food chains"
+      ],
+      "common_misconceptions": [
+        "Plants get their food from soil",
+        "Photosynthesis only happens at night",
+        "The oxygen plants release is from water, not CO2"
+      ],
+      "key_concepts": ["chlorophyll", "glucose", "carbon dioxide", "oxygen", "chloroplast", "light energy"],
+      "socratic_path": [
+        "Where do you think a plant gets the material to grow bigger?",
+        "A plant can grow in just water and light with no soil — what does that tell you?",
+        "If a plant converts light energy into stored energy, what molecule might store that energy?",
+        "What gas do plants breathe in, and what do they breathe out?"
+      ]
+    },
+    {
+      "id": "gravity_freefall",
+      "title": "Why do objects fall at the same rate regardless of mass?",
+      "domain": "physics / mechanics",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "Gravity exerts a force on all objects with mass",
+        "Force equals mass times acceleration (F = ma)",
+        "Heavier objects experience a greater gravitational force"
+      ],
+      "learning_objectives": [
+        "Understand why greater gravitational force on a heavier object is exactly cancelled by its greater inertia",
+        "Distinguish between weight (force) and mass (resistance to acceleration)",
+        "Recognize the equivalence principle"
+      ],
+      "common_misconceptions": [
+        "Heavier objects fall faster because gravity pulls harder on them",
+        "A feather falls slower because it is lighter (ignoring air resistance)",
+        "Mass and weight are the same thing"
+      ],
+      "key_concepts": ["mass", "weight", "inertia", "gravitational force", "equivalence principle", "acceleration"],
+      "socratic_path": [
+        "If gravity pulls harder on heavier objects, why do they not fall faster?",
+        "What does Newton's F = ma tell us about how force, mass, and acceleration relate?",
+        "If a 10 kg ball experiences 10x more gravitational force than a 1 kg ball, what does F = ma predict about their accelerations?",
+        "What would happen if you dropped a hammer and a feather on the Moon with no air?"
+      ]
+    },
+    {
+      "id": "climate_change",
+      "title": "Why does carbon dioxide cause global warming?",
+      "domain": "earth science / physics",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "The Sun emits energy as radiation including visible light",
+        "The Earth absorbs sunlight and re-emits it as infrared (heat) radiation",
+        "Different gases interact differently with different wavelengths of radiation"
+      ],
+      "learning_objectives": [
+        "Understand the greenhouse effect as a natural and necessary phenomenon",
+        "Explain how CO2 molecules absorb and re-emit infrared radiation",
+        "Distinguish the natural greenhouse effect from anthropogenic (human-caused) enhancement"
+      ],
+      "common_misconceptions": [
+        "The ozone hole causes global warming",
+        "CO2 is a pollutant that blocks sunlight from reaching Earth",
+        "The greenhouse effect is entirely harmful — without it Earth would be frozen"
+      ],
+      "key_concepts": ["greenhouse effect", "infrared radiation", "absorption", "re-emission", "thermal equilibrium", "forcing"],
+      "socratic_path": [
+        "If the Earth absorbs sunlight, what do you think happens to that energy?",
+        "Why does the Earth not just keep heating up from all the sunlight it absorbs every day?",
+        "What if there were a gas that absorbed the outgoing heat radiation and sent some of it back down?",
+        "If you added more of that gas to the atmosphere, what would happen to Earth's temperature?"
+      ]
+    },
+    {
+      "id": "natural_selection",
+      "title": "How does natural selection drive evolution?",
+      "domain": "biology / evolution",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "Organisms reproduce and pass traits to offspring",
+        "Offspring are not identical to parents — there is variation",
+        "Resources in the environment are limited"
+      ],
+      "learning_objectives": [
+        "Understand the four conditions required for natural selection (variation, heritability, differential survival, reproduction)",
+        "Explain how environment determines which traits are advantageous",
+        "Distinguish natural selection from directed evolution or goal-directed change"
+      ],
+      "common_misconceptions": [
+        "Organisms evolve because they want or need to",
+        "Evolution has a direction or goal (toward complexity or perfection)",
+        "Individual organisms evolve during their lifetime"
+      ],
+      "key_concepts": ["variation", "heritability", "fitness", "selection pressure", "adaptation", "population"],
+      "socratic_path": [
+        "If all offspring were identical to their parents, could a species ever change over time?",
+        "Imagine two rabbits — one slightly faster, one slightly slower. What happens when a fox chases them?",
+        "If the faster rabbit survives and has babies, what might those babies tend to be like?",
+        "Could this process produce a completely new species eventually? What would it take?"
+      ]
+    }
+  ]
+}

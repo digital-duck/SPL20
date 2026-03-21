@@ -1,0 +1,10 @@
+PROMPT classify_intent WITH BUDGET 2000 TOKENS
+SELECT @user_input AS input LIMIT 500 TOKENS
+GENERATE classify(input) INTO @intent;
+IF @intent = 'hello' THEN
+  CALL greet_handler(@input)
+ELSE IF @intent = 'goodbye' THEN
+  CALL goodbye_handler(@input)
+ELSE
+  CALL default_handler(@input);
+END;

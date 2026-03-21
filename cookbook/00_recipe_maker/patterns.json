@@ -1,0 +1,104 @@
+{
+  "_comment": "SPL 2.0 Recipe Patterns — building blocks the recipe-maker draws from when planning a new recipe.",
+  "patterns": [
+    {
+      "id": "chain",
+      "name": "Chain",
+      "category": "reasoning",
+      "description": "Sequential steps where each GENERATE builds on the previous output. Simple linear pipeline.",
+      "use_when": "Task naturally decomposes into ordered stages: research → analyse → summarise, or draft → refine → format.",
+      "key_structure": "GENERATE step1 → GENERATE step2(step1_output) → GENERATE step3(step2_output) → COMMIT",
+      "example_recipes": ["09_chain_of_thought", "34_progressive_summary", "21_multi_model_pipeline"]
+    },
+    {
+      "id": "self_refine",
+      "name": "Self-Refine",
+      "category": "agentic",
+      "description": "Draft → critique → improve loop. LLM evaluates its own output and iterates until quality threshold met.",
+      "use_when": "Output quality matters and a single pass is insufficient. Writing, code, analysis.",
+      "key_structure": "GENERATE draft → GENERATE critique(draft) → EVALUATE quality → GENERATE refine(draft, critique) → COMMIT",
+      "example_recipes": ["05_self_refine", "16_reflection"]
+    },
+    {
+      "id": "debate",
+      "name": "Debate",
+      "category": "multi-agent",
+      "description": "Two or more personas argue opposing positions, then a judge evaluates and picks the stronger argument.",
+      "use_when": "Exploring trade-offs, stress-testing a position, generating balanced perspectives on a topic.",
+      "key_structure": "CREATE FUNCTION persona_a / persona_b → GENERATE argue_a → GENERATE argue_b → GENERATE judge → COMMIT",
+      "example_recipes": ["11_debate_arena"]
+    },
+    {
+      "id": "plan_execute",
+      "name": "Plan and Execute",
+      "category": "agentic",
+      "description": "Planner decomposes a goal into steps, executor runs each step in sequence.",
+      "use_when": "Complex tasks that require up-front decomposition before execution. Building apps, research pipelines.",
+      "key_structure": "GENERATE plan(goal) → CALL extract_steps(plan) → GENERATE execute(step1) → ... → GENERATE synthesise → COMMIT",
+      "example_recipes": ["12_plan_and_execute", "14_multi_agent"]
+    },
+    {
+      "id": "map_reduce",
+      "name": "Map-Reduce",
+      "category": "application",
+      "description": "Split input into chunks, process each independently, aggregate results.",
+      "use_when": "Large documents, batch processing multiple items, parallelisable tasks.",
+      "key_structure": "CALL split_items → GENERATE process(item1) → GENERATE process(item2) → ... → CALL aggregate → COMMIT",
+      "example_recipes": ["13_map_reduce", "31_sentiment_pipeline", "10_batch_test"]
+    },
+    {
+      "id": "evaluate_select",
+      "name": "Evaluate and Select",
+      "category": "benchmarking",
+      "description": "Generate multiple candidates, score each against a rubric, pick the winner.",
+      "use_when": "Comparing prompt variants, model outputs, or solution options. A/B testing, ensemble voting.",
+      "key_structure": "GENERATE option_a → GENERATE option_b → GENERATE score_a(rubric) → GENERATE score_b(rubric) → CALL extract_scores → EVALUATE → COMMIT",
+      "example_recipes": ["26_ab_test", "20_ensemble_voting", "17_tree_of_thought", "04_model_showdown"]
+    },
+    {
+      "id": "guardrails",
+      "name": "Guardrails",
+      "category": "safety",
+      "description": "Safety-first pipeline: validate input → detect/redact PII → generate → validate output.",
+      "use_when": "Any user-facing workflow where input may be harmful, off-topic, or contain sensitive data.",
+      "key_structure": "CALL classify_keywords → GENERATE classify_input → CALL detect_pii → CALL redact_pii → GENERATE safe_response → GENERATE validate_output → COMMIT",
+      "example_recipes": ["18_guardrails", "07_safe_generation"]
+    },
+    {
+      "id": "rag",
+      "name": "Retrieval-Augmented Generation",
+      "category": "retrieval",
+      "description": "Load external context (from file, DB, or index) then ground LLM generation with that context.",
+      "use_when": "LLM needs real-world data it cannot hallucinate: orders, documents, knowledge bases.",
+      "key_structure": "CALL load_data(id) → CALL load_context(query) → GENERATE answer(context, query) → COMMIT",
+      "example_recipes": ["08_rag_query", "28_support_triage", "33_interview_sim", "32_socratic_tutor"]
+    },
+    {
+      "id": "extraction",
+      "name": "Extraction and Structuring",
+      "category": "application",
+      "description": "Parse structured data from unstructured text. Extract fields, normalise formats, validate ownership.",
+      "use_when": "Meeting notes → action items, raw text → JSON, tickets → structured records.",
+      "key_structure": "CALL load_input → GENERATE extract(text, schema) → CALL normalise(json) → CALL validate(json) → COMMIT",
+      "example_recipes": ["27_data_extraction", "29_meeting_actions", "23_structured_output"]
+    },
+    {
+      "id": "multi_persona",
+      "name": "Multi-Persona Collaboration",
+      "category": "multi-agent",
+      "description": "Multiple role-based agents (interviewer/candidate, tutor/student, researcher/analyst/writer) interact in structured turns.",
+      "use_when": "Simulating real-world dialogues, collaborative workflows, role-playing scenarios with different expertise.",
+      "key_structure": "CREATE FUNCTION persona_a / persona_b → CALL load_role → CALL load_profile → GENERATE turn_a → GENERATE turn_b → CALL score/compile → COMMIT",
+      "example_recipes": ["33_interview_sim", "32_socratic_tutor", "14_multi_agent"]
+    },
+    {
+      "id": "tool_use",
+      "name": "Tool-Use Hybrid",
+      "category": "agentic",
+      "description": "Mix of deterministic CALL tools (file I/O, maths, regex, JSON parsing) and LLM GENERATE steps. CALL handles what code does better; GENERATE handles what LLMs do better.",
+      "use_when": "Any recipe that needs external data, deterministic computation, or structured post-processing. The default pattern for all production recipes.",
+      "key_structure": "CALL load_data → GENERATE reason/create(context) → CALL compute/format(output) → COMMIT",
+      "example_recipes": ["36_tool_use", "06_react_agent", "28_support_triage", "29_meeting_actions", "31_sentiment_pipeline", "33_interview_sim"]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+API Design Review — Notifications Service v2
+Date: 2026-03-21
+Attendees: Priya (Tech Lead), Sam (Backend), Jordan (Platform), Maya (Product), Felix (Security)
+Facilitator: Priya
+
+---
+
+Priya: Okay, let's get started. Today we're reviewing the design for Notifications v2. Sam, can you walk us through the proposal?
+
+Sam: Sure. So the core problem with v1 is that we're using a synchronous HTTP call from the app server to send notifications. When the notification service has any latency spike, it blocks the request thread and we get cascading timeouts. The proposal is to move to an async event-driven model using Kafka as the message bus.
+
+Jordan: I looked at the proposal doc last night. The Kafka approach makes sense, but I want to flag that we're already running three Kafka clusters for different teams. Do we really want a fourth, or should we reuse the platform team's shared cluster?
+
+Sam: I was going to spin up a dedicated cluster to avoid noisy-neighbor problems. Notifications can be very high volume during peak hours.
+
+Jordan: Fair point, but the shared cluster has topic-level isolation and priority queues now. I'd rather we stress-test it before committing to a fourth cluster — that's real infrastructure cost.
+
+Priya: Let's make a decision: we start with the shared cluster in staging, run load tests at 2x peak volume, and if we see interference we move to a dedicated cluster. Jordan, can you set up a dedicated notifications topic on the shared cluster by next Wednesday?
+
+Jordan: Yes, I can do that. I'll also document the topic naming convention and retention policy.
+
+Priya: Great. Sam, that means your integration will target the shared cluster first. Update the design doc to reflect that.
+
+Sam: Will do. I'll update the doc by end of day Monday.
+
+Priya: Next topic — the notification schema. Maya, from the product side, what fields do we need?
+
+Maya: At minimum: notification_id, user_id, type, title, body, created_at, read_at (nullable), deep_link_url (optional), and metadata as a flexible JSON blob for type-specific data. Push notifications also need device_token and platform (ios/android/web).
+
+Sam: That all makes sense. One question — do we version the schema? If we add fields later, older consumers might break.
+
+Felix: This is actually a security concern too. If metadata is a free-form JSON blob, that's an injection surface. We should define an allowlist of metadata keys per notification type.
+
+Priya: Good catch, Felix. Can you put together the metadata allowlist as a security spec by Thursday? We'll include it in the final design doc.
+
+Felix: Yes, I'll have it ready Thursday morning.
+
+Sam: For schema versioning, I'd propose we add a schema_version field and maintain backward compatibility for at least two major versions. Sound reasonable?
+
+Priya: Agreed. Sam, add that to the design doc along with the update Monday.
+
+Maya: One more product requirement — we need a user-facing notification preferences API. Users should be able to mute specific notification types, set quiet hours, and choose delivery channels (push, email, in-app). That's not in the current proposal at all.
+
+Sam: That's a pretty significant scope addition. How urgent is it?
+
+Maya: It's on the Q2 roadmap and we have two enterprise customers specifically asking for it. I'd call it high priority.
+
+Priya: We'll add it to the design scope but break it into a separate implementation ticket. Maya, can you write the product requirements doc for preferences by next Friday?
+
+Maya: Yes, I'll write it up.
+
+Priya: And Sam, once you have Maya's PRD, create the technical spec for the preferences service. We'll review it in two weeks.
+
+Sam: Got it.
+
+Jordan: Quick question on infrastructure — who's responsible for monitoring the Kafka consumer lag for the notifications topic? If messages are piling up we need to know immediately.
+
+Priya: Good point. We need an alerting runbook. Jordan, can you set up the Datadog monitors for consumer lag and document the escalation path?
+
+Jordan: Yes. I'll set up the monitors and write the runbook by next Wednesday alongside the topic setup.
+
+Felix: I also want to raise the topic of notification payload encryption. We're sending things like password reset links and financial alerts through this system. Those payloads need to be encrypted at rest in Kafka and in transit to the consumer.
+
+Priya: Absolutely. Felix, add encryption requirements to your security spec.
+
+Felix: Will do.
+
+Priya: Are there any open questions we haven't resolved?
+
+Sam: Yes — we haven't decided on the consumer group strategy. Do we have one consumer group for all notification types, or per-type consumer groups? It affects retry logic significantly.
+
+Priya: Let's keep that open for now. Sam, research the tradeoffs and bring a recommendation to the next design review.
+
+Jordan: Also open: do we need dead letter queue (DLQ) handling? If a notification fails to deliver repeatedly, where does it go?
+
+Priya: That's critical for reliability. We need a DLQ strategy. Who can own that?
+
+Sam: I'll include a DLQ proposal in the updated design doc.
+
+Maya: One more open question from my side: what's the latency target for in-app notifications? Sub-second? Two seconds? This affects architecture choices.
+
+Priya: Good question. Maya, can you get the business requirement from your stakeholders and send it to the group by Wednesday?
+
+Maya: Sure, I'll check with the customer success team and get back to everyone by Wednesday.
+
+Priya: Great. I think we've covered the main areas. Next design review is in two weeks, April 4th at 11am. Before that, I want to see the updated design doc from Sam by Monday, Felix's security spec by Thursday, and Jordan's cluster setup by Wednesday. Let's make sure we have everything in Confluence before the next review.
+
+Sam: I'll create the Confluence page today and share the link.
+
+Felix: Sounds good.
+
+Jordan: Talk soon.
+
+Maya: Thanks everyone.

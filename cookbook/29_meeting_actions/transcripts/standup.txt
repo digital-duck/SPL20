@@ -1,0 +1,38 @@
+Daily Standup — CloudDash Team
+Date: 2026-03-21
+Attendees: Alice (PM, facilitator), Bob (Backend), Carol (Frontend), Dave (QA)
+Format: Yesterday / Today / Blockers
+
+---
+
+Alice: Morning everyone, let's keep it tight. Bob, you're up first.
+
+Bob: Yesterday I finished the session token race condition fix and pushed the branch. Today I'm adding the Datadog monitoring alerts for session errors — should be done by noon — and then I'll start the Redis cache migration this afternoon. No blockers.
+
+Alice: Great. Carol?
+
+Carol: Yesterday I got the Figma handoff files from Eve and set up the onboarding wizard stories in Jira. Today I'm building the welcome screen component — I expect to have a PR up by end of day. One blocker: I'm waiting on Bob's invite API docs. Bob, can you send those over after standup?
+
+Bob: Absolutely, I'll send it right after this call.
+
+Alice: Good, that's a quick unblock. Dave?
+
+Dave: Yesterday I reviewed the test plan for the session fix — looks good, ready to run regression once Bob's branch is merged. Today I'm writing the QA checklist for the onboarding wizard so I'm ready to test when Carol's PRs land. No blockers, but a question: are we doing end-to-end tests for the wizard in this sprint or just unit and integration?
+
+Alice: Good question. Let's plan for end-to-end — can you scope that out and let me know the estimate by noon today?
+
+Dave: Sure, I'll send a Slack message with the estimate.
+
+Alice: Great. Any other blockers or news?
+
+Carol: Just a heads up — the dark mode CSS fix will be my first PR today, quick one. Should be up in an hour.
+
+Alice: Perfect. Bob, remember to file the infra ticket for the screen reader VM today and flag it urgent.
+
+Bob: On my list — I'll do it as soon as we're done here.
+
+Alice: Alright, that's it. See everyone tomorrow. Bob, Carol — connect right after this to unblock the API docs.
+
+Bob: Will do.
+
+Carol: Thanks.

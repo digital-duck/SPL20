@@ -1,0 +1,29 @@
+WORKFLOW review_agent
+  INPUT @draft TEXT
+  OUTPUT @final TEXT
+DO
+  -- Initialize quality score and current draft text
+  @quality := 0.0;
+  @current := @draft;
+
+  -- Main loop: critique and refine until quality > 0.8
+  WHILE @quality < 0.8 DO
+    -- Critique the current draft using sentiment analysis
+    GENERATE sentiment(@current) INTO @quality;
+
+    -- Refine the draft by rewriting it with improved style
+    GENERATE rewrite(@current, style='improved') INTO @new_draft;
+    @current := @new_draft;
+
+    -- Evaluate the quality of the refined draft
+    EVALUATE
+      WHEN @quality > 0.8 THEN
+        COMMIT @new_draft;  -- Refine is successful, commit new draft as final
+      ELSE
+        COMMIT @current;     -- Refined draft still needs improvement, reuse current draft
+    END;
+  END;
+
+  -- Finalize the review by committing the last refined draft as final output
+  COMMIT @current;
+END

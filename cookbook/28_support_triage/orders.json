@@ -1,0 +1,271 @@
+[
+  {
+    "order_id": "ORD-12345",
+    "customer_id": "CUST-001",
+    "customer_name": "Alice Johnson",
+    "customer_email": "alice.johnson@example.com",
+    "product_line": "CloudDash Pro",
+    "items": [
+      {
+        "sku": "CDP-ANNUAL",
+        "name": "CloudDash Pro — Annual Subscription",
+        "quantity": 1,
+        "unit_price": 299.00,
+        "line_total": 299.00
+      }
+    ],
+    "subtotal": 299.00,
+    "tax": 23.92,
+    "total": 322.92,
+    "currency": "USD",
+    "status": "delivered",
+    "payment_status": "duplicate_charge",
+    "charges": [
+      {"charge_id": "CHG-8801", "date": "2026-03-01T09:15:00Z", "amount": 322.92, "card_last4": "4242", "status": "completed"},
+      {"charge_id": "CHG-8802", "date": "2026-03-01T09:16:34Z", "amount": 322.92, "card_last4": "4242", "status": "completed"}
+    ],
+    "shipping_address": "123 Maple St, Springfield, IL 62701",
+    "tracking_number": "UPS-1Z9268W90365198729",
+    "created_at": "2026-03-01T09:15:00Z",
+    "shipped_at": "2026-03-02T11:00:00Z",
+    "delivered_at": "2026-03-05T14:30:00Z",
+    "notes": "Duplicate charge detected: CHG-8802 processed 1m 34s after CHG-8801 for same cart. Refund pending finance review."
+  },
+  {
+    "order_id": "ORD-67890",
+    "customer_id": "CUST-002",
+    "customer_name": "Bob Martinez",
+    "customer_email": "bob.martinez@example.com",
+    "product_line": "CloudDash Team",
+    "items": [
+      {
+        "sku": "CDT-5SEATS",
+        "name": "CloudDash Team — 5 Seat License",
+        "quantity": 1,
+        "unit_price": 149.00,
+        "line_total": 149.00
+      },
+      {
+        "sku": "CDT-ONBOARD",
+        "name": "Onboarding Session (1 hour)",
+        "quantity": 1,
+        "unit_price": 79.00,
+        "line_total": 79.00
+      }
+    ],
+    "subtotal": 228.00,
+    "tax": 18.24,
+    "total": 246.24,
+    "currency": "USD",
+    "status": "shipped",
+    "payment_status": "paid",
+    "charges": [
+      {"charge_id": "CHG-9100", "date": "2026-03-10T14:00:00Z", "amount": 246.24, "card_last4": "1881", "status": "completed"}
+    ],
+    "shipping_address": "456 Oak Ave, Austin, TX 78701",
+    "tracking_number": "FEDEX-274899172985",
+    "estimated_delivery": "2026-03-22",
+    "created_at": "2026-03-10T14:00:00Z",
+    "shipped_at": "2026-03-11T08:30:00Z",
+    "delivered_at": null,
+    "notes": "Last carrier scan 2026-03-14 in Memphis hub. No update for 7 days — possible delay or lost in transit."
+  },
+  {
+    "order_id": "ORD-11111",
+    "customer_id": "CUST-003",
+    "customer_name": "Carol Kim",
+    "customer_email": "carol.kim@example.com",
+    "product_line": "CloudDash Starter",
+    "items": [
+      {
+        "sku": "CDS-MONTHLY",
+        "name": "CloudDash Starter — Monthly Subscription",
+        "quantity": 1,
+        "unit_price": 29.00,
+        "line_total": 29.00
+      }
+    ],
+    "subtotal": 29.00,
+    "tax": 2.32,
+    "total": 31.32,
+    "currency": "USD",
+    "status": "delivered",
+    "payment_status": "paid",
+    "charges": [
+      {"charge_id": "CHG-7750", "date": "2026-02-15T10:00:00Z", "amount": 31.32, "card_last4": "5566", "status": "completed"}
+    ],
+    "shipping_address": "789 Pine Rd, Seattle, WA 98101",
+    "tracking_number": "USPS-9400111899223487002368",
+    "created_at": "2026-02-15T10:00:00Z",
+    "shipped_at": "2026-02-16T09:00:00Z",
+    "delivered_at": "2026-02-19T12:00:00Z",
+    "notes": "Customer reported wrong item: received CloudDash Pro box instead of Starter. Fulfillment mispick confirmed by warehouse photo."
+  },
+  {
+    "order_id": "ORD-22222",
+    "customer_id": "CUST-004",
+    "customer_name": "David Okonkwo",
+    "customer_email": "david.okonkwo@example.com",
+    "product_line": "CloudDash Pro",
+    "items": [
+      {
+        "sku": "CDP-ANNUAL",
+        "name": "CloudDash Pro — Annual Subscription",
+        "quantity": 1,
+        "unit_price": 299.00,
+        "line_total": 299.00
+      }
+    ],
+    "subtotal": 299.00,
+    "tax": 23.92,
+    "total": 322.92,
+    "currency": "USD",
+    "status": "delivered",
+    "payment_status": "refund_requested",
+    "charges": [
+      {"charge_id": "CHG-6600", "date": "2026-01-05T08:00:00Z", "amount": 322.92, "card_last4": "9988", "status": "completed"}
+    ],
+    "refund_request": {
+      "requested_at": "2026-03-19T11:00:00Z",
+      "reason": "Customer switching to competitor. Within 30-day refund window.",
+      "status": "pending",
+      "eligible": true,
+      "refund_amount": 322.92
+    },
+    "shipping_address": "22 Harbor Blvd, Miami, FL 33101",
+    "tracking_number": "UPS-1Z8F29W00343701234",
+    "created_at": "2026-01-05T08:00:00Z",
+    "shipped_at": "2026-01-06T10:00:00Z",
+    "delivered_at": "2026-01-09T15:00:00Z",
+    "notes": "Refund request within policy window. Awaiting finance approval."
+  },
+  {
+    "order_id": "ORD-33333",
+    "customer_id": "CUST-005",
+    "customer_name": "Eva Lindqvist",
+    "customer_email": "eva.lindqvist@example.com",
+    "product_line": "CloudDash Enterprise",
+    "items": [
+      {
+        "sku": "CDE-20SEATS",
+        "name": "CloudDash Enterprise — 20 Seat License",
+        "quantity": 1,
+        "unit_price": 999.00,
+        "line_total": 999.00
+      }
+    ],
+    "subtotal": 999.00,
+    "tax": 79.92,
+    "total": 1078.92,
+    "currency": "USD",
+    "status": "cancelled",
+    "payment_status": "refunded",
+    "charges": [
+      {"charge_id": "CHG-5500", "date": "2026-03-05T16:00:00Z", "amount": 1078.92, "card_last4": "3311", "status": "refunded"}
+    ],
+    "cancellation": {
+      "cancelled_at": "2026-03-06T09:00:00Z",
+      "reason": "Customer accidentally ordered wrong tier.",
+      "cancelled_by": "customer"
+    },
+    "shipping_address": "100 Business Park, Denver, CO 80201",
+    "tracking_number": null,
+    "created_at": "2026-03-05T16:00:00Z",
+    "shipped_at": null,
+    "delivered_at": null,
+    "notes": "Order cancelled before shipment. Full refund of $1,078.92 issued to card ending 3311. Expected 3-5 business days."
+  },
+  {
+    "order_id": "ORD-44444",
+    "customer_id": "CUST-006",
+    "customer_name": "Frank Torres",
+    "customer_email": "frank.torres@example.com",
+    "product_line": "CloudDash Starter",
+    "items": [
+      {
+        "sku": "CDS-ANNUAL",
+        "name": "CloudDash Starter — Annual Subscription",
+        "quantity": 1,
+        "unit_price": 199.00,
+        "line_total": 199.00
+      }
+    ],
+    "subtotal": 199.00,
+    "tax": 15.92,
+    "total": 214.92,
+    "currency": "USD",
+    "status": "processing",
+    "payment_status": "paid",
+    "charges": [
+      {"charge_id": "CHG-4400", "date": "2026-03-20T22:00:00Z", "amount": 214.92, "card_last4": "7722", "status": "completed"}
+    ],
+    "shipping_address": "55 Elm St, Boston, MA 02101",
+    "tracking_number": null,
+    "created_at": "2026-03-20T22:00:00Z",
+    "shipped_at": null,
+    "delivered_at": null,
+    "notes": "Order placed last night. Currently in warehouse pick queue. Expected to ship within 24 hours."
+  },
+  {
+    "order_id": "ORD-55555",
+    "customer_id": "CUST-007",
+    "customer_name": "Grace Nguyen",
+    "customer_email": "grace.nguyen@example.com",
+    "product_line": "CloudDash Team",
+    "items": [
+      {
+        "sku": "CDT-10SEATS",
+        "name": "CloudDash Team — 10 Seat License",
+        "quantity": 1,
+        "unit_price": 249.00,
+        "line_total": 249.00
+      }
+    ],
+    "subtotal": 249.00,
+    "tax": 19.92,
+    "total": 268.92,
+    "currency": "USD",
+    "status": "delivered",
+    "payment_status": "paid",
+    "charges": [
+      {"charge_id": "CHG-3300", "date": "2026-02-01T12:00:00Z", "amount": 268.92, "card_last4": "6644", "status": "completed"}
+    ],
+    "shipping_address": "300 Tech Drive, San Francisco, CA 94105",
+    "tracking_number": "FEDEX-274811099234",
+    "created_at": "2026-02-01T12:00:00Z",
+    "shipped_at": "2026-02-02T10:00:00Z",
+    "delivered_at": "2026-02-05T11:00:00Z",
+    "notes": "Customer reported data export API returning 500 errors since 2026-03-18. Engineering ticket ENG-4421 opened."
+  },
+  {
+    "order_id": "ORD-88888",
+    "customer_id": "CUST-008",
+    "customer_name": "Henry Park",
+    "customer_email": "henry.park@example.com",
+    "product_line": "CloudDash Pro",
+    "items": [
+      {
+        "sku": "CDP-MONTHLY",
+        "name": "CloudDash Pro — Monthly Subscription",
+        "quantity": 1,
+        "unit_price": 49.00,
+        "line_total": 49.00
+      }
+    ],
+    "subtotal": 49.00,
+    "tax": 3.92,
+    "total": 52.92,
+    "currency": "USD",
+    "status": "delivered",
+    "payment_status": "paid",
+    "charges": [
+      {"charge_id": "CHG-2200", "date": "2026-03-15T08:00:00Z", "amount": 52.92, "card_last4": "1234", "status": "completed"}
+    ],
+    "shipping_address": "88 Cherry Lane, Chicago, IL 60601",
+    "tracking_number": "UPS-1Z3K78W00112345678",
+    "created_at": "2026-03-15T08:00:00Z",
+    "shipped_at": "2026-03-15T16:00:00Z",
+    "delivered_at": "2026-03-17T10:00:00Z",
+    "notes": "Order delivered successfully. No open issues."
+  }
+]

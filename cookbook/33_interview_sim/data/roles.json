@@ -1,0 +1,281 @@
+{
+  "roles": [
+    {
+      "id": "senior_swe",
+      "title": "Senior Software Engineer",
+      "level": "senior",
+      "focus_areas": {
+        "system_design": {
+          "description": "Large-scale distributed systems architecture and trade-off analysis",
+          "competencies": [
+            "scalability and load estimation",
+            "availability vs consistency trade-offs (CAP theorem)",
+            "data modeling and storage choice",
+            "failure modes and resilience patterns",
+            "API design and communication protocols"
+          ],
+          "sample_questions": [
+            "Design a URL shortener that handles 100 million requests per day. Walk me through your approach.",
+            "How would you design a real-time notification system for a social platform with 50 million active users?",
+            "Design a distributed rate limiter that works across multiple data centers.",
+            "Walk me through designing a ride-sharing matching service like Uber.",
+            "How would you design a system to detect and deduplicate events in a high-throughput event stream?"
+          ],
+          "strong_answer_signals": [
+            "quantifies scale (requests/sec, data volume, users)",
+            "explicitly names trade-offs made and why",
+            "considers failure modes and recovery",
+            "discusses data model before choosing storage",
+            "identifies bottlenecks and mitigation strategies"
+          ],
+          "weak_answer_signals": [
+            "jumps to implementation without clarifying requirements",
+            "ignores scale or failure scenarios",
+            "proposes a single point of failure without acknowledging it",
+            "no mention of trade-offs"
+          ]
+        },
+        "algorithms": {
+          "description": "Data structures, algorithmic problem-solving, and complexity analysis",
+          "competencies": [
+            "time and space complexity reasoning",
+            "problem decomposition and edge case identification",
+            "choosing appropriate data structures",
+            "optimization strategies",
+            "recursive and iterative thinking"
+          ],
+          "sample_questions": [
+            "Given a list of meeting time intervals, find the minimum number of conference rooms required.",
+            "Implement an LRU cache with O(1) get and O(1) put operations.",
+            "Find the longest substring without repeating characters.",
+            "Given a binary tree, find the lowest common ancestor of two nodes.",
+            "Design an algorithm to find all anagram substrings in a string."
+          ],
+          "strong_answer_signals": [
+            "clarifies constraints before coding",
+            "states time and space complexity unprompted",
+            "considers edge cases (empty input, single element, duplicates)",
+            "walks through a concrete example",
+            "mentions alternative approaches and why they were rejected"
+          ],
+          "weak_answer_signals": [
+            "jumps to brute force without considering optimization",
+            "cannot state complexity",
+            "misses key edge cases",
+            "gets confused by recursion base cases"
+          ]
+        },
+        "behavioral": {
+          "description": "Leadership, ownership, conflict resolution, and engineering culture",
+          "competencies": [
+            "technical ownership and accountability",
+            "cross-functional collaboration",
+            "conflict resolution and influence without authority",
+            "mentoring and knowledge sharing",
+            "handling ambiguity and competing priorities"
+          ],
+          "sample_questions": [
+            "Tell me about a time you strongly disagreed with a technical decision and how you handled it.",
+            "Describe a project where you had to lead without formal authority. What challenges did you face?",
+            "Tell me about the most technically complex problem you have ever solved. How did you approach it?",
+            "How do you handle a situation where a teammate consistently misses deadlines?",
+            "Describe a time you had to make a difficult technical trade-off under time pressure."
+          ],
+          "strong_answer_signals": [
+            "uses specific examples with outcomes (STAR format)",
+            "shows self-awareness about their own role in difficulties",
+            "demonstrates empathy and collaboration, not just technical skill",
+            "quantifies impact where possible"
+          ],
+          "weak_answer_signals": [
+            "vague or hypothetical answers instead of specific examples",
+            "blames others without acknowledging own contribution",
+            "no mention of outcome or what was learned"
+          ]
+        }
+      }
+    },
+    {
+      "id": "data_scientist",
+      "title": "Data Scientist",
+      "level": "mid-senior",
+      "focus_areas": {
+        "machine_learning": {
+          "description": "Model selection, training, evaluation, and production considerations",
+          "competencies": [
+            "supervised and unsupervised learning",
+            "model evaluation metrics and their trade-offs",
+            "regularization, overfitting, underfitting",
+            "feature engineering and selection",
+            "model deployment and monitoring"
+          ],
+          "sample_questions": [
+            "Walk me through how you would build a churn prediction model from scratch.",
+            "How would you handle a highly imbalanced dataset where only 1% of records are positive class?",
+            "Explain the bias-variance trade-off and give an example of when you have encountered it.",
+            "How do you evaluate a recommendation system? What metrics would you use and why?",
+            "A model performs well in development but degrades quickly in production. How do you diagnose and fix this?"
+          ],
+          "strong_answer_signals": [
+            "asks clarifying questions about the problem and data before modeling",
+            "discusses multiple metrics and acknowledges their trade-offs",
+            "mentions production concerns (latency, monitoring, drift)",
+            "gives a concrete real-world example"
+          ],
+          "weak_answer_signals": [
+            "jumps straight to a specific model without justification",
+            "ignores class imbalance or data quality issues",
+            "no mention of evaluation or validation strategy"
+          ]
+        },
+        "statistics": {
+          "description": "Statistical inference, experimental design, and probability",
+          "competencies": [
+            "hypothesis testing and p-values",
+            "A/B testing design and analysis",
+            "probability distributions",
+            "causal inference vs correlation",
+            "Bayesian vs frequentist thinking"
+          ],
+          "sample_questions": [
+            "How would you design an A/B test for a new checkout flow? What sample size would you need?",
+            "A product change shows a p-value of 0.04. Is it significant? How do you communicate this to stakeholders?",
+            "Explain the difference between correlation and causation with a practical example.",
+            "How do you handle multiple comparisons in an experiment with many variants?",
+            "A customer asks why our model says X predicts Y. How do you explain model interpretability to a non-technical audience?"
+          ],
+          "strong_answer_signals": [
+            "frames hypothesis clearly before discussing test",
+            "mentions power analysis for sample size",
+            "discusses practical significance vs statistical significance",
+            "aware of pitfalls (p-hacking, survivorship bias)"
+          ],
+          "weak_answer_signals": [
+            "treats p-value as probability the null is true",
+            "ignores multiple comparisons",
+            "conflates correlation with causation"
+          ]
+        },
+        "python_and_data_engineering": {
+          "description": "Python proficiency, data pipelines, and SQL for analysis",
+          "competencies": [
+            "pandas, numpy, scikit-learn proficiency",
+            "SQL for complex aggregations and window functions",
+            "data pipeline design and ETL patterns",
+            "code quality and reproducibility",
+            "working with large datasets efficiently"
+          ],
+          "sample_questions": [
+            "How would you process a 50 GB CSV file that does not fit in memory in Python?",
+            "Write a SQL query to find the top 3 products by revenue in each category.",
+            "What is the difference between apply() and vectorized operations in pandas? When would you use each?",
+            "How do you ensure your data analysis notebooks are reproducible by a colleague?",
+            "Describe how you would build a daily data pipeline that ingests, cleans, and loads data into a warehouse."
+          ],
+          "strong_answer_signals": [
+            "mentions chunking or streaming for large files",
+            "writes clean SQL with window functions if appropriate",
+            "discusses vectorization for performance",
+            "mentions environment management (requirements.txt, conda, Docker)"
+          ],
+          "weak_answer_signals": [
+            "loops in Python where vectorization is clearly better",
+            "ignores memory constraints for large data",
+            "no mention of reproducibility or environment"
+          ]
+        }
+      }
+    },
+    {
+      "id": "devops_engineer",
+      "title": "DevOps / Platform Engineer",
+      "level": "mid-senior",
+      "focus_areas": {
+        "kubernetes": {
+          "description": "Container orchestration, cluster management, and cloud-native patterns",
+          "competencies": [
+            "pod lifecycle and scheduling",
+            "services, ingress, and networking",
+            "persistent volumes and stateful sets",
+            "RBAC and security policies",
+            "horizontal pod autoscaling and resource management"
+          ],
+          "sample_questions": [
+            "A pod keeps crashing with OOMKilled. How do you diagnose and fix it?",
+            "Explain the difference between a Deployment and a StatefulSet. When would you use each?",
+            "How would you implement zero-downtime deployments in Kubernetes?",
+            "Walk me through how you would secure a Kubernetes cluster in production.",
+            "How does the Kubernetes scheduler decide which node to place a pod on?"
+          ],
+          "strong_answer_signals": [
+            "describes debugging steps systematically (kubectl describe, logs, events)",
+            "distinguishes stateless vs stateful requirements clearly",
+            "mentions liveness/readiness probes for zero-downtime",
+            "covers RBAC, network policies, and secret management for security"
+          ],
+          "weak_answer_signals": [
+            "cannot name basic kubectl commands for debugging",
+            "treats Deployment and StatefulSet as interchangeable",
+            "security answer limited to 'use HTTPS'"
+          ]
+        },
+        "cicd": {
+          "description": "Continuous integration, delivery, and deployment pipelines",
+          "competencies": [
+            "pipeline design and stage ordering",
+            "testing strategy within pipelines",
+            "artifact management and versioning",
+            "deployment strategies (blue/green, canary, rolling)",
+            "secrets management and environment promotion"
+          ],
+          "sample_questions": [
+            "Design a CI/CD pipeline for a microservices application with 20 services.",
+            "How do you manage secrets in a CI/CD pipeline without storing them in source control?",
+            "Explain the difference between blue/green and canary deployments. When would you choose each?",
+            "A deployment broke production. Walk me through your rollback strategy.",
+            "How do you ensure a pipeline fails fast without blocking other teams unnecessarily?"
+          ],
+          "strong_answer_signals": [
+            "separates build, test, and deploy stages clearly",
+            "mentions secret managers (Vault, AWS Secrets Manager, etc.)",
+            "ties deployment strategy to risk and blast radius",
+            "has a clear rollback plan with specific steps"
+          ],
+          "weak_answer_signals": [
+            "stores secrets in environment variables hardcoded in YAML",
+            "no distinction between staging and production promotion",
+            "rollback strategy is 're-deploy the old version' with no specifics"
+          ]
+        },
+        "cloud_infrastructure": {
+          "description": "Cloud architecture, IaC, and cost/reliability optimization",
+          "competencies": [
+            "infrastructure as code (Terraform, Pulumi, CDK)",
+            "cloud networking (VPC, subnets, security groups)",
+            "cost optimization strategies",
+            "multi-region and disaster recovery design",
+            "monitoring, alerting, and observability"
+          ],
+          "sample_questions": [
+            "How would you migrate a monolithic application to a cloud-native architecture?",
+            "Walk me through how you would design a multi-region active-active setup.",
+            "Your cloud bill doubled this month. How do you investigate and reduce costs?",
+            "What is your approach to infrastructure as code? How do you manage state and drift?",
+            "How would you design an observability stack for a microservices platform?"
+          ],
+          "strong_answer_signals": [
+            "uses IaC for all infrastructure with state management strategy",
+            "active-active mentions latency routing and conflict resolution",
+            "cost investigation starts with cost explorer and tags",
+            "observability covers metrics, logs, and traces (three pillars)"
+          ],
+          "weak_answer_signals": [
+            "clicks through the console instead of using IaC",
+            "multi-region means active-passive with manual failover only",
+            "observability is just 'we use CloudWatch'"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+PROMPT summarize_doc WITH BUDGET 2000 TOKENS
+SELECT @document AS content LIMIT 1500 TOKENS

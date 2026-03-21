@@ -1,0 +1,145 @@
+{
+  "subject": "programming",
+  "topics": [
+    {
+      "id": "recursion",
+      "title": "What is recursion and how does it work?",
+      "domain": "computer science / algorithms",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "A function is a reusable block of code that can be called with arguments",
+        "Functions can call other functions",
+        "A program must eventually stop — infinite loops crash programs"
+      ],
+      "learning_objectives": [
+        "Understand that a recursive function calls itself with a smaller version of the problem",
+        "Identify base cases (when to stop) and recursive cases (how to reduce the problem)",
+        "Recognize problems where recursion is a natural fit (trees, factorials, fractals)"
+      ],
+      "common_misconceptions": [
+        "Recursion is just a fancy loop",
+        "Recursion is always slower or less efficient than iteration",
+        "A recursive function can call itself without limit (forgetting the base case)"
+      ],
+      "key_concepts": ["base case", "recursive case", "call stack", "stack overflow", "divide and conquer", "self-reference"],
+      "socratic_path": [
+        "If I asked you to compute 5 factorial (5!), how would you do it step by step?",
+        "Notice that 5! = 5 × 4!. And 4! = 4 × 3!. Do you see a pattern?",
+        "If a function computing n! can call a function computing (n-1)!, when does that chain of calls have to stop?",
+        "What happens if you forget the stopping condition and the function keeps calling itself forever?"
+      ]
+    },
+    {
+      "id": "big_o",
+      "title": "What is Big O notation and why does it matter?",
+      "domain": "computer science / algorithms",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "Programs can be fast or slow depending on how they are written",
+        "As input grows larger, the time a program takes may grow as well",
+        "Mathematical functions like n, n², and log(n) grow at different rates"
+      ],
+      "learning_objectives": [
+        "Understand Big O as a measure of how runtime scales with input size",
+        "Distinguish O(1), O(log n), O(n), O(n log n), O(n²) and recognize examples of each",
+        "Explain why constant factors are dropped and why Big O focuses on worst case"
+      ],
+      "common_misconceptions": [
+        "O(n²) is always slower than O(n) for any input size",
+        "Big O measures actual running time in seconds",
+        "The fastest algorithm always has the smallest Big O class"
+      ],
+      "key_concepts": ["time complexity", "space complexity", "asymptotic analysis", "worst case", "logarithm", "linear", "quadratic"],
+      "socratic_path": [
+        "If you have a list of 1000 names and want to find one, how many names might you have to check?",
+        "If the list doubles to 2000, how many checks do you need now? What if it doubles again?",
+        "What if the list were sorted — could you use a smarter strategy than checking every name?",
+        "How would you describe an algorithm where doubling the input only adds one more step?"
+      ]
+    },
+    {
+      "id": "pointers",
+      "title": "What is a pointer and why does it matter?",
+      "domain": "computer science / systems programming",
+      "recommended_levels": ["undergraduate"],
+      "prerequisites": [
+        "Variables store values in memory",
+        "Computer memory can be thought of as a very long list of numbered locations (addresses)",
+        "Different data types (int, float, char) take different amounts of memory"
+      ],
+      "learning_objectives": [
+        "Understand that a pointer is a variable that stores a memory address rather than a value",
+        "Explain how dereferencing a pointer accesses the value at that address",
+        "Recognize why pointers enable dynamic memory allocation and data structures like linked lists"
+      ],
+      "common_misconceptions": [
+        "A pointer is the same as the variable it points to",
+        "Pointers are only needed in old languages like C — modern languages do not use them",
+        "Copying a pointer copies the data it points to"
+      ],
+      "key_concepts": ["memory address", "dereferencing", "null pointer", "heap vs stack", "pass by reference", "memory allocation"],
+      "socratic_path": [
+        "If every house on a street has an address, what is the difference between knowing an address and knowing what is inside the house?",
+        "In memory, if a variable stores the value 42, what might a pointer to that variable store?",
+        "What happens if you follow a pointer to read the value it points to? What if the pointer is invalid?",
+        "Why would you want to pass an address to a function instead of a copy of the actual data?"
+      ]
+    },
+    {
+      "id": "async_programming",
+      "title": "What is asynchronous programming and when do you need it?",
+      "domain": "computer science / software engineering",
+      "recommended_levels": ["undergraduate", "expert"],
+      "prerequisites": [
+        "Programs execute statements one at a time (sequentially) by default",
+        "Some operations take a long time to complete: network requests, file reads, database queries",
+        "A CPU can execute millions of instructions while waiting for a network response"
+      ],
+      "learning_objectives": [
+        "Understand that async programming lets a program do other work while waiting for slow operations",
+        "Distinguish between synchronous blocking, async callbacks, promises/futures, and async/await",
+        "Recognize the event loop as the mechanism behind non-blocking I/O"
+      ],
+      "common_misconceptions": [
+        "Async programming is the same as multi-threading",
+        "Async code always runs faster than sync code",
+        "Async/await eliminates the need to think about concurrency"
+      ],
+      "key_concepts": ["blocking", "non-blocking", "event loop", "callback", "promise/future", "async/await", "concurrency vs parallelism"],
+      "socratic_path": [
+        "If you order food at a restaurant, do you stand frozen at the counter until it is ready, or do you sit down and do other things?",
+        "In a program, if you request data from a server and it takes 2 seconds, what is the CPU doing during those 2 seconds in a blocking program?",
+        "How could you design a program that does useful work while waiting, rather than just waiting?",
+        "What problems might arise if many tasks are all running at once and they try to share the same data?"
+      ]
+    },
+    {
+      "id": "oop_principles",
+      "title": "What is object-oriented programming and why was it invented?",
+      "domain": "computer science / software design",
+      "recommended_levels": ["high school", "undergraduate"],
+      "prerequisites": [
+        "Programs are made of data (variables) and behavior (functions)",
+        "Large programs become hard to manage when data and functions are scattered everywhere",
+        "Modeling real-world concepts in code makes programs easier to reason about"
+      ],
+      "learning_objectives": [
+        "Understand classes as blueprints and objects as instances",
+        "Explain encapsulation (data + behavior together), inheritance (reuse), and polymorphism (same interface, different behavior)",
+        "Recognize why OOP was developed to manage complexity in large codebases"
+      ],
+      "common_misconceptions": [
+        "OOP is the only correct way to write programs",
+        "Inheritance is always the right way to reuse code",
+        "Encapsulation just means making variables private"
+      ],
+      "key_concepts": ["class", "object", "instance", "encapsulation", "inheritance", "polymorphism", "abstraction", "interface"],
+      "socratic_path": [
+        "If you were modeling a library in code, what real-world things would you need to represent?",
+        "A Book has a title, author, and ISBN. What actions (behaviors) can you perform on a Book?",
+        "If both Book and Magazine share some properties (title, publisher), how might you avoid writing the same code twice?",
+        "If you have a list of Publications and want to print each one's details, do you need to know if each is a Book or Magazine?"
+      ]
+    }
+  ]
+}

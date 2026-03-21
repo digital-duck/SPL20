@@ -1,0 +1,80 @@
+Sprint Planning — Q2 Sprint 7
+Date: 2026-03-21
+Attendees: Alice (PM), Bob (Backend), Carol (Frontend), Dave (QA), Eve (Design)
+Facilitator: Alice
+
+---
+
+Alice: Good morning everyone. Let's get Sprint 7 kicked off. Our velocity last sprint was 38 points — we're targeting 40 this sprint. First up, the login bug that's been blocking new signups.
+
+Bob: Yeah, I've been looking at that. It's a race condition in the session token refresh. I can fix it by Wednesday. I just need Dave to write regression tests once I push the branch.
+
+Dave: Sure, I'll add regression coverage. Should take me a day after Bob's branch is ready — so I'm thinking Thursday.
+
+Alice: Perfect. That's a high priority — I'll mark it as P1. Bob, can you also add monitoring alerts for session errors? We were flying blind last time.
+
+Bob: Good point. I'll add Datadog alerts for session token failures. I can do that alongside the fix, so also Wednesday.
+
+Alice: Great. Carol, we need the new onboarding wizard shipped this sprint. Design signed off last sprint.
+
+Carol: Yes, Eve gave me the final Figma files on Friday. I've already broken it down into three stories — the welcome screen, the workspace setup flow, and the invite-teammates step. I can have the welcome screen and workspace setup done by Thursday. The invite step might slip to next sprint if the backend API isn't ready.
+
+Bob: The invite API endpoint is actually already done — I merged it last Wednesday. Let me share the docs with you after this meeting.
+
+Carol: Oh perfect, then all three steps are doable this sprint. I'll target end of sprint for the full wizard.
+
+Alice: Excellent. Dave, we'll need QA on the wizard before we ship.
+
+Dave: I'll block off Friday for manual QA on the wizard, then automated tests next Monday.
+
+Eve: One thing — I noticed the error states in the wizard are still using the old design system components. Carol, can you swap those out while you're in there? I'll send you a quick spec today.
+
+Carol: Yep, no problem. I'll include that in the welcome screen story.
+
+Alice: Good catch, Eve. Let's also make sure the wizard is covered by our accessibility audit. Dave, can you run the WCAG check on it?
+
+Dave: I can run axe on it, but we don't have a screen reader test environment set up yet. Someone needs to provision that.
+
+Alice: That's a blocker. Bob, can you provision a screen reader testing VM in our staging environment?
+
+Bob: I can file the infra ticket, but I'll need DevOps to actually spin it up. Let me ping Raj after this — probably a two-day turnaround.
+
+Alice: Okay, file the ticket today and flag it as urgent. Moving on — we have three tech debt stories from the backlog. The Redis cache migration has been sitting there for two sprints.
+
+Bob: I'll take the Redis migration. It's about 8 points. I want to get it done before we scale up next quarter.
+
+Alice: Good. The API rate limiting story — who's taking that?
+
+Bob: I'm already at capacity with the session fix, Redis, and the Datadog alerts. Can Carol take it, or is she full?
+
+Carol: I'm full with the wizard. That one probably needs backend work anyway.
+
+Alice: Let's park the rate limiting in the icebox for now. We'll revisit next sprint. Last thing — Carol, the dark mode bug on the settings page. A few enterprise customers reported it.
+
+Carol: I know the one. It's a CSS variable scoping issue. Give me an hour, it's a quick fix. I'll do it Monday.
+
+Dave: I'll verify it Monday afternoon.
+
+Alice: Perfect. Any open questions before we wrap up?
+
+Eve: What's the plan for the mobile app? Are we still targeting a June beta?
+
+Alice: Good question. That depends on the wizard shipping cleanly and Bob finishing the invite API improvements. I'll have a clearer answer after this sprint retrospective. Let's flag it as an open question.
+
+Dave: Also, who's handling the GDPR data export feature? I saw it on the roadmap but no one owns it.
+
+Alice: That's on the roadmap for Q3. No owner assigned yet — I'll bring it up with engineering leadership next week.
+
+Bob: One more thing — we still don't have an on-call rotation set up for the new payment service. That needs to happen before we go live in April.
+
+Alice: Absolutely. I'll put together a proposal by Friday and share it with the team. We'll finalize the rotation at next week's team meeting.
+
+Alice: Alright, I think we're set. Next sprint planning is in two weeks, March 35 — sorry, April 4th. Retro is Thursday March 26th at 2pm.
+
+Bob: Sounds good.
+
+Carol: See everyone.
+
+Dave: Thanks Alice.
+
+Eve: Bye all.

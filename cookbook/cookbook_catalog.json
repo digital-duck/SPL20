@@ -401,7 +401,7 @@
       ],
       "dir": "22_text2spl_demo",
       "log": "text2spl_demo",
-      "is_active": false,
+      "is_active": true,
       "approval_status": "new",
       "category": "application"
     },
