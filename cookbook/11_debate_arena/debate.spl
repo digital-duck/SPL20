@@ -8,11 +8,13 @@
 --   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
 
 WORKFLOW debate_arena
-    INPUT: @topic TEXT
+    INPUT: 
+        @topic TEXT,
+        @max_rounds integer DEFAULT 3
     OUTPUT: @verdict TEXT
 DO
     @round := 0
-    @max_rounds := 3
+    -- @max_rounds := 3
     @pro_history := ''
     @con_history := ''
 

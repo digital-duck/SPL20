@@ -18,21 +18,33 @@ chunk_plan(document) → N chunks
 | `document` | TEXT | *(required)* | Full document text to summarize |
 | `style` | TEXT | *(required)* | Output style (e.g. `bullet points`, `executive brief`, `narrative`) |
 
+## Sample Files
+
+| File | Description | Size |
+|------|-------------|------|
+| `large_doc.txt` | 6-section technical report on distributed AI infrastructure (~2,800 words) | multi-chunk |
+| `sample.md` | SPL 2.0 overview document in Markdown (~800 words) | single/two-chunk |
+
 ## Usage
 
 ```bash
+# Long document — exercises chunking across multiple sections
 spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama \
-    document="$(cat large_doc.txt)" \
-    style="bullet points"
+    document="$(cat cookbook/13_map_reduce/large_doc.txt)" \
+    style="bullet points" \
+    2>&1 | tee cookbook/out/13_map_reduce-long-$(date +%Y%m%d_%H%M%S).md
 
+# Medium document — Markdown format, tests section boundary handling
 spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama \
-    document="$(cat README.md)" \
-    style="executive brief"
+    document="$(cat cookbook/13_map_reduce/sample.md)" \
+    style="executive brief" \
+    2>&1 | tee cookbook/out/13_map_reduce-medium-$(date +%Y%m%d_%H%M%S).md
 
-# Inline text
+# Short inline text — single-chunk path
 spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama \
-    document="Artificial intelligence has transformed..." \
-    style="narrative"
+    document="Artificial intelligence has transformed how organizations process and analyze large volumes of unstructured data. Key applications include document summarization, sentiment analysis, and automated report generation." \
+    style="narrative" \
+    2>&1 | tee cookbook/out/13_map_reduce-short-$(date +%Y%m%d_%H%M%S).md
 ```
 
 ## Output status

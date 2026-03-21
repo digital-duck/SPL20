@@ -1,0 +1,117 @@
+-- Recipe 37: Headline News Aggregator
+-- Generate, expand, and evaluate a daily news digest for a given topic area.
+-- Uses claude_cli adapter with Opus model for broad knowledge synthesis.
+--
+-- Pattern:
+--   generate_headlines(topic) → N headlines
+--     → expand each headline into a brief summary
+--     → evaluate coverage and balance
+--     → refine if coverage gaps detected
+--     → commit structured daily digest
+--
+-- Usage:
+--   spl2 run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--       topic="artificial intelligence"
+--
+--   spl2 run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--       topic="renewable energy" format="executive brief" max_headlines=5
+--
+--   spl2 run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--       topic="quantum computing" format="bullet points" perspective="global"
+
+CREATE FUNCTION news_format_guide(format TEXT DEFAULT 'structured')
+RETURNS TEXT AS $$
+SELECT CASE format
+  WHEN 'executive brief'  THEN 'Concise executive summary. Lead with the most significant development. 2-3 sentences per item. Close with a one-line strategic implication.'
+  WHEN 'bullet points'    THEN 'Bulleted list. One headline per bullet. Sub-bullets for key facts. No more than 3 sub-bullets per headline.'
+  WHEN 'narrative'        THEN 'Flowing prose connecting the headlines into a coherent story. Identify themes and through-lines. 3-4 paragraphs.'
+  ELSE                         'Structured digest. Each headline followed by a 2-3 sentence summary. Group related items. End with a brief synthesis.'
+END
+$$;
+
+CREATE FUNCTION perspective_guide(perspective TEXT DEFAULT 'balanced')
+RETURNS TEXT AS $$
+SELECT CASE perspective
+  WHEN 'technical'   THEN 'Focus on technical developments, research breakthroughs, and engineering milestones. Prioritize substance over narrative.'
+  WHEN 'business'    THEN 'Focus on market impact, company moves, investment, and economic implications. Prioritize commercial significance.'
+  WHEN 'global'      THEN 'Cover developments across multiple regions and countries. Note geographic variation in trends. Avoid US-centric framing.'
+  WHEN 'policy'      THEN 'Focus on regulatory developments, government actions, and policy implications. Note geopolitical dimensions.'
+  ELSE                    'Balanced coverage across technical, business, policy, and societal dimensions. Represent multiple viewpoints.'
+END
+$$;
+
+WORKFLOW headline_news
+    INPUT:
+        @topic            TEXT,
+        @date             TEXT DEFAULT 'today',
+        @max_headlines    INTEGER DEFAULT 7,
+        @format           TEXT DEFAULT 'structured',
+        @perspective      TEXT DEFAULT 'balanced'
+    OUTPUT: @digest TEXT
+DO
+    -- Step 1: Generate top headlines for the topic
+    GENERATE generate_headlines(
+        @topic,
+        @max_headlines,
+        @date,
+        perspective_guide(@perspective)
+    ) INTO @headlines
+
+    -- Step 2: Expand each headline into a brief summary with key facts
+    GENERATE expand_headlines(
+        @headlines,
+        @topic,
+        perspective_guide(@perspective)
+    ) INTO @expanded
+
+    -- Step 3: Evaluate coverage — are major angles represented?
+    GENERATE evaluate_coverage(
+        @expanded,
+        @topic,
+        perspective_guide(@perspective)
+    ) INTO @coverage_score
+
+    -- Step 4: Refine if coverage gaps detected
+    EVALUATE @coverage_score
+        WHEN > 0.75 THEN
+            -- Coverage is solid — format and commit
+            GENERATE format_digest(
+                @expanded,
+                @topic,
+                @date,
+                news_format_guide(@format)
+            ) INTO @digest
+            COMMIT @digest WITH status = 'complete', coverage = @coverage_score
+
+        OTHERWISE
+            -- Coverage gaps — add missing angles and reformat
+            GENERATE fill_coverage_gaps(
+                @expanded,
+                @topic,
+                @coverage_score,
+                perspective_guide(@perspective)
+            ) INTO @expanded
+
+            GENERATE format_digest(
+                @expanded,
+                @topic,
+                @date,
+                news_format_guide(@format)
+            ) INTO @digest
+            COMMIT @digest WITH status = 'refined', coverage = @coverage_score
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Too many headlines — trim and commit best effort
+        GENERATE format_digest(
+            @headlines,
+            @topic,
+            @date,
+            news_format_guide(@format)
+        ) INTO @digest
+        COMMIT @digest WITH status = 'partial'
+
+    WHEN BudgetExceeded THEN
+        COMMIT @expanded WITH status = 'budget_limit'
+END

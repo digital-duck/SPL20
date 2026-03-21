@@ -672,6 +672,26 @@
       "is_active": true,
       "approval_status": "new",
       "category": "agentic"
+    },
+    {
+      "id": "37",
+      "name": "Headline News Aggregator",
+      "description": "Generate \u2192 expand \u2192 evaluate coverage \u2192 daily news digest for any topic area",
+      "args": [
+        "spl2",
+        "run",
+        "./37_headline_news/headline_news.spl",
+        "--adapter",
+        "claude_cli",
+        "-m",
+        "claude-opus-4-6",
+        "topic=artificial intelligence"
+      ],
+      "dir": "37_headline_news",
+      "log": "headline_news",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
     }
   ]
 }
