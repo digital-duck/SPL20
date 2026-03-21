@@ -33,7 +33,8 @@ Always pass `--tools tools.py`:
 spl2 run cookbook/26_ab_test/ab_test.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/26_ab_test/tools.py \
-    experiment_id=neural_networks
+    experiment_id=neural_networks \
+    2>&1 | tee cookbook/out/26_ab_test-$(date +%Y%m%d_%H%M%S).md
 
 # From catalog — standing desk value proposition
 spl2 run cookbook/26_ab_test/ab_test.spl \

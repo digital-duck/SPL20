@@ -29,7 +29,8 @@ Always pass `--tools tools.py`:
 spl2 run cookbook/18_guardrails/guardrails.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/18_guardrails/tools.py \
-    input_id=safe_encryption
+    input_id=safe_encryption \
+    2>&1 | tee cookbook/out/18_guardrails-$(date +%Y%m%d_%H%M%S).md
 
 # From catalog — PII redaction test
 spl2 run cookbook/18_guardrails/guardrails.spl \

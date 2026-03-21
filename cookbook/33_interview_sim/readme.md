@@ -39,7 +39,7 @@ spl2 run cookbook/33_interview_sim/interview_sim.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/33_interview_sim/tools.py \
     role_key=senior_swe focus=system_design candidate_id=alice_senior_swe difficulty=hard \
-    2>&1 | tee cookbook/out/33_interview-$(date +%Y%m%d_%H%M%S).md
+    2>&1 | tee cookbook/out/33_interview_sim-$(date +%Y%m%d_%H%M%S).md
 
 # Senior SWE — algorithms — junior candidate (interesting gap)
 spl2 run cookbook/33_interview_sim/interview_sim.spl \

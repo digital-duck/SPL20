@@ -25,6 +25,11 @@ generate_headlines(topic, max_headlines) → headlines
 ## Usage
 
 ```bash
+spl2 run cookbook/37_headline_news/headline_news.spl --adapter ollama -m phi4 \
+    topic="artificial intelligence" \
+    2>&1 | tee cookbook/out/37_headline_news-ai-ollama_phi4-$(date +%Y%m%d_%H%M%S).md
+
+
 # Default — balanced structured digest on AI
 spl2 run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
     topic="artificial intelligence" \

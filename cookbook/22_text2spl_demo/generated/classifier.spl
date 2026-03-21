@@ -1,0 +1,14 @@
+WORKFLOW classify_intent
+  INPUT @user_input TEXT
+  OUTPUT @intent TEXT
+DO
+  GENERATE extract_entities(@user_input) INTO @entities;
+  DO
+    EVALUATE IF @entities = 'booking' THEN
+      GENERATE classify_booking(@entities) INTO @intent;
+    ELSEIF @entities = 'payment' THEN
+      GENERATE classify_payment(@entities) INTO @intent;
+    ELSE
+      @intent := 'unknown';
+  END;
+  COMMIT @intent;

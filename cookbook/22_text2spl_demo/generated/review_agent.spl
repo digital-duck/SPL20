@@ -1,0 +1,69 @@
+WORKFLOW review_agent
+  INPUT @draft TEXT
+  OUTPUT @final TEXT
+DO
+  @quality := 0.0;
+  @current := @draft;
+  WHILE @quality < 0.8 DO
+    GENERATE rewrite(@current, style='improved') INTO @temp;
+    COMMIT @temp;
+    GENERATE classify(@temp) INTO @label;
+    IF @label = 'long' THEN
+      @quality := 0.8;
+    ELSEIF @label != 'long' THEN
+      @quality := 0.5;
+    END;
+  END;
+  @final := @current;
+  COMMIT @final;
+
+CREATE FUNCTION evaluate_quality(quality REAL)
+RETURNS BOOLEAN AS $$
+  quality >= 0.8
+$$;
+
+CREATE FUNCTION generate_rewrite(input TEXT, style TEXT)
+RETURNS TEXT AS $$
+  CASE style
+    WHEN 'improved' THEN replace(input, 'bad word', 'good word')
+    ELSE input
+  END;
+$$;
+
+CREATE FUNCTION rewrite(input TEXT, style TEXT)
+RETURNS TEXT AS $$
+  GENERATE generate_rewrite(input, style) INTO @temp;
+  COMMIT @temp;
+$$;
+
+CREATE FUNCTION classify(input TEXT)
+RETURNS TEXT AS $$
+  CASE length(input)
+    WHEN > 100 THEN 'long'
+    ELSE 'short'
+  END;
+$$;
+
+CREATE FUNCTION sentiment(input TEXT)
+RETURNS REAL AS $$
+  summarize(input);
+$$;
+
+DO
+  DO
+    GENERATE rewrite(@current, style='improved') INTO @temp;
+    COMMIT @temp;
+    GENERATE classify(@temp) INTO @label;
+    IF @label = 'long' THEN
+      @quality := 0.8;
+    ELSEIF @label != 'long' THEN
+      @quality := 0.5;
+    END;
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @quality := 0.2;
+      COMMIT @current;
+    WHEN ModelOverloaded THEN
+      RETRY;
+  END;
+END;
