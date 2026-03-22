@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from typing import Any, Callable
-from spl2.ast_nodes import CreateFunctionStatement, ProcedureStatement
+from spl.ast_nodes import CreateFunctionStatement, ProcedureStatement
 
 
 class FunctionRegistry:

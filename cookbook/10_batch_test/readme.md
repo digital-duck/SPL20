@@ -19,10 +19,10 @@ Uses parallel CTEs to fan out all recipe × model combinations in a single workf
 
 ```bash
 # Default models (gemma3, llama3.2)
-spl2 run cookbook/10_batch_test/batch_test.spl --adapter ollama
+spl run cookbook/10_batch_test/batch_test.spl --adapter ollama
 
 # Custom models
-spl2 run cookbook/10_batch_test/batch_test.spl --adapter ollama \
+spl run cookbook/10_batch_test/batch_test.spl --adapter ollama \
     model_1=gemma3 model_2=mistral
 ```
 

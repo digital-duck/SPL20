@@ -6,7 +6,7 @@ Tools:
   lookup_order(order_numbers)       Fetch full order record(s) from orders.json by order ID.
 
 Usage:
-  spl2 run cookbook/28_support_triage/support_triage.spl \\
+  spl run cookbook/28_support_triage/support_triage.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/28_support_triage/tools.py \\
       ticket="My account has been charged twice for order #ORD-12345"
@@ -16,7 +16,7 @@ import json
 import os
 import re
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _ORDERS_FILE = os.path.join(os.path.dirname(__file__), "orders.json")
 

@@ -3,10 +3,10 @@
 -- Demonstrates scientific reasoning pattern: structured inquiry with evidence weighting.
 --
 -- Usage:
---   spl2 run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama -m gemma3 \
 --       observation="Remote teams show lower productivity in the first month after joining"
 --
---   spl2 run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama \
+--   spl run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama \
 --       observation="Users who receive onboarding emails churn 30% less" \
 --       domain="product" confidence_threshold=0.75
 

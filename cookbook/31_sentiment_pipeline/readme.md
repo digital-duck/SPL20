@@ -31,7 +31,7 @@ Always pass `--tools tools.py`:
 
 ```bash
 # Product reviews → full report
-spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \
+spl run cookbook/31_sentiment_pipeline/sentiment.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     filename=product_reviews.txt \
@@ -39,21 +39,21 @@ spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \
     2>&1 | tee cookbook/out/31_sentiment-$(date +%Y%m%d_%H%M%S).md
 
 # Support tickets
-spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \
+spl run cookbook/31_sentiment_pipeline/sentiment.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     filename=support_tickets.txt \
     domain=support_tickets
 
 # Social media posts
-spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \
+spl run cookbook/31_sentiment_pipeline/sentiment.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     filename=social_media.txt \
     domain=social_media
 
 # Inline pipe-delimited (no file needed)
-spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \
+spl run cookbook/31_sentiment_pipeline/sentiment.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     items="Great product, love it! | Terrible experience, never again | It was okay I guess" \

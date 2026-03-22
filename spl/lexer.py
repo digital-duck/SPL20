@@ -3,7 +3,7 @@
 Extends SPL 1.0 lexer with := operator, : colon, % percent, and { } braces.
 """
 
-from spl2.tokens import Token, TokenType, KEYWORDS
+from spl.tokens import Token, TokenType, KEYWORDS
 
 
 class LexerError(Exception):

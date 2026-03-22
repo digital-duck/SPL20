@@ -19,15 +19,15 @@ WORKFLOW layered_explainer
 
 ```bash
 # Explain quantum computing to high schoolers
-spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
     topic="quantum computing" audience="high school students"
 
 # Deep-dive for policy makers
-spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
     topic="CRISPR gene editing" audience="policy makers" depth="deep"
 
 # Simple intro for a general audience
-spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
     topic="machine learning" audience="non-technical managers" depth="intro"
 ```
 

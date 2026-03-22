@@ -4,8 +4,8 @@ Extends SPL 1.0 parser with WORKFLOW, PROCEDURE, EVALUATE, WHILE, DO,
 COMMIT, RETRY, RAISE, assignment, GENERATE...INTO, CALL, and SELECT...INTO.
 """
 
-from spl2.tokens import Token, TokenType
-from spl2.ast_nodes import (
+from spl.tokens import Token, TokenType
+from spl.ast_nodes import (
     Program, PromptStatement, CreateFunctionStatement, ExplainStatement,
     ExecuteStatement, SelectItem, CTEClause, WhereClause, Condition,
     OrderByItem, GenerateClause, StoreClause, FromClause, Parameter,

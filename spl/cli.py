@@ -1,27 +1,27 @@
 """SPL 2.0 Command-Line Interface.
 
 Usage examples:
-    spl2 init
-    spl2 validate query.spl
-    spl2 syntax   query.spl
-    spl2 explain  query.spl
-    spl2 run      query.spl --adapter ollama -p task="Write a haiku"
-    spl2 execute  query.spl --adapter momagrid --cache
-    spl2 text2spl "summarize a document" --adapter ollama
-    spl2 compile  "build a review agent" --adapter ollama --execute
-    spl2 config show
-    spl2 config set adapter ollama
-    spl2 config get adapter
-    spl2 config init
-    spl2 adapters
-    spl2 memory list
-    spl2 memory get  <key>
-    spl2 memory set  <key> <value>
-    spl2 memory delete <key>
-    spl2 rag add   "document text"
-    spl2 rag query "search text" --top-k 5
-    spl2 rag count
-    spl2 version
+    spl init
+    spl validate query.spl
+    spl syntax   query.spl
+    spl explain  query.spl
+    spl run      query.spl --adapter ollama -p task="Write a haiku"
+    spl execute  query.spl --adapter momagrid --cache
+    spl text2spl "summarize a document" --adapter ollama
+    spl compile  "build a review agent" --adapter ollama --execute
+    spl config show
+    spl config set adapter ollama
+    spl config get adapter
+    spl config init
+    spl adapters
+    spl memory list
+    spl memory get  <key>
+    spl memory set  <key> <value>
+    spl memory delete <key>
+    spl rag add   "document text"
+    spl rag query "search text" --top-k 5
+    spl rag count
+    spl version
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from pathlib import Path
 
 import click
 
-from spl2 import __version__
+from spl import __version__
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ def _ensure_workspace(storage_dir: str = ".spl") -> bool:
     if os.path.exists(storage_dir):
         return False
     os.makedirs(storage_dir, exist_ok=True)
-    from spl2.storage.memory import MemoryStore
+    from spl.storage.memory import MemoryStore
     store = MemoryStore(os.path.join(storage_dir, "memory.db"))
     store.close()
     return True
@@ -74,22 +74,22 @@ def _ensure_workspace(storage_dir: str = ".spl") -> bool:
 
 def _parse_source(source: str):
     """Lex → Parse → return AST."""
-    from spl2.lexer import Lexer
-    from spl2.parser import Parser
+    from spl.lexer import Lexer
+    from spl.parser import Parser
     tokens = Lexer(source).tokenize()
     return Parser(tokens).parse()
 
 
 def _analyze_source(source: str):
     """Lex → Parse → Analyze → return AnalysisResult."""
-    from spl2.analyzer import Analyzer
+    from spl.analyzer import Analyzer
     ast = _parse_source(source)
     return Analyzer().analyze(ast)
 
 
 def _get_cfg():
     """Load SPL config (lazy, cached per process)."""
-    from spl2.config import load_config
+    from spl.config import load_config
     return load_config()
 
 
@@ -105,7 +105,7 @@ def _cfg_default(key: str, fallback):
 def _setup_logging(run_name: str, adapter: str = "", spl_file: str = ""):
     """Set up dd-logging for the current run. Returns log file path."""
     from dd_logging import setup_logging
-    from spl2.config import LOG_DIR
+    from spl.config import LOG_DIR
 
     # Build a descriptive run_name from the spl file
     if spl_file:
@@ -117,7 +117,7 @@ def _setup_logging(run_name: str, adapter: str = "", spl_file: str = ""):
 
     log_path = setup_logging(
         run_name=run_name,
-        root_name="spl2",
+        root_name="spl",
         adapter=adapter,
         log_level=log_level,
         log_dir=str(LOG_DIR),
@@ -128,7 +128,7 @@ def _setup_logging(run_name: str, adapter: str = "", spl_file: str = ""):
 
 def _print_result(result) -> None:
     """Pretty-print an SPLResult or WorkflowResult."""
-    from spl2.executor import SPLResult, WorkflowResult
+    from spl.executor import SPLResult, WorkflowResult
 
     if isinstance(result, SPLResult):
         click.echo("=" * 60)
@@ -166,12 +166,12 @@ def _print_result(result) -> None:
 # ── CLI group ─────────────────────────────────────────────────────────────────
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.version_option(__version__, prog_name="spl2")
+@click.version_option(__version__, prog_name="spl")
 def cli() -> None:
     """SPL 2.0 — Structured Prompt Language.  SQL for Agentic Workflow Orchestration."""
 
 
-# ── spl2 init ─────────────────────────────────────────────────────────────────
+# ── spl init ─────────────────────────────────────────────────────────────────
 
 @cli.command("init")
 def cmd_init() -> None:
@@ -183,12 +183,12 @@ def cmd_init() -> None:
         click.echo("Workspace already exists: .spl/")
 
     # Also ensure ~/.spl/config.yaml exists
-    from spl2.config import ensure_defaults, CONFIG_PATH
+    from spl.config import ensure_defaults, CONFIG_PATH
     ensure_defaults()
     click.echo(f"  Config: {CONFIG_PATH}")
 
 
-# ── spl2 validate / syntax ───────────────────────────────────────────────────
+# ── spl validate / syntax ───────────────────────────────────────────────────
 
 @cli.command("validate")
 @click.argument("file", type=click.Path(dir_okay=False))
@@ -200,10 +200,10 @@ def cmd_validate(file: str, as_json: bool) -> None:
     try:
         ast = _parse_source(source)
         if as_json:
-            from spl2.ir import ast_to_json
+            from spl.ir import ast_to_json
             click.echo(json.dumps(ast_to_json(ast), indent=2))
         else:
-            from spl2.analyzer import Analyzer
+            from spl.analyzer import Analyzer
             analysis = Analyzer().analyze(ast)
             click.echo(f"Parsed OK: {len(ast.statements)} statement(s)")
             for stmt in ast.statements:
@@ -225,7 +225,7 @@ cli.add_command(cmd_validate, name="parse")
 cli.add_command(cmd_validate, name="syntax")
 
 
-# ── spl2 explain ──────────────────────────────────────────────────────────────
+# ── spl explain ──────────────────────────────────────────────────────────────
 
 @cli.command("explain")
 @click.argument("file", type=click.Path(dir_okay=False))
@@ -233,8 +233,8 @@ def cmd_explain(file: str) -> None:
     """Show execution plan for FILE (no LLM call)."""
     source = _read_file(file)
     try:
-        from spl2.optimizer import Optimizer
-        from spl2.explain import explain_plans
+        from spl.optimizer import Optimizer
+        from spl.explain import explain_plans
 
         analysis = _analyze_source(source)
         plans = Optimizer().optimize(analysis)
@@ -245,7 +245,7 @@ def cmd_explain(file: str) -> None:
         raise click.ClickException(str(exc)) from exc
 
 
-# ── spl2 execute / run ────────────────────────────────────────────────────────
+# ── spl execute / run ────────────────────────────────────────────────────────
 
 @cli.command("execute", context_settings={"ignore_unknown_options": True})
 @click.argument("file", type=click.Path(dir_okay=False))
@@ -278,9 +278,9 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
     Parameters can be passed with -p KEY=VALUE or as trailing KEY=VALUE args:
 
     \b
-      spl2 run query.spl -p question="What is SPL?"
-      spl2 run query.spl question="What is SPL?"
-      spl2 run query.spl --adapter ollama --model gemma3 question="hello"
+      spl run query.spl -p question="What is SPL?"
+      spl run query.spl question="What is SPL?"
+      spl run query.spl --adapter ollama --model gemma3 question="hello"
     """
     # Apply config defaults
     adapter = adapter or _cfg_default("adapter", "echo")
@@ -292,14 +292,14 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
     params = _parse_params(param + extra_args)
 
     # Print the invocation and script source for easy review / log readability
-    cmd_parts = ["spl2", "run", file, "--adapter", adapter]
+    cmd_parts = ["spl", "run", file, "--adapter", adapter]
     if model:
         cmd_parts += ["-m", model]
     cmd_parts += [f"{k}={v}" for k, v in params.items()]
     click.echo(f"\n```bash\n{' '.join(cmd_parts)}\n```\n")
     if "prompt" in params:
         click.echo(f"```prompt\n{params['prompt']}\n```\n")
-    click.echo(f"```spl2\n{source.rstrip()}\n```\n")
+    click.echo(f"```spl\n{source.rstrip()}\n```\n")
 
     _ensure_workspace(storage_dir)
 
@@ -307,13 +307,13 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
     log_path = _setup_logging(run_name="run", adapter=adapter, spl_file=file)
 
     from dd_logging import get_logger
-    log = get_logger("cli", "spl2")
-    log.info("spl2 run %s --adapter %s %s", file, adapter,
+    log = get_logger("cli", "spl")
+    log.info("spl run %s --adapter %s %s", file, adapter,
              f"-m {model}" if model else "")
 
     try:
-        from spl2.executor import Executor
-        from spl2.ast_nodes import PromptStatement
+        from spl.executor import Executor
+        from spl.ast_nodes import PromptStatement
 
         ast = _parse_source(source)
 
@@ -323,7 +323,7 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
                 if isinstance(stmt, PromptStatement):
                     stmt.model = model
 
-        from spl2.analyzer import Analyzer
+        from spl.analyzer import Analyzer
         analysis = Analyzer().analyze(ast)
 
         cache_ttl = _cfg_default("cache_ttl", 3600)
@@ -340,7 +340,7 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
             cache_ttl=cache_ttl,
         )
         if tools_module:
-            from spl2.tools import load_tools_module
+            from spl.tools import load_tools_module
             loaded = load_tools_module(tools_module)
             for tool_name, tool_fn in loaded.items():
                 executor.register_tool(tool_name, tool_fn)
@@ -371,12 +371,12 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
 cli.add_command(cmd_execute, name="run")
 
 
-# ── spl2 adapters ─────────────────────────────────────────────────────────────
+# ── spl adapters ─────────────────────────────────────────────────────────────
 
 @cli.command("adapters")
 def cmd_adapters() -> None:
     """List available LLM adapter engines."""
-    from spl2.adapters import list_adapters
+    from spl.adapters import list_adapters
 
     adapters_info = {
         "echo": "Returns prompt as response (testing, no setup required)",
@@ -396,10 +396,10 @@ def cmd_adapters() -> None:
     for name in sorted(available):
         desc = adapters_info.get(name, "")
         click.echo(f"  {name:<14} {desc}")
-    click.echo(f"\nUsage: spl2 run <file.spl> --adapter <name>")
+    click.echo(f"\nUsage: spl run <file.spl> --adapter <name>")
 
 
-# ── spl2 config ──────────────────────────────────────────────────────────────
+# ── spl config ──────────────────────────────────────────────────────────────
 
 @cli.group("config")
 def cmd_config() -> None:
@@ -409,7 +409,7 @@ def cmd_config() -> None:
 @cmd_config.command("show")
 def config_show() -> None:
     """Show current configuration."""
-    from spl2.config import load_config, CONFIG_PATH
+    from spl.config import load_config, CONFIG_PATH
     import yaml
 
     cfg = load_config()
@@ -421,7 +421,7 @@ def config_show() -> None:
 @click.argument("key")
 def config_get(key: str) -> None:
     """Get a configuration value (supports dot-path like 'adapters.ollama.timeout')."""
-    from spl2.config import load_config
+    from spl.config import load_config
 
     cfg = load_config()
     value = cfg.get(key)
@@ -441,12 +441,12 @@ def config_set(pairs: tuple[str, ...]) -> None:
 
     \b
     Examples:
-      spl2 config set adapter ollama
-      spl2 config set adapter ollama model gemma3
-      spl2 config set adapters.ollama.timeout 300
-      spl2 config set adapter=ollama model=gemma3
+      spl config set adapter ollama
+      spl config set adapter ollama model gemma3
+      spl config set adapters.ollama.timeout 300
+      spl config set adapter=ollama model=gemma3
     """
-    from spl2.config import load_config, save_config
+    from spl.config import load_config, save_config
 
     cfg = load_config()
 
@@ -468,8 +468,8 @@ def config_set(pairs: tuple[str, ...]) -> None:
         else:
             raise click.UsageError(
                 f"Missing value for key: {args[i]}\n"
-                f"Usage: spl2 config set KEY VALUE [KEY VALUE ...]\n"
-                f"   or: spl2 config set KEY=VALUE [KEY=VALUE ...]"
+                f"Usage: spl config set KEY VALUE [KEY VALUE ...]\n"
+                f"   or: spl config set KEY=VALUE [KEY=VALUE ...]"
             )
 
     for key, value in kvs:
@@ -497,7 +497,7 @@ def config_set(pairs: tuple[str, ...]) -> None:
               help="Overwrite existing config with defaults.")
 def config_init(force: bool) -> None:
     """Create ~/.spl/config.yaml with smart defaults."""
-    from spl2.config import CONFIG_PATH, save_config, DEFAULTS, SPL_HOME
+    from spl.config import CONFIG_PATH, save_config, DEFAULTS, SPL_HOME
     from dd_config import Config
 
     if CONFIG_PATH.exists() and not force:
@@ -514,7 +514,7 @@ def config_init(force: bool) -> None:
 @cmd_config.command("path")
 def config_path() -> None:
     """Print the config file path."""
-    from spl2.config import CONFIG_PATH, LOG_DIR
+    from spl.config import CONFIG_PATH, LOG_DIR
     click.echo(f"Config: {CONFIG_PATH}")
     click.echo(f"Logs:   {LOG_DIR}")
 
@@ -523,7 +523,7 @@ def config_path() -> None:
 @click.argument("key")
 def config_reset(key: str) -> None:
     """Reset a configuration key to its default value."""
-    from spl2.config import load_config, save_config, DEFAULTS
+    from spl.config import load_config, save_config, DEFAULTS
     from dd_config import Config
 
     defaults = Config.from_dict(DEFAULTS)
@@ -537,7 +537,7 @@ def config_reset(key: str) -> None:
     click.echo(f"Reset {key} = {default_val}")
 
 
-# ── spl2 cache ────────────────────────────────────────────────────────────────
+# ── spl cache ────────────────────────────────────────────────────────────────
 
 @cli.group("cache")
 def cmd_cache() -> None:
@@ -549,7 +549,7 @@ def cmd_cache() -> None:
 def cache_list(storage_dir: str | None) -> None:
     """List cached prompts."""
     storage_dir = storage_dir or _cfg_default("storage_dir", ".spl")
-    from spl2.storage.memory import MemoryStore
+    from spl.storage.memory import MemoryStore
     store = MemoryStore(os.path.join(storage_dir, "memory.db"))
     rows = store._conn.execute(
         "SELECT prompt_hash, model, tokens_used, created_at, expires_at "
@@ -586,7 +586,7 @@ def cache_list(storage_dir: str | None) -> None:
 def cache_clear(storage_dir: str | None, expired_only: bool) -> None:
     """Clear the prompt cache."""
     storage_dir = storage_dir or _cfg_default("storage_dir", ".spl")
-    from spl2.storage.memory import MemoryStore
+    from spl.storage.memory import MemoryStore
     store = MemoryStore(os.path.join(storage_dir, "memory.db"))
     if expired_only:
         cursor = store._conn.execute(
@@ -601,7 +601,7 @@ def cache_clear(storage_dir: str | None, expired_only: bool) -> None:
     click.echo(f"Cleared {cursor.rowcount} {label}cache entries")
 
 
-# ── spl2 memory ───────────────────────────────────────────────────────────────
+# ── spl memory ───────────────────────────────────────────────────────────────
 
 @cli.group("memory")
 def cmd_memory() -> None:
@@ -612,7 +612,7 @@ def cmd_memory() -> None:
 @click.option("--storage-dir", default=".spl", show_default=True)
 def memory_list(storage_dir: str) -> None:
     """List all memory keys."""
-    from spl2.storage.memory import MemoryStore
+    from spl.storage.memory import MemoryStore
     store = MemoryStore(os.path.join(storage_dir, "memory.db"))
     keys = store.list_keys()
     if not keys:
@@ -630,7 +630,7 @@ def memory_list(storage_dir: str) -> None:
 @click.option("--storage-dir", default=".spl", show_default=True)
 def memory_get(key: str, storage_dir: str) -> None:
     """Print the value stored under KEY."""
-    from spl2.storage.memory import MemoryStore
+    from spl.storage.memory import MemoryStore
     store = MemoryStore(os.path.join(storage_dir, "memory.db"))
     value = store.get(key)
     store.close()
@@ -646,7 +646,7 @@ def memory_get(key: str, storage_dir: str) -> None:
 @click.option("--storage-dir", default=".spl", show_default=True)
 def memory_set(key: str, value: str, storage_dir: str) -> None:
     """Store VALUE under KEY."""
-    from spl2.storage.memory import MemoryStore
+    from spl.storage.memory import MemoryStore
     store = MemoryStore(os.path.join(storage_dir, "memory.db"))
     store.set(key, value)
     store.close()
@@ -658,7 +658,7 @@ def memory_set(key: str, value: str, storage_dir: str) -> None:
 @click.option("--storage-dir", default=".spl", show_default=True)
 def memory_delete(key: str, storage_dir: str) -> None:
     """Delete KEY from the memory store."""
-    from spl2.storage.memory import MemoryStore
+    from spl.storage.memory import MemoryStore
     store = MemoryStore(os.path.join(storage_dir, "memory.db"))
     deleted = store.delete(key)
     store.close()
@@ -668,7 +668,7 @@ def memory_delete(key: str, storage_dir: str) -> None:
         raise click.ClickException(f"Key not found: {key}")
 
 
-# ── spl2 rag ──────────────────────────────────────────────────────────────────
+# ── spl rag ──────────────────────────────────────────────────────────────────
 
 @cli.group("rag")
 def cmd_rag() -> None:
@@ -688,7 +688,7 @@ def rag_add(text: str, storage_dir: str, chunk: bool | None) -> None:
     Paragraph chunking is enabled by default for files (use --no-chunk to disable).
     """
     import os, re
-    from spl2.storage import get_vector_store
+    from spl.storage import get_vector_store
 
     if os.path.isfile(text):
         with open(text, "r", encoding="utf-8") as f:
@@ -719,7 +719,7 @@ def rag_add(text: str, storage_dir: str, chunk: bool | None) -> None:
 @click.option("--storage-dir", default=".spl", show_default=True)
 def rag_query(query: str, top_k: int, storage_dir: str) -> None:
     """Search the vector store for QUERY."""
-    from spl2.storage import get_vector_store
+    from spl.storage import get_vector_store
     store = get_vector_store("faiss", storage_dir)
     results = store.query(query, top_k=top_k)
     store.close()
@@ -737,14 +737,14 @@ def rag_query(query: str, top_k: int, storage_dir: str) -> None:
 @click.option("--storage-dir", default=".spl", show_default=True)
 def rag_count(storage_dir: str) -> None:
     """Show the number of indexed documents."""
-    from spl2.storage import get_vector_store
+    from spl.storage import get_vector_store
     store = get_vector_store("faiss", storage_dir)
     n = store.count()
     store.close()
     click.echo(f"Documents indexed: {n}")
 
 
-# ── spl2 code-rag ────────────────────────────────────────────────────────────
+# ── spl code-rag ────────────────────────────────────────────────────────────
 
 @cli.group("code-rag")
 def cmd_code_rag() -> None:
@@ -753,7 +753,7 @@ def cmd_code_rag() -> None:
 
 def _get_code_rag_store(storage_dir: str | None = None, collection: str | None = None):
     """Return a CodeRAGStore using config defaults."""
-    from spl2.code_rag import CodeRAGStore
+    from spl.code_rag import CodeRAGStore
     sd  = storage_dir or _cfg_default("code_rag.storage_dir", ".spl/code_rag")
     col = collection  or _cfg_default("code_rag.collection",  CodeRAGStore.COLLECTION_NAME)
     return CodeRAGStore(storage_dir=sd, collection_name=col)
@@ -778,8 +778,8 @@ def code_rag_import(cookbook_dir: str, catalog: str | None, from_file: str | Non
     Without --from: imports all cookbook recipes (run this first to prime the DB).
 
     \b
-      spl2 code-rag import
-      spl2 code-rag import --cookbook-dir /path/to/cookbook
+      spl code-rag import
+      spl code-rag import --cookbook-dir /path/to/cookbook
 
     With --from FILE: bulk-imports pairs from a JSONL file. Each line must be:
 
@@ -791,18 +791,18 @@ def code_rag_import(cookbook_dir: str, catalog: str | None, from_file: str | Non
     \b
       {"description": "...", "spl_file": "./my_recipe.spl"}
 
-    The JSONL format matches `spl2 code-rag export` output exactly, so
+    The JSONL format matches `spl code-rag export` output exactly, so
     exported pairs can be re-imported into another project or after a DB reset.
 
     \b
-      spl2 code-rag import --from ./my_pairs.jsonl
-      spl2 code-rag import --from ./my_pairs.jsonl --source synthetic --no-validate
+      spl code-rag import --from ./my_pairs.jsonl
+      spl code-rag import --from ./my_pairs.jsonl --source synthetic --no-validate
     """
     store = _get_code_rag_store(storage_dir)
 
     if from_file:
         # ── JSONL import ──────────────────────────────────────────────────
-        from spl2.text2spl import Text2SPL
+        from spl.text2spl import Text2SPL
         path = Path(from_file)
         if not path.exists():
             raise click.ClickException(f"File not found: {from_file}")
@@ -897,14 +897,14 @@ def code_rag_query(description: str, top_k: int, storage_dir: str | None, show_s
     store = _get_code_rag_store(storage_dir)
     hits = store.retrieve(description, top_k=top_k)
     if not hits:
-        click.echo("No results (store may be empty — run: spl2 code-rag index)")
+        click.echo("No results (store may be empty — run: spl code-rag index)")
         return
     for i, h in enumerate(hits, 1):
         label = h["name"] or h["description"][:60]
         click.echo(f"\n{i}. [{h['source']}]  score={h['score']:.4f}  {label}")
         click.echo(f"   {h['description']}")
         if show_spl:
-            click.echo(f"\n```spl2\n{h['spl_source']}\n```")
+            click.echo(f"\n```spl\n{h['spl_source']}\n```")
 
 
 @cmd_code_rag.command("count")
@@ -927,9 +927,9 @@ def code_rag_export(output: str, storage_dir: str | None) -> None:
 
 
 def _parse_log_for_pairs(text: str) -> list[dict]:
-    """Extract (command, spl_source) pairs from a spl2 run log.
+    """Extract (command, spl_source) pairs from a spl run log.
 
-    Scans for ```bash and ```spl2 fence blocks and pairs them in order.
+    Scans for ```bash and ```spl fence blocks and pairs them in order.
     Works on both per-recipe log files (clean) and tee'd run_all.py output
     (which prefixes normal lines with '     | ').
     """
@@ -959,7 +959,7 @@ def _parse_log_for_pairs(text: str) -> list[dict]:
             pending_prompt = None
         elif lang == "prompt" and pending_bash is not None:
             pending_prompt = content
-        elif lang in ("spl2", "spl") and pending_bash is not None:
+        elif lang in ("spl", "spl") and pending_bash is not None:
             pairs.append({
                 "command": pending_bash,
                 "prompt": pending_prompt,
@@ -1004,10 +1004,10 @@ def _description_from_spl(spl_source: str) -> str:
 
 
 def _description_from_command(cmd: str, catalog_map: dict[str, str]) -> str:
-    """Derive a description from a `spl2 run <file>` bash command."""
+    """Derive a description from a `spl run <file>` bash command."""
     import re
     # Extract the .spl file path from the command
-    m = re.search(r'spl2\s+run\s+(\S+\.spl)', cmd)
+    m = re.search(r'spl\s+run\s+(\S+\.spl)', cmd)
     if not m:
         return ""
     spl_path = m.group(1)
@@ -1050,9 +1050,9 @@ def code_rag_parse_log(
     dry_run: bool,
     storage_dir: str | None,
 ) -> None:
-    """Parse spl2 run log files and import valid (description, SPL) pairs.
+    """Parse spl run log files and import valid (description, SPL) pairs.
 
-    Scans LOG_FILE(s) for ```spl2 blocks (SPL source) paired with the
+    Scans LOG_FILE(s) for ```spl blocks (SPL source) paired with the
     preceding ```bash block (run command), derives a description from the
     cookbook catalog or the PROMPT/WORKFLOW name, validates the SPL, and
     adds each valid pair to the Code-RAG store.
@@ -1061,11 +1061,11 @@ def code_rag_parse_log(
     Works on both per-recipe logs (.spl/logs/*.log) and tee'd run_all output:
 
     \b
-      spl2 code-rag parse-log .spl/logs/run_*.log
-      spl2 code-rag parse-log cookbook/out/run_all_20260320.md
-      spl2 code-rag parse-log cookbook/out/run_all_20260320.md --dry-run
+      spl code-rag parse-log .spl/logs/run_*.log
+      spl code-rag parse-log cookbook/out/run_all_20260320.md
+      spl code-rag parse-log cookbook/out/run_all_20260320.md --dry-run
     """
-    from spl2.text2spl import Text2SPL
+    from spl.text2spl import Text2SPL
 
     catalog_map = _load_catalog_map(cookbook_dir)
     store = None if dry_run else _get_code_rag_store(storage_dir)
@@ -1123,7 +1123,7 @@ def code_rag_parse_log(
         click.echo(f"Total in store: {store.count()}")
 
 
-# ── spl2 text2spl / compile ──────────────────────────────────────────────────
+# ── spl text2spl / compile ──────────────────────────────────────────────────
 
 @cli.command("text2spl", context_settings={"ignore_unknown_options": True})
 @click.argument("description")
@@ -1151,15 +1151,15 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
 
     Uses the dedicated text2spl compiler adapter/model from config
     (text2spl.adapter / text2spl.model) — independent of the runtime
-    adapter used by `spl2 run`.
+    adapter used by `spl run`.
 
     \b
     Examples:
-      spl2 text2spl "summarize a document"
-      spl2 text2spl "build a review agent" --mode workflow
-      spl2 text2spl "translate text to French" -o translate.spl
-      spl2 text2spl "classify user intent" --execute text="Hello there"
-      spl2 text2spl "..." --adapter ollama -m qwen2.5-coder  # override compiler
+      spl text2spl "summarize a document"
+      spl text2spl "build a review agent" --mode workflow
+      spl text2spl "translate text to French" -o translate.spl
+      spl text2spl "classify user intent" --execute text="Hello there"
+      spl text2spl "..." --adapter ollama -m qwen2.5-coder  # override compiler
     """
     # text2spl has its own adapter/model config section, separate from runtime.
     # Priority: CLI flag > text2spl config section > global adapter fallback.
@@ -1171,11 +1171,11 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
     # Set up logging
     log_path = _setup_logging(run_name="text2spl", adapter=adapter)
     from dd_logging import get_logger
-    log = get_logger("cli.text2spl", "spl2")
-    log.info("spl2 text2spl %r --adapter %s --mode %s", description, adapter, mode)
+    log = get_logger("cli.text2spl", "spl")
+    log.info("spl text2spl %r --adapter %s --mode %s", description, adapter, mode)
 
-    from spl2.text2spl import Text2SPL
-    from spl2.adapters import get_adapter as _get_adapter
+    from spl.text2spl import Text2SPL
+    from spl.adapters import get_adapter as _get_adapter
 
     try:
         llm = _get_adapter(adapter)
@@ -1186,7 +1186,7 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
     code_rag = None
     if _cfg_default("code_rag.enabled", True):
         try:
-            from spl2.code_rag import CodeRAGStore
+            from spl.code_rag import CodeRAGStore
             code_rag = CodeRAGStore(
                 storage_dir=_cfg_default("code_rag.storage_dir", ".spl/code_rag"),
                 collection_name=_cfg_default("code_rag.collection", CodeRAGStore.COLLECTION_NAME),
@@ -1194,7 +1194,7 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
             if code_rag.count() > 0:
                 click.echo(f"Code-RAG: {code_rag.count()} examples indexed", err=True)
             else:
-                click.echo("Code-RAG: store empty — run `spl2 code-rag index` to populate", err=True)
+                click.echo("Code-RAG: store empty — run `spl code-rag index` to populate", err=True)
                 code_rag = None
         except Exception as exc:
             log.warning("Code-RAG unavailable: %s", exc)
@@ -1237,15 +1237,15 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
     if execute:
         params = _parse_params(param + extra_args)
         _ensure_workspace(".spl")
-        from spl2.executor import Executor
+        from spl.executor import Executor
 
         ast = _parse_source(spl_code)
         if model:
-            from spl2.ast_nodes import PromptStatement
+            from spl.ast_nodes import PromptStatement
             for stmt in ast.statements:
                 if isinstance(stmt, PromptStatement):
                     stmt.model = model
-        from spl2.analyzer import Analyzer
+        from spl.analyzer import Analyzer
         analysis = Analyzer().analyze(ast)
 
         executor = Executor(adapter_name=adapter, storage_dir=".spl")
@@ -1263,12 +1263,12 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
 cli.add_command(cmd_text2spl, name="compile")
 
 
-# ── spl2 version ──────────────────────────────────────────────────────────────
+# ── spl version ──────────────────────────────────────────────────────────────
 
 @cli.command("version")
 def cmd_version() -> None:
     """Print the SPL engine version."""
-    click.echo(f"spl2 {__version__}")
+    click.echo(f"spl {__version__}")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

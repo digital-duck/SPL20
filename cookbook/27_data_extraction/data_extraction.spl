@@ -3,10 +3,10 @@
 -- Demonstrates schema-constrained extraction on real-world noisy input.
 --
 -- Usage:
---   spl2 run cookbook/27_data_extraction/data_extraction.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/27_data_extraction/data_extraction.spl --adapter ollama -m gemma3 \
 --       text="Please process payment of USD 4,250.00 to Riverside Consulting (ref: PO-8821) by end of March."
 --
---   spl2 run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
+--   spl run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
 --       text="$(cat invoice.txt)" format="invoice"
 
 CREATE FUNCTION extraction_schema(format TEXT DEFAULT 'general')

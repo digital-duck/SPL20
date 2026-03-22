@@ -3,14 +3,14 @@
 --
 -- Setup:
 --   pip install numpy faiss-cpu
---   spl2 rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
+--   spl rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
 --
 -- Usage:
---   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="Where did Wen grow up?"
---   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is Momagrid and why was it built?"
---   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is the Gang of Four in the ZiNets research team?"
---   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is eta_AI and how is it measured?"
---   spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="How did Wen transition from physics to software engineering?"
+--   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="Where did Wen grow up?"
+--   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is Momagrid and why was it built?"
+--   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is the Gang of Four in the ZiNets research team?"
+--   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is eta_AI and how is it measured?"
+--   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="How did Wen transition from physics to software engineering?"
 
 PROMPT rag_answer
 SELECT

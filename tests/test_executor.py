@@ -2,15 +2,15 @@
 
 import asyncio
 import pytest
-from spl2.lexer import Lexer
-from spl2.parser import Parser
-from spl2.analyzer import Analyzer
-from spl2.executor import (
+from spl.lexer import Lexer
+from spl.parser import Parser
+from spl.analyzer import Analyzer
+from spl.executor import (
     Executor, SPLResult, WorkflowResult, WorkflowState,
     HallucinationDetected, MaxIterationsReached, SPLWorkflowError,
     EXCEPTION_CLASSES,
 )
-from spl2.adapters.echo import EchoAdapter
+from spl.adapters.echo import EchoAdapter
 
 
 def _analyze(source: str):

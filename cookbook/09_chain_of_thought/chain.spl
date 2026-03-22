@@ -3,8 +3,8 @@
 -- Each GENERATE feeds into the next via workflow variables.
 --
 -- Usage:
---   spl2 run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m gemma3 topic="distributed AI inference"
---   spl2 run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m llama3.2 topic="quantum computing"
+--   spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m gemma3 topic="distributed AI inference"
+--   spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m llama3.2 topic="quantum computing"
 
 WORKFLOW chain_of_thought
     INPUT: @topic TEXT

@@ -36,7 +36,7 @@ GENERATE greeting(input, lang)
 ```
 
 ```bash
-$ spl2 run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
+$ spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
 ============================================================
 Model: gemma3
 Tokens: 54 in / 21 out
@@ -63,14 +63,14 @@ pip install -e ".[dev]"
 pytest tests/
 
 # Try it out
-spl2 parse   examples/hello_world.spl
-spl2 explain examples/self_refine.spl
-spl2 run     examples/hello_world.spl
+spl parse   examples/hello_world.spl
+spl explain examples/self_refine.spl
+spl run     examples/hello_world.spl
 
 # Run with a real LLM (Ollama)
 pip install httpx
 ollama pull gemma3
-spl2 run examples/hello_world.spl --adapter ollama user_input="hello" lang="French"
+spl run examples/hello_world.spl --adapter ollama user_input="hello" lang="French"
 ```
 
 ## Examples
@@ -88,13 +88,13 @@ GENERATE greeting(input, lang)
 
 ```bash
 # English (default echo adapter for testing)
-spl2 run examples/hello_world.spl user_input="hello wen"
+spl run examples/hello_world.spl user_input="hello wen"
 
 # Chinese via Ollama
-spl2 run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
+spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
 
 # French via Ollama
-spl2 run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="French"
+spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="French"
 ```
 
 **Ollama Proxy** — use any Ollama model as a general-purpose LLM in 4 lines:
@@ -108,9 +108,9 @@ GENERATE answer(prompt)
 
 ```bash
 # Swap models on the fly with --model (-m) — no .spl file edits needed:
-spl2 run examples/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
-spl2 run examples/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
-spl2 run examples/ollama_proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
+spl run examples/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
+spl run examples/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
+spl run examples/ollama_proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
 ```
 
 Output:
@@ -129,7 +129,7 @@ Okay, let's break down quantum computing. It's a fascinating and complex field..
 # Test multiple models against the same prompt:
 for model in gemma3 llama3.2 mistral phi3 qwen2.5; do
   echo "=== Testing $model ==="
-  spl2 run examples/ollama_proxy.spl --adapter ollama -m $model prompt="What is 2+2?"
+  spl run examples/ollama_proxy.spl --adapter ollama -m $model prompt="What is 2+2?"
 done
 ```
 
@@ -163,19 +163,19 @@ See `examples/` for more patterns (ReAct agent, safe generation with exception h
 ## CLI
 
 ```bash
-spl2 run      <file.spl> [--adapter NAME] [--model MODEL] [-p key=value | key=value ...]
-spl2 execute  <file.spl> [--adapter NAME] [-m MODEL] [--cache] [key=value ...]
-spl2 explain  <file.spl>              # Show execution plan (no LLM call)
-spl2 parse    <file.spl> [--json]     # Validate syntax, optionally dump AST as JSON
-spl2 validate <file.spl>              # Alias for parse
-spl2 syntax   <file.spl>              # Alias for parse
-spl2 text2spl "<description>" [--mode auto|prompt|workflow] [--adapter NAME] [-o FILE] [--execute]
-spl2 compile  "<description>"          # Alias for text2spl
-spl2 init                              # Initialise .spl/ workspace
-spl2 adapters                          # List available LLM adapter engines
-spl2 memory   {list,get,set,delete}    # Manage persistent memory store
-spl2 rag      {add,query,count}        # Manage RAG vector store
-spl2 version                           # Print version
+spl run      <file.spl> [--adapter NAME] [--model MODEL] [-p key=value | key=value ...]
+spl execute  <file.spl> [--adapter NAME] [-m MODEL] [--cache] [key=value ...]
+spl explain  <file.spl>              # Show execution plan (no LLM call)
+spl parse    <file.spl> [--json]     # Validate syntax, optionally dump AST as JSON
+spl validate <file.spl>              # Alias for parse
+spl syntax   <file.spl>              # Alias for parse
+spl text2spl "<description>" [--mode auto|prompt|workflow] [--adapter NAME] [-o FILE] [--execute]
+spl compile  "<description>"          # Alias for text2spl
+spl init                              # Initialise .spl/ workspace
+spl adapters                          # List available LLM adapter engines
+spl memory   {list,get,set,delete}    # Manage persistent memory store
+spl rag      {add,query,count}        # Manage RAG vector store
+spl version                           # Print version
 ```
 
 ### text2SPL Compiler
@@ -184,20 +184,20 @@ Compile natural language directly into SPL 2.0 code:
 
 ```bash
 # Generate SPL from English
-spl2 text2spl "summarize a document" --adapter ollama
+spl text2spl "summarize a document" --adapter ollama
 
 # Save to file
-spl2 text2spl "build a review agent" --mode workflow -o review.spl --adapter ollama
+spl text2spl "build a review agent" --mode workflow -o review.spl --adapter ollama
 
 # Compile and execute in one step
-spl2 compile "translate text to French" --execute --adapter anthropic text="Hello world"
+spl compile "translate text to French" --execute --adapter anthropic text="Hello world"
 ```
 
 Parameters can be passed with `-p KEY=VALUE` or as trailing `KEY=VALUE` arguments:
 ```bash
-spl2 run query.spl -p question="What is SPL?"
-spl2 run query.spl question="What is SPL?"          # same thing, shorter
-spl2 run query.spl question="What is SPL?" lang=en   # multiple params
+spl run query.spl -p question="What is SPL?"
+spl run query.spl question="What is SPL?"          # same thing, shorter
+spl run query.spl question="What is SPL?" lang=en   # multiple params
 ```
 
 ## LLM Adapters
@@ -205,7 +205,7 @@ spl2 run query.spl question="What is SPL?" lang=en   # multiple params
 SPL 2.0 supports 10 adapter backends — from local inference to major cloud providers:
 
 ```bash
-$ spl2 adapters
+$ spl adapters
 Available LLM adapters (10):
 
   anthropic      Claude models via Anthropic API (requires anthropic, ANTHROPIC_API_KEY)
@@ -250,18 +250,18 @@ Lexer --> Parser --> Analyzer --> Optimizer --> Executor
 
 | Module | File | Purpose |
 |--------|------|---------|
-| Lexer | `spl2/lexer.py` | Tokenization (115 token types) |
-| Parser | `spl2/parser.py` | Recursive descent parser |
-| AST | `spl2/ast_nodes.py` | 30+ dataclass node types |
-| Analyzer | `spl2/analyzer.py` | Semantic validation |
-| Optimizer | `spl2/optimizer.py` | Token budget allocation, workflow planning |
-| Executor | `spl2/executor.py` | Runtime execution engine |
-| Explain | `spl2/explain.py` | ASCII plan rendering |
-| IR | `spl2/ir.py` | JSON serialization of AST and plans |
-| CLI | `spl2/cli.py` | Command-line interface |
-| text2SPL | `spl2/text2spl.py` | Natural language to SPL compiler |
-| Adapters | `spl2/adapters/` | LLM backend plugins (10 adapters) |
-| Storage | `spl2/storage/` | SQLite memory + FAISS vector store |
+| Lexer | `spl/lexer.py` | Tokenization (115 token types) |
+| Parser | `spl/parser.py` | Recursive descent parser |
+| AST | `spl/ast_nodes.py` | 30+ dataclass node types |
+| Analyzer | `spl/analyzer.py` | Semantic validation |
+| Optimizer | `spl/optimizer.py` | Token budget allocation, workflow planning |
+| Executor | `spl/executor.py` | Runtime execution engine |
+| Explain | `spl/explain.py` | ASCII plan rendering |
+| IR | `spl/ir.py` | JSON serialization of AST and plans |
+| CLI | `spl/cli.py` | Command-line interface |
+| text2SPL | `spl/text2spl.py` | Natural language to SPL compiler |
+| Adapters | `spl/adapters/` | LLM backend plugins (10 adapters) |
+| Storage | `spl/storage/` | SQLite memory + FAISS vector store |
 
 ## Requirements
 

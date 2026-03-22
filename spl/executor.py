@@ -17,9 +17,9 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-_log = logging.getLogger("spl2.executor")
+_log = logging.getLogger("spl.executor")
 
-from spl2.ast_nodes import (
+from spl.ast_nodes import (
     PromptStatement, SelectItem, SystemRoleCall, ContextRef,
     RagQuery, MemoryGet, Identifier, Literal, ParamRef,
     BinaryOp, FunctionCall, DottedName, NamedArg,
@@ -29,13 +29,13 @@ from spl2.ast_nodes import (
     RetryStatement, RaiseStatement, CallStatement, SelectIntoStatement,
     SemanticCondition, ComparisonCondition, Condition, ExceptionHandler,
 )
-from spl2.optimizer import ExecutionPlan, ExecutionStep, WorkflowPlan
-from spl2.adapters.base import LLMAdapter, GenerationResult
-from spl2.adapters import get_adapter
-from spl2.storage.memory import MemoryStore
-from spl2.storage import get_vector_store
-from spl2.token_counter import TokenCounter
-from spl2.functions import FunctionRegistry
+from spl.optimizer import ExecutionPlan, ExecutionStep, WorkflowPlan
+from spl.adapters.base import LLMAdapter, GenerationResult
+from spl.adapters import get_adapter
+from spl.storage.memory import MemoryStore
+from spl.storage import get_vector_store
+from spl.token_counter import TokenCounter
+from spl.functions import FunctionRegistry
 
 
 # ================================================================
@@ -201,13 +201,13 @@ class Executor:
         params: dict[str, str] | None = None,
     ) -> list[SPLResult | WorkflowResult]:
         """Execute all statements in an analyzed program."""
-        from spl2.optimizer import Optimizer
+        from spl.optimizer import Optimizer
         optimizer = Optimizer()
         results = []
 
         # Register functions and procedures first
         for stmt in analysis.ast.statements:
-            from spl2.ast_nodes import CreateFunctionStatement
+            from spl.ast_nodes import CreateFunctionStatement
             if isinstance(stmt, CreateFunctionStatement):
                 self.functions.register(stmt)
             elif isinstance(stmt, ProcedureStatement):
@@ -354,7 +354,7 @@ class Executor:
 
     async def _execute_cte_step(self, step: ExecutionStep, params: dict[str, str]) -> str:
         """Execute a CTE's nested PROMPT as a sub-query and return the result text."""
-        from spl2.optimizer import Optimizer
+        from spl.optimizer import Optimizer
         cte_stmt = step.cte_stmt
         if cte_stmt is None:
             return f"[CTE '{step.alias}' has no nested PROMPT]"

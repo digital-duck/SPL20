@@ -1,6 +1,6 @@
 """LLM adapter registry and factory for SPL 2.0."""
 
-from spl2.adapters.base import LLMAdapter, GenerationResult
+from spl.adapters.base import LLMAdapter, GenerationResult
 
 _ADAPTER_REGISTRY: dict[str, type[LLMAdapter]] = {}
 
@@ -26,61 +26,61 @@ def list_adapters() -> list[str]:
 def _register_builtin_adapters():
     """Register adapters that are available."""
     try:
-        from spl2.adapters.echo import EchoAdapter
+        from spl.adapters.echo import EchoAdapter
         register_adapter("echo", EchoAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.claude_cli import ClaudeCLIAdapter
+        from spl.adapters.claude_cli import ClaudeCLIAdapter
         register_adapter("claude_cli", ClaudeCLIAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.openrouter import OpenRouterAdapter
+        from spl.adapters.openrouter import OpenRouterAdapter
         register_adapter("openrouter", OpenRouterAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.ollama import OllamaAdapter
+        from spl.adapters.ollama import OllamaAdapter
         register_adapter("ollama", OllamaAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.momagrid import MomagridAdapter
+        from spl.adapters.momagrid import MomagridAdapter
         register_adapter("momagrid", MomagridAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.anthropic import AnthropicAdapter
+        from spl.adapters.anthropic import AnthropicAdapter
         register_adapter("anthropic", AnthropicAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.openai import OpenAIAdapter
+        from spl.adapters.openai import OpenAIAdapter
         register_adapter("openai", OpenAIAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.google import GoogleAdapter
+        from spl.adapters.google import GoogleAdapter
         register_adapter("google", GoogleAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.deepseek import DeepSeekAdapter
+        from spl.adapters.deepseek import DeepSeekAdapter
         register_adapter("deepseek", DeepSeekAdapter)
     except ImportError:
         pass
 
     try:
-        from spl2.adapters.qwen import QwenAdapter
+        from spl.adapters.qwen import QwenAdapter
         register_adapter("qwen", QwenAdapter)
     except ImportError:
         pass

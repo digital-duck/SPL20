@@ -25,14 +25,14 @@ draft(task)
 
 ### Minimal — use all defaults
 ```bash
-spl2 run cookbook/05_self_refine/self_refine.spl \
+spl run cookbook/05_self_refine/self_refine.spl \
     --adapter ollama \
     task="Write a haiku about coding"
 ```
 
 ### Custom iteration limit
 ```bash
-spl2 run cookbook/05_self_refine/self_refine.spl \
+spl run cookbook/05_self_refine/self_refine.spl \
     --adapter ollama \
     task="Write a haiku about coding" \
     max_iterations=3
@@ -40,7 +40,7 @@ spl2 run cookbook/05_self_refine/self_refine.spl \
 
 ### With a different model
 ```bash
-spl2 run cookbook/05_self_refine/self_refine.spl \
+spl run cookbook/05_self_refine/self_refine.spl \
     --adapter ollama -m llama3.2 \
     task="Explain recursion in one paragraph" \
     max_iterations=4
@@ -48,7 +48,7 @@ spl2 run cookbook/05_self_refine/self_refine.spl \
 
 ### Via Claude Code CLI
 ```bash
-spl2 run cookbook/05_self_refine/self_refine.spl \
+spl run cookbook/05_self_refine/self_refine.spl \
     --adapter claude_cli -m claude-sonnet-4-6 \
     task="Write an executive summary of the benefits of SPL - Structured Prompt Language" \
     max_iterations=3

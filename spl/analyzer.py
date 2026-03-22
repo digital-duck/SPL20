@@ -7,7 +7,7 @@ Extends SPL 1.0 analyzer with validation for:
 - Variable scope analysis for @var assignments
 """
 
-from spl2.ast_nodes import (
+from spl.ast_nodes import (
     Program, PromptStatement, CreateFunctionStatement, ExplainStatement,
     ExecuteStatement, SelectItem, CTEClause, GenerateClause,
     SystemRoleCall, ContextRef, RagQuery, MemoryGet, Identifier,

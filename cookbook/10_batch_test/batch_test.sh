@@ -48,7 +48,7 @@ for model in $MODELS; do
         TOTAL=$((TOTAL + 1))
 
         # Run and capture exit code
-        if spl2 run "$filepath" --adapter "$ADAPTER" -m "$model" $params > /dev/null 2>&1; then
+        if spl run "$filepath" --adapter "$ADAPTER" -m "$model" $params > /dev/null 2>&1; then
             echo "  PASS  $script"
             PASSED=$((PASSED + 1))
         else

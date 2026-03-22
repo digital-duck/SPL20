@@ -4,14 +4,14 @@
 -- with deterministic tool calls for loading, splitting, stats, and extreme detection.
 --
 -- Usage (load from file):
---   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \
+--   spl run cookbook/31_sentiment_pipeline/sentiment.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/31_sentiment_pipeline/tools.py \
 --       filename=product_reviews.txt \
 --       domain=product_reviews
 --
 -- Usage (inline pipe-delimited):
---   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \
+--   spl run cookbook/31_sentiment_pipeline/sentiment.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/31_sentiment_pipeline/tools.py \
 --       items="Great product, love it! | Terrible experience, never again | It was okay I guess" \

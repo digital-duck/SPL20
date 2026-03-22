@@ -5,14 +5,14 @@
 -- date normalisation, and ownership validation.
 --
 -- Usage (load from file):
---   spl2 run cookbook/29_meeting_actions/meeting_actions.spl \
+--   spl run cookbook/29_meeting_actions/meeting_actions.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/29_meeting_actions/tools.py \
 --       filename=sprint_planning.txt \
 --       output_format=markdown
 --
 -- Usage (inline transcript):
---   spl2 run cookbook/29_meeting_actions/meeting_actions.spl \
+--   spl run cookbook/29_meeting_actions/meeting_actions.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/29_meeting_actions/tools.py \
 --       transcript="Alice: fix the login bug by Friday. Bob: I will handle it." \

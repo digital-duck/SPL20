@@ -19,7 +19,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Callable
 
-_log = logging.getLogger("spl2.storage.vector")
+_log = logging.getLogger("spl.storage.vector")
 
 try:
     import numpy as _numpy  # noqa: F401

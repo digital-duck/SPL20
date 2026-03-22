@@ -26,38 +26,38 @@ Always pass `--tools tools.py`:
 
 ```bash
 # From catalog — safe input
-spl2 run cookbook/18_guardrails/guardrails.spl \
+spl run cookbook/18_guardrails/guardrails.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=safe_encryption \
     2>&1 | tee cookbook/out/18_guardrails-$(date +%Y%m%d_%H%M%S).md
 
 # From catalog — PII redaction test
-spl2 run cookbook/18_guardrails/guardrails.spl \
+spl run cookbook/18_guardrails/guardrails.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=pii_ssn
 
 # From catalog — harmful request (should block at Gate 1)
-spl2 run cookbook/18_guardrails/guardrails.spl \
+spl run cookbook/18_guardrails/guardrails.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=harmful_malware
 
 # From catalog — multiple PII types
-spl2 run cookbook/18_guardrails/guardrails.spl \
+spl run cookbook/18_guardrails/guardrails.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=pii_multiple
 
 # Ad-hoc — no catalog needed
-spl2 run cookbook/18_guardrails/guardrails.spl \
+spl run cookbook/18_guardrails/guardrails.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     user_input="Explain how encryption works"
 
 # Discover available test inputs
-spl2 run ... input_id=list
+spl run ... input_id=list
 ```
 
 ## Workflow steps

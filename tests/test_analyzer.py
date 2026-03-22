@@ -1,9 +1,9 @@
 """Tests for SPL 2.0 Semantic Analyzer."""
 
 import pytest
-from spl2 import parse, validate
-from spl2.analyzer import AnalysisError, infer_condition_type
-from spl2.ast_nodes import SemanticCondition, ComparisonCondition, Literal
+from spl import parse, validate
+from spl.analyzer import AnalysisError, infer_condition_type
+from spl.ast_nodes import SemanticCondition, ComparisonCondition, Literal
 
 
 class TestAnalyzerSPL1Compat:
@@ -132,7 +132,7 @@ class TestAnalyzerSPL2:
         """)
         assert any("classification" in w.message.lower() for w in result.warnings)
 
-    def test_mixed_spl1_spl2(self):
+    def test_mixed_spl1_spl(self):
         result = validate("""
             CREATE FUNCTION summarize(text)
             RETURNS text

@@ -2,9 +2,9 @@
 
 import asyncio
 import pytest
-from spl2.adapters import get_adapter, list_adapters, register_adapter
-from spl2.adapters.base import LLMAdapter, GenerationResult
-from spl2.adapters.echo import EchoAdapter
+from spl.adapters import get_adapter, list_adapters, register_adapter
+from spl.adapters.base import LLMAdapter, GenerationResult
+from spl.adapters.echo import EchoAdapter
 
 
 class TestAdapterRegistry:
@@ -69,7 +69,7 @@ class TestOpenRouterAdapter:
         import os
         old_key = os.environ.pop("OPENROUTER_API_KEY", None)
         try:
-            from spl2.adapters.openrouter import OpenRouterAdapter
+            from spl.adapters.openrouter import OpenRouterAdapter
             with pytest.raises(ValueError, match="API key"):
                 OpenRouterAdapter(api_key="")
         except ImportError:
@@ -80,7 +80,7 @@ class TestOpenRouterAdapter:
 
     def test_list_models(self):
         try:
-            from spl2.adapters.openrouter import OpenRouterAdapter
+            from spl.adapters.openrouter import OpenRouterAdapter
             adapter = OpenRouterAdapter(api_key="test-key")
             models = adapter.list_models()
             assert len(models) > 0
@@ -94,7 +94,7 @@ class TestOllamaAdapter:
 
     def test_list_models_fallback(self):
         try:
-            from spl2.adapters.ollama import OllamaAdapter
+            from spl.adapters.ollama import OllamaAdapter
             adapter = OllamaAdapter(base_url="http://localhost:99999")
             models = adapter.list_models()
             assert len(models) > 0
@@ -111,7 +111,7 @@ class TestMomagridAdapter:
 
     def test_default_hub_url(self):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             adapter = MomagridAdapter()
             assert adapter.hub_url == "http://localhost:9000"
         except ImportError:
@@ -119,7 +119,7 @@ class TestMomagridAdapter:
 
     def test_custom_hub_url(self):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             adapter = MomagridAdapter(hub_url="http://192.168.1.10:9000")
             assert adapter.hub_url == "http://192.168.1.10:9000"
         except ImportError:
@@ -127,7 +127,7 @@ class TestMomagridAdapter:
 
     def test_env_hub_url(self, monkeypatch):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             monkeypatch.setenv("MOMAGRID_HUB_URL", "http://grid.local:9000")
             adapter = MomagridAdapter(hub_url=None)
             assert adapter.hub_url == "http://grid.local:9000"
@@ -136,7 +136,7 @@ class TestMomagridAdapter:
 
     def test_min_tier_and_vram(self):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             adapter = MomagridAdapter(min_tier="GOLD", min_vram_gb=24.0)
             assert adapter.min_tier == "GOLD"
             assert adapter.min_vram_gb == 24.0
@@ -145,7 +145,7 @@ class TestMomagridAdapter:
 
     def test_list_models_fallback(self):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             adapter = MomagridAdapter(hub_url="http://localhost:99999")
             models = adapter.list_models()
             assert len(models) > 0
@@ -155,7 +155,7 @@ class TestMomagridAdapter:
 
     def test_count_tokens(self):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             adapter = MomagridAdapter()
             count = adapter.count_tokens("Hello world")
             assert count > 0
@@ -164,7 +164,7 @@ class TestMomagridAdapter:
 
     def test_api_key_header(self):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             adapter = MomagridAdapter(api_key="test-key-123")
             headers = adapter._headers()
             assert headers["Authorization"] == "Bearer test-key-123"
@@ -173,7 +173,7 @@ class TestMomagridAdapter:
 
     def test_connect_error_on_generate(self):
         try:
-            from spl2.adapters.momagrid import MomagridAdapter
+            from spl.adapters.momagrid import MomagridAdapter
             adapter = MomagridAdapter(hub_url="http://localhost:19876", timeout=2)
             with pytest.raises(ConnectionError, match="Cannot connect"):
                 asyncio.run(adapter.generate("test prompt"))

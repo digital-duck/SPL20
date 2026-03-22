@@ -5,8 +5,8 @@ text2SPL can retrieve semantically similar examples at compile time instead
 of relying on a small set of hand-written examples.
 
 Sources of pairs:
-  - Cookbook recipes (indexed once via `spl2 code-rag index`)
-  - Every validated `spl2 compile` invocation (auto-captured when enabled)
+  - Cookbook recipes (indexed once via `spl code-rag index`)
+  - Every validated `spl compile` invocation (auto-captured when enabled)
 
 Usage:
     store = CodeRAGStore()
@@ -23,7 +23,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-_log = logging.getLogger("spl2.code_rag")
+_log = logging.getLogger("spl.code_rag")
 
 try:
     import chromadb
@@ -144,7 +144,7 @@ class CodeRAGStore:
     ) -> str:
         """Add a validated (description, SPL source) pair to the store.
 
-        Called automatically after each successful `spl2 compile` invocation
+        Called automatically after each successful `spl compile` invocation
         when auto_capture is enabled.
 
         Returns the doc_id used.

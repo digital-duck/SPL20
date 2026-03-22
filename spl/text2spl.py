@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import logging
 
-from spl2.adapters.base import LLMAdapter
-from spl2.lexer import Lexer, LexerError
-from spl2.parser import Parser, ParseError
-from spl2.analyzer import Analyzer, AnalysisError
+from spl.adapters.base import LLMAdapter
+from spl.lexer import Lexer, LexerError
+from spl.parser import Parser, ParseError
+from spl.analyzer import Analyzer, AnalysisError
 
-_log = logging.getLogger("spl2.text2spl")
+_log = logging.getLogger("spl.text2spl")
 
 
 SPL2_SYSTEM_PROMPT = """\

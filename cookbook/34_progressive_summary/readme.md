@@ -22,16 +22,16 @@ summarize(text, sentence constraint)   → @sentence_summary
 ## Usage
 
 ```bash
-spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
     text="$(cat long_article.txt)"
 
-spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
     text="$(cat research_paper.txt)" \
     audience="executive" \
     layers=3
 
 # Inline text
-spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
     text="Artificial intelligence has transformed industries..." \
     audience="technical"
 ```

@@ -30,26 +30,26 @@ Always pass `--tools tools.py`:
 
 ```bash
 # From catalog — neural networks explanation styles
-spl2 run cookbook/26_ab_test/ab_test.spl \
+spl run cookbook/26_ab_test/ab_test.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     experiment_id=neural_networks \
     2>&1 | tee cookbook/out/26_ab_test-$(date +%Y%m%d_%H%M%S).md
 
 # From catalog — standing desk value proposition
-spl2 run cookbook/26_ab_test/ab_test.spl \
+spl run cookbook/26_ab_test/ab_test.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     experiment_id=standing_desk winner_threshold=2.0
 
 # From catalog — code review style
-spl2 run cookbook/26_ab_test/ab_test.spl \
+spl run cookbook/26_ab_test/ab_test.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     experiment_id=code_review
 
 # Ad-hoc — no catalog needed
-spl2 run cookbook/26_ab_test/ab_test.spl \
+spl run cookbook/26_ab_test/ab_test.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     task="Summarize the French Revolution in 3 sentences" \
@@ -57,7 +57,7 @@ spl2 run cookbook/26_ab_test/ab_test.spl \
     prompt_b="Be vivid and narrative"
 
 # Discover available experiments
-spl2 run ... experiment_id=list
+spl run ... experiment_id=list
 ```
 
 ## Workflow steps

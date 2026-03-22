@@ -7,7 +7,7 @@ Usage:
     python3 -W ignore chunking_doc.py /path/to/document.md [--query "your question"]
 
 Or via the improved CLI (does the same thing in one command):
-    spl2 rag add /path/to/document.md
+    spl rag add /path/to/document.md
 """
 
 import argparse
@@ -55,7 +55,7 @@ def index_chunks(chunks: list[str], storage_dir: str = ".spl") -> object:
     - all-MiniLM-L6-v2: 384-dim semantic vectors trained on 1B sentence pairs.
       Synonyms, paraphrases, and related concepts score high automatically.
     """
-    from spl2.storage import get_vector_store
+    from spl.storage import get_vector_store
 
     print(f"\n[3] Indexing {len(chunks)} chunks ...")
     store = get_vector_store("faiss", storage_dir)
@@ -119,7 +119,7 @@ def main():
     store.close()
 
     print(f"\nDone. Run the recipe:")
-    print(f'  spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama question="{args.query}"')
+    print(f'  spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="{args.query}"')
 
 
 if __name__ == "__main__":

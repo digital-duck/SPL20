@@ -4,23 +4,23 @@
 -- Supports pre-built experiments from experiments.json or ad-hoc task + prompt_a + prompt_b.
 --
 -- Usage (from catalog):
---   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
 --       --tools cookbook/26_ab_test/tools.py \
 --       experiment_id=neural_networks
 --
---   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
 --       --tools cookbook/26_ab_test/tools.py \
 --       experiment_id=standing_desk winner_threshold=2.0
 --
 -- Usage (ad-hoc — no catalog):
---   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
 --       --tools cookbook/26_ab_test/tools.py \
 --       task="Explain neural networks" \
 --       prompt_a="Explain like I'm 5" \
 --       prompt_b="Give a technical explanation with analogies"
 --
 -- Discover available experiments:
---   spl2 run ... experiment_id=list
+--   spl run ... experiment_id=list
 
 -- Scoring rubric as a reusable function
 CREATE FUNCTION scoring_rubric()

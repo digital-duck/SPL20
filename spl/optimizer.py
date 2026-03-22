@@ -7,7 +7,7 @@ Extends SPL 1.0 optimizer with workflow execution planning:
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from spl2.ast_nodes import (
+from spl.ast_nodes import (
     PromptStatement, SelectItem, SystemRoleCall, ContextRef,
     RagQuery, MemoryGet, Identifier, DottedName, FunctionCall,
     WorkflowStatement, ProcedureStatement,
@@ -15,8 +15,8 @@ from spl2.ast_nodes import (
     AssignmentStatement, GenerateIntoStatement, CommitStatement,
     RetryStatement, RaiseStatement, CallStatement, SelectIntoStatement,
 )
-from spl2.analyzer import AnalysisResult
-from spl2.token_counter import TokenCounter
+from spl.analyzer import AnalysisResult
+from spl.token_counter import TokenCounter
 
 
 # ================================================================
@@ -347,7 +347,7 @@ class Optimizer:
                 estimated_tokens=stmt.generate_clause.output_budget or 1000,
             )
         elif isinstance(stmt, EvaluateStatement):
-            from spl2.ast_nodes import SemanticCondition, ComparisonCondition
+            from spl.ast_nodes import SemanticCondition, ComparisonCondition
             branches = []
             for wc in stmt.when_clauses:
                 cond = wc.condition

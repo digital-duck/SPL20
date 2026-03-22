@@ -3,7 +3,7 @@
 Supports both PROMPT execution plans and WORKFLOW execution plans.
 """
 
-from spl2.optimizer import ExecutionPlan, WorkflowPlan, WorkflowStep
+from spl.optimizer import ExecutionPlan, WorkflowPlan, WorkflowStep
 
 
 def explain_plan(plan: ExecutionPlan | WorkflowPlan) -> str:

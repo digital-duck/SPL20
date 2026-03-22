@@ -25,34 +25,34 @@ Always pass `--tools tools.py` so the order-lookup tools are available:
 
 ```bash
 # Billing — duplicate charge on a real order (ORD-12345 exists in orders.json)
-spl2 run cookbook/28_support_triage/support_triage.spl \
+spl run cookbook/28_support_triage/support_triage.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/28_support_triage/tools.py \
     ticket="My account has been charged twice for the same order #ORD-12345" \
     2>&1 | tee cookbook/out/28_support_triage-$(date +%Y%m%d_%H%M%S).md
 
 # Shipping delay (ORD-67890 shows stuck in Memphis hub)
-spl2 run cookbook/28_support_triage/support_triage.spl \
+spl run cookbook/28_support_triage/support_triage.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/28_support_triage/tools.py \
     ticket="Package for order ORD-67890 hasn't arrived, it's been 10 days" \
     tone="empathetic"
 
 # Wrong item received (ORD-11111 shows fulfillment mispick)
-spl2 run cookbook/28_support_triage/support_triage.spl \
+spl run cookbook/28_support_triage/support_triage.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/28_support_triage/tools.py \
     ticket="I received the wrong product for order ORD-11111"
 
 # Login issue — no order number, LLM responds on ticket text alone
-spl2 run cookbook/28_support_triage/support_triage.spl \
+spl run cookbook/28_support_triage/support_triage.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/28_support_triage/tools.py \
     ticket="I can't log in, password reset email never arrives" \
     tone="friendly"
 
 # Unknown order number — tool tells LLM to ask customer to confirm
-spl2 run cookbook/28_support_triage/support_triage.spl \
+spl run cookbook/28_support_triage/support_triage.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/28_support_triage/tools.py \
     ticket="Where is my order #99999?"

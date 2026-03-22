@@ -9,7 +9,7 @@ Tools:
   find_extremes(sentiment_json)   Locate most positive, most negative, lowest-confidence items.
 
 Usage:
-  spl2 run cookbook/31_sentiment_pipeline/sentiment.spl \\
+  spl run cookbook/31_sentiment_pipeline/sentiment.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/31_sentiment_pipeline/tools.py \\
       filename=product_reviews.txt \\
@@ -20,7 +20,7 @@ import json
 import math
 import os
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _REVIEWS_DIR = os.path.join(os.path.dirname(__file__), "reviews")
 

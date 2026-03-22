@@ -19,7 +19,7 @@ cd SPL20
 pip install -e ".[dev]"
 
 # Verify installation
-spl2 --help
+spl --help
 pytest tests/   # should show 231 passed
 ```
 
@@ -75,7 +75,7 @@ WITH OUTPUT BUDGET 1000 tokens;
 ### Parse and Validate
 
 ```bash
-spl2 parse examples/hello_world.spl
+spl parse examples/hello_world.spl
 ```
 
 Output:
@@ -87,7 +87,7 @@ Parsed OK: 1 statement(s)
 ### View Execution Plan
 
 ```bash
-spl2 explain examples/hello_world.spl
+spl explain examples/hello_world.spl
 ```
 
 This shows the token allocation, cost estimate, and step breakdown without making any LLM calls.
@@ -95,7 +95,7 @@ This shows the token allocation, cost estimate, and step breakdown without makin
 ### Run with Echo Adapter (Testing)
 
 ```bash
-spl2 run examples/hello_world.spl user_input="hello wen" lang="Chinese"
+spl run examples/hello_world.spl user_input="hello wen" lang="Chinese"
 ```
 
 The `echo` adapter mirrors the prompt back — useful for verifying your query structure.
@@ -105,7 +105,7 @@ The `echo` adapter mirrors the prompt back — useful for verifying your query s
 ```bash
 # Using local Ollama — multilingual greeting in 440ms:
 ollama pull gemma3
-spl2 run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
+spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
 ```
 
 Output:
@@ -125,21 +125,21 @@ Latency: 440ms
 
 ```bash
 # Chinese via Ollama (local, free)
-spl2 run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
+spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
 
 # French via Ollama
-spl2 run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="French"
+spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="French"
 
 # Japanese via OpenRouter (100+ cloud models)
 export OPENROUTER_API_KEY="sk-or-..."
-spl2 run examples/hello_world.spl --adapter openrouter user_input="hello wen" lang="Japanese"
+spl run examples/hello_world.spl --adapter openrouter user_input="hello wen" lang="Japanese"
 
 # Via Claude Code CLI (subscription)
-spl2 run examples/hello_world.spl --adapter claude_cli user_input="hello wen" lang="Spanish"
+spl run examples/hello_world.spl --adapter claude_cli user_input="hello wen" lang="Spanish"
 
 # Via Momagrid (decentralized GPU grid)
 export MOMAGRID_HUB_URL="http://localhost:9000"
-spl2 run examples/hello_world.spl --adapter momagrid user_input="hello wen" lang="Korean"
+spl run examples/hello_world.spl --adapter momagrid user_input="hello wen" lang="Korean"
 ```
 
 ### Passing Parameters
@@ -148,13 +148,13 @@ Parameters can be passed two ways — both are equivalent:
 
 ```bash
 # Explicit -p flag (traditional)
-spl2 run query.spl -p user_input="hello" -p lang="French"
+spl run query.spl -p user_input="hello" -p lang="French"
 
 # Trailing KEY=VALUE (convenient shorthand)
-spl2 run query.spl user_input="hello" lang="French"
+spl run query.spl user_input="hello" lang="French"
 
 # Mixed
-spl2 run query.spl -p user_input="hello" lang="French"
+spl run query.spl -p user_input="hello" lang="French"
 ```
 
 ### Create Your Own
@@ -171,10 +171,10 @@ GENERATE answer(question)
 
 ```bash
 # Test with echo
-spl2 run my_first.spl question="How do I reverse a list in Python?"
+spl run my_first.spl question="How do I reverse a list in Python?"
 
 # Run with a real LLM
-spl2 run my_first.spl --adapter ollama question="How do I reverse a list in Python?"
+spl run my_first.spl --adapter ollama question="How do I reverse a list in Python?"
 ```
 
 ---
@@ -195,9 +195,9 @@ GENERATE answer(prompt)
 
 ```bash
 # Query any Ollama model — swap models with --model (-m), no .spl edits needed:
-spl2 run examples/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
-spl2 run examples/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
-spl2 run examples/ollama_proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
+spl run examples/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
+spl run examples/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
+spl run examples/ollama_proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
 ```
 
 Output:
@@ -223,9 +223,9 @@ The `--model` flag overrides `USING MODEL` in any `.spl` file at runtime — no 
 
 ```bash
 # Override model on any script:
-spl2 run examples/hello_world.spl --adapter ollama --model gemma3 user_input="hello" lang="Chinese"
-spl2 run examples/hello_world.spl --adapter ollama -m llama3.2 user_input="hello" lang="French"
-spl2 run examples/hello_world.spl --adapter ollama -m mistral user_input="hello" lang="Spanish"
+spl run examples/hello_world.spl --adapter ollama --model gemma3 user_input="hello" lang="Chinese"
+spl run examples/hello_world.spl --adapter ollama -m llama3.2 user_input="hello" lang="French"
+spl run examples/hello_world.spl --adapter ollama -m mistral user_input="hello" lang="Spanish"
 ```
 
 ### Automated Ollama Model Testing
@@ -236,7 +236,7 @@ SPL 2.0 makes it trivial to benchmark and compare Ollama models:
 # Test multiple models against the same prompt:
 for model in gemma3 llama3.2 mistral phi3 qwen2.5; do
   echo "=== Testing $model ==="
-  spl2 run examples/ollama_proxy.spl --adapter ollama -m $model prompt="What is 2+2?"
+  spl run examples/ollama_proxy.spl --adapter ollama -m $model prompt="What is 2+2?"
 done
 ```
 
@@ -244,7 +244,7 @@ done
 # Compare multilingual capability across models:
 for model in gemma3 llama3.2 mistral; do
   echo "=== $model: Chinese ==="
-  spl2 run examples/hello_world.spl --adapter ollama -m $model user_input="hello" lang="Chinese"
+  spl run examples/hello_world.spl --adapter ollama -m $model user_input="hello" lang="Chinese"
 done
 ```
 
@@ -252,7 +252,7 @@ done
 # Benchmark response quality with a harder prompt:
 for model in gemma3 llama3.2 mistral phi3; do
   echo "=== $model ==="
-  spl2 run examples/ollama_proxy.spl --adapter ollama -m $model \
+  spl run examples/ollama_proxy.spl --adapter ollama -m $model \
     prompt="Explain the difference between concurrency and parallelism in 3 sentences"
 done
 ```
@@ -562,7 +562,7 @@ END
 
 Run it:
 ```bash
-spl2 run examples/self_refine.spl --adapter claude_cli -p task="Write a haiku about coding"
+spl run examples/self_refine.spl --adapter claude_cli -p task="Write a haiku about coding"
 ```
 
 ### Pattern 2: ReAct Agent
@@ -601,7 +601,7 @@ END
 
 Run it:
 ```bash
-spl2 run examples/react_agent.spl --adapter claude_cli -p task="What is the capital of France?"
+spl run examples/react_agent.spl --adapter claude_cli -p task="What is the capital of France?"
 ```
 
 ### Pattern 3: Safe Generation
@@ -634,7 +634,7 @@ END
 
 Run it:
 ```bash
-spl2 run examples/safe_generation.spl --adapter claude_cli -p prompt="Explain quantum computing"
+spl run examples/safe_generation.spl --adapter claude_cli -p prompt="Explain quantum computing"
 ```
 
 ---
@@ -644,7 +644,7 @@ spl2 run examples/safe_generation.spl --adapter claude_cli -p prompt="Explain qu
 Enable caching to skip repeated LLM calls:
 
 ```bash
-spl2 run my_query.spl --cache -p question="What is SPL?"
+spl run my_query.spl --cache -p question="What is SPL?"
 # First run: calls LLM, caches result
 # Second run: returns cached result (0 tokens, 0 cost)
 ```
@@ -658,7 +658,7 @@ Cache is stored in `.spl/memory.db` (SQLite). Cache keys are SHA-256 hashes of t
 ### Parse to JSON AST
 
 ```bash
-spl2 parse examples/self_refine.spl --json
+spl parse examples/self_refine.spl --json
 ```
 
 Produces a portable JSON representation of the AST — useful for tooling, visualization, or cross-language interop.
@@ -667,8 +667,8 @@ Produces a portable JSON representation of the AST — useful for tooling, visua
 
 ```python
 import asyncio
-from spl2 import parse, validate, optimize
-from spl2 import Executor
+from spl import parse, validate, optimize
+from spl import Executor
 
 # Parse
 ast = parse(open("my_query.spl").read())
@@ -695,13 +695,13 @@ Convert plain English to SPL 2.0 code via the CLI or Python API.
 
 ### Dedicated Compiler Adapter
 
-text2SPL uses its own adapter and model, **separate from the runtime adapter** used by `spl2 run`. This lets you use a powerful code-generation model for compilation while keeping a different (e.g. faster or local) model for execution.
+text2SPL uses its own adapter and model, **separate from the runtime adapter** used by `spl run`. This lets you use a powerful code-generation model for compilation while keeping a different (e.g. faster or local) model for execution.
 
 The recommended setup uses the `claude_cli` adapter with `claude-sonnet-4-6`, which runs against your Claude subscription (zero marginal cost, no VRAM required):
 
 ```bash
 # No flags needed — picks up text2spl.adapter and text2spl.model from config
-spl2 compile "summarize a document and store the result"
+spl compile "summarize a document and store the result"
 ```
 
 The config section that controls this (in `~/.spl/config.yaml`):
@@ -717,32 +717,32 @@ text2spl:
 
 To override the compiler adapter/model for a single call:
 ```bash
-spl2 compile "..." --adapter ollama -m qwen2.5-coder   # benchmark another compiler
+spl compile "..." --adapter ollama -m qwen2.5-coder   # benchmark another compiler
 ```
 
 To switch the compiler globally:
 ```bash
-spl2 config set text2spl.adapter ollama
-spl2 config set text2spl.model qwen2.5-coder
+spl config set text2spl.adapter ollama
+spl config set text2spl.model qwen2.5-coder
 ```
 
 ### CLI Usage
 
 ```bash
 # Compile (uses text2spl.adapter from config — claude_cli by default)
-spl2 compile "summarize a document and store the result"
+spl compile "summarize a document and store the result"
 
 # Force a workflow
-spl2 compile "build a review agent that refines until quality > 0.8" --mode workflow
+spl compile "build a review agent that refines until quality > 0.8" --mode workflow
 
 # Save to file
-spl2 compile "translate text to French" -o translate.spl
+spl compile "translate text to French" -o translate.spl
 
 # Compile and execute in one step
-spl2 compile "classify user intent" --execute text="Hello there"
+spl compile "classify user intent" --execute text="Hello there"
 
 # text2spl and compile are aliases for the same command
-spl2 text2spl "summarize a document"
+spl text2spl "summarize a document"
 ```
 
 The compiler includes a **validate-and-retry loop** — if the generated code has syntax errors, the LLM automatically attempts to fix them (up to 2 retries at lower temperature).
@@ -759,8 +759,8 @@ The compiler includes a **validate-and-retry loop** — if the generated code ha
 
 ```python
 import asyncio
-from spl2.text2spl import Text2SPL
-from spl2.adapters import get_adapter
+from spl.text2spl import Text2SPL
+from spl.adapters import get_adapter
 
 compiler = Text2SPL(get_adapter("claude_cli"))
 
@@ -787,7 +787,7 @@ print(f"Valid: {valid}, Message: {msg}")
 
 ## 10. Code-RAG — Self-Improving Example Retrieval for text2SPL
 
-Code-RAG is a ChromaDB-backed vector store of `(description, SPL source)` pairs. When you run `spl2 compile`, it retrieves the most semantically similar SPL examples from the store and injects them into the compiler's context — replacing the handful of static hand-written examples with the full richness of your cookbook and any other pairs you have collected.
+Code-RAG is a ChromaDB-backed vector store of `(description, SPL source)` pairs. When you run `spl compile`, it retrieves the most semantically similar SPL examples from the store and injects them into the compiler's context — replacing the handful of static hand-written examples with the full richness of your cookbook and any other pairs you have collected.
 
 ### Why Code-RAG
 
@@ -795,7 +795,7 @@ Without Code-RAG, the text2SPL compiler uses 4 fixed examples in its system prom
 
 - **Better coverage** — every cookbook recipe (35+) is available as a retrieval target
 - **Semantic matching** — if you ask for "a loop that refines until quality is high", the WHILE-quality-gate recipe is retrieved, not a generic summariser
-- **Self-learning** — every successful `spl2 compile` call automatically adds its validated `(description, SPL)` pair back into the store, making the next compile better
+- **Self-learning** — every successful `spl compile` call automatically adds its validated `(description, SPL)` pair back into the store, making the next compile better
 
 ### First-Time Setup
 
@@ -804,14 +804,14 @@ Without Code-RAG, the text2SPL compiler uses 4 fixed examples in its system prom
 pip install chromadb onnxruntime
 
 # Prime the store with all cookbook recipes (run once)
-spl2 code-rag import
+spl code-rag import
 
 # Verify
-spl2 code-rag count
+spl code-rag count
 # → Code-RAG pairs indexed: 34
 ```
 
-After this, every `spl2 compile` call automatically uses the store. You will see a status line on stderr:
+After this, every `spl compile` call automatically uses the store. You will see a status line on stderr:
 
 ```
 Code-RAG: 34 examples indexed
@@ -821,26 +821,26 @@ Code-RAG: 34 examples indexed
 
 ```bash
 # Import cookbook recipes (initial priming)
-spl2 code-rag import
-spl2 code-rag import --cookbook-dir /path/to/cookbook
+spl code-rag import
+spl code-rag import --cookbook-dir /path/to/cookbook
 
 # Import additional pairs from a JSONL file
-spl2 code-rag import --from ./my_pairs.jsonl
-spl2 code-rag import --from ./research_pairs.jsonl --source synthetic --no-validate
+spl code-rag import --from ./my_pairs.jsonl
+spl code-rag import --from ./research_pairs.jsonl --source synthetic --no-validate
 
 # Add a single pair from a .spl file
-spl2 code-rag add "classify a support ticket and route to the right team" ./route.spl
+spl code-rag add "classify a support ticket and route to the right team" ./route.spl
 
 # Query — inspect what would be retrieved for a given description
-spl2 code-rag query "summarize a long document into bullet points"
-spl2 code-rag query "build an agent with quality loop" --top-k 5 --show-spl
+spl code-rag query "summarize a long document into bullet points"
+spl code-rag query "build an agent with quality loop" --top-k 5 --show-spl
 
 # Count total pairs
-spl2 code-rag count
+spl code-rag count
 
 # Export all pairs as JSONL (for fine-tuning or backup)
-spl2 code-rag export
-spl2 code-rag export --output ./my_backup.jsonl
+spl code-rag export
+spl code-rag export --output ./my_backup.jsonl
 ```
 
 ### JSONL Import Format
@@ -863,7 +863,7 @@ Optional fields:
 | `source` | Provenance tag (`cookbook`, `user`, `synthetic`, `research`) |
 | `spl_file` | Path to an external `.spl` file instead of inline `spl_source` |
 
-The JSONL format is identical to `spl2 code-rag export` output — exported pairs can be re-imported into another project or after a DB reset.
+The JSONL format is identical to `spl code-rag export` output — exported pairs can be re-imported into another project or after a DB reset.
 
 ### Validation on Import
 
@@ -878,16 +878,16 @@ Total in store: 36
 Use `--no-validate` to skip validation (e.g. when importing pairs already known to be valid, for speed):
 
 ```bash
-spl2 code-rag import --from ./large_dataset.jsonl --no-validate
+spl code-rag import --from ./large_dataset.jsonl --no-validate
 ```
 
 ### Auto-Capture
 
-When Code-RAG is enabled (the default), every `spl2 compile` invocation that produces valid SPL automatically adds the `(description, SPL)` pair to the store. The store grows as you use the compiler — no manual curation needed.
+When Code-RAG is enabled (the default), every `spl compile` invocation that produces valid SPL automatically adds the `(description, SPL)` pair to the store. The store grows as you use the compiler — no manual curation needed.
 
 To disable auto-capture:
 ```bash
-spl2 config set code_rag.auto_capture false
+spl config set code_rag.auto_capture false
 ```
 
 ### Configuration
@@ -932,7 +932,7 @@ Every new cookbook recipe and every user compile call automatically improves fut
 When the store is large enough, export as a JSONL fine-tuning dataset:
 
 ```bash
-spl2 code-rag export --output .spl/code_rag/training_data.jsonl
+spl code-rag export --output .spl/code_rag/training_data.jsonl
 ```
 
 Each exported record:
@@ -951,8 +951,8 @@ This dataset is suitable for fine-tuning a code-specialised model (e.g. `qwen2.5
 No setup required. Returns the assembled prompt as the response. Useful for testing query structure.
 
 ```bash
-spl2 run my_query.spl                    # echo is the default
-spl2 run my_query.spl --adapter echo
+spl run my_query.spl                    # echo is the default
+spl run my_query.spl --adapter echo
 ```
 
 ### Claude CLI
@@ -963,7 +963,7 @@ Uses your existing Claude Code subscription (zero marginal cost).
 # Prerequisites: Claude Code installed and authenticated
 # https://docs.anthropic.com/en/docs/claude-code
 
-spl2 run my_query.spl --adapter claude_cli
+spl run my_query.spl --adapter claude_cli
 ```
 
 Notes:
@@ -979,7 +979,7 @@ Access 100+ models through a single API key.
 pip install httpx
 export OPENROUTER_API_KEY="sk-or-v1-..."
 
-spl2 run my_query.spl --adapter openrouter
+spl run my_query.spl --adapter openrouter
 ```
 
 Models are specified in the `.spl` file via `USING MODEL`:
@@ -1003,7 +1003,7 @@ pip install httpx
 ollama pull llama3.2
 ollama serve   # if not already running
 
-spl2 run my_query.spl --adapter ollama
+spl run my_query.spl --adapter ollama
 ```
 
 Supports any model installed via `ollama pull`: llama3.2, mistral, codellama, phi3, gemma2, qwen2.5-coder, etc.
@@ -1011,7 +1011,7 @@ Supports any model installed via `ollama pull`: llama3.2, mistral, codellama, ph
 For remote Ollama servers:
 ```bash
 export OLLAMA_BASE_URL="http://192.168.1.10:11434"
-spl2 run my_query.spl --adapter ollama
+spl run my_query.spl --adapter ollama
 ```
 
 ### Momagrid (Decentralized Grid)
@@ -1024,7 +1024,7 @@ pip install httpx
 # Start or connect to a Momagrid hub
 export MOMAGRID_HUB_URL="http://localhost:9000"
 
-spl2 run my_query.spl --adapter momagrid
+spl run my_query.spl --adapter momagrid
 ```
 
 Features:
@@ -1036,7 +1036,7 @@ Features:
 Optional API key authentication:
 ```bash
 export MOMAGRID_API_KEY="your-key"
-spl2 run my_query.spl --adapter momagrid
+spl run my_query.spl --adapter momagrid
 ```
 
 ### Anthropic (Claude)
@@ -1047,8 +1047,8 @@ Direct access to Claude models via the Anthropic API.
 pip install anthropic
 export ANTHROPIC_API_KEY="sk-ant-..."
 
-spl2 run my_query.spl --adapter anthropic
-spl2 run my_query.spl --adapter anthropic -m claude-sonnet-4-20250514
+spl run my_query.spl --adapter anthropic
+spl run my_query.spl --adapter anthropic -m claude-sonnet-4-20250514
 ```
 
 Models: `claude-opus-4-0-20250514`, `claude-sonnet-4-20250514`, `claude-sonnet-4-5-20250514`, `claude-haiku-4-5-20251001`
@@ -1061,8 +1061,8 @@ Direct access to GPT and o-series models.
 pip install openai
 export OPENAI_API_KEY="sk-..."
 
-spl2 run my_query.spl --adapter openai
-spl2 run my_query.spl --adapter openai -m gpt-4o
+spl run my_query.spl --adapter openai
+spl run my_query.spl --adapter openai -m gpt-4o
 ```
 
 Models: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1`, `o3`, `o3-mini`
@@ -1075,8 +1075,8 @@ Direct access to Gemini models via Google GenAI SDK.
 pip install google-genai
 export GOOGLE_API_KEY="AI..."
 
-spl2 run my_query.spl --adapter google
-spl2 run my_query.spl --adapter google -m gemini-2.5-pro
+spl run my_query.spl --adapter google
+spl run my_query.spl --adapter google -m gemini-2.5-pro
 ```
 
 Models: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-flash`
@@ -1089,8 +1089,8 @@ Access to DeepSeek chat and reasoning models.
 pip install httpx
 export DEEPSEEK_API_KEY="sk-..."
 
-spl2 run my_query.spl --adapter deepseek
-spl2 run my_query.spl --adapter deepseek -m deepseek-reasoner
+spl run my_query.spl --adapter deepseek
+spl run my_query.spl --adapter deepseek -m deepseek-reasoner
 ```
 
 Models: `deepseek-chat`, `deepseek-reasoner`
@@ -1103,8 +1103,8 @@ Access to Alibaba's Qwen models via DashScope.
 pip install httpx
 export DASHSCOPE_API_KEY="sk-..."
 
-spl2 run my_query.spl --adapter qwen
-spl2 run my_query.spl --adapter qwen -m qwen-max
+spl run my_query.spl --adapter qwen
+spl run my_query.spl --adapter qwen -m qwen-max
 ```
 
 Models: `qwen-max`, `qwen-plus`, `qwen-turbo`, `qwen-long`, `qwen2.5-72b-instruct`, `qwen2.5-coder-32b-instruct`
@@ -1112,7 +1112,7 @@ Models: `qwen-max`, `qwen-plus`, `qwen-turbo`, `qwen-long`, `qwen2.5-72b-instruc
 ### List All Adapters
 
 ```bash
-$ spl2 adapters
+$ spl adapters
 Available LLM adapters (10):
 
   anthropic      Claude models via Anthropic API (requires anthropic, ANTHROPIC_API_KEY)
@@ -1140,7 +1140,7 @@ pip install numpy faiss-cpu
 ### Indexing Documents (Programmatic)
 
 ```python
-from spl2.storage.vector import VectorStore
+from spl.storage.vector import VectorStore
 
 store = VectorStore(".spl")
 
@@ -1176,14 +1176,14 @@ You can also manage the vector store directly from the command line:
 
 ```bash
 # Add documents
-spl2 rag add "Python is a programming language"
-spl2 rag add "JavaScript runs in browsers"
+spl rag add "Python is a programming language"
+spl rag add "JavaScript runs in browsers"
 
 # Check count
-spl2 rag count
+spl rag count
 
 # Query
-spl2 rag query "What language runs in browsers?" --top-k 3
+spl rag query "What language runs in browsers?" --top-k 3
 ```
 
 ---
@@ -1194,17 +1194,17 @@ Manage the persistent key-value store:
 
 ```bash
 # Set a value
-spl2 memory set user_name "Wen"
-spl2 memory set preference "concise answers"
+spl memory set user_name "Wen"
+spl memory set preference "concise answers"
 
 # Get a value
-spl2 memory get user_name
+spl memory get user_name
 
 # List all keys
-spl2 memory list
+spl memory list
 
 # Delete
-spl2 memory delete preference
+spl memory delete preference
 ```
 
 Memory values are accessible in SPL via `memory.get('key')`:
@@ -1219,9 +1219,9 @@ GENERATE answer(q)
 
 ---
 
-## 15. Configuration (`spl2 config`)
+## 15. Configuration (`spl config`)
 
-SPL 2.0 stores configuration in `~/.spl/config.yaml`. This eliminates repetitive CLI flags — set your preferred adapter, model, and timeouts once, and every `spl2 run` inherits them automatically.
+SPL 2.0 stores configuration in `~/.spl/config.yaml`. This eliminates repetitive CLI flags — set your preferred adapter, model, and timeouts once, and every `spl run` inherits them automatically.
 
 ### Why Configuration Matters
 
@@ -1232,24 +1232,24 @@ SPL 2.0 stores configuration in `~/.spl/config.yaml`. This eliminates repetitive
 ### Initialize
 
 ```bash
-spl2 config init          # create ~/.spl/config.yaml with smart defaults
-spl2 config init --force  # overwrite existing config with defaults
+spl config init          # create ~/.spl/config.yaml with smart defaults
+spl config init --force  # overwrite existing config with defaults
 ```
 
 ### View Configuration
 
 ```bash
-spl2 config show          # show full config as YAML
-spl2 config path          # show config and log directory paths
+spl config show          # show full config as YAML
+spl config path          # show config and log directory paths
 ```
 
 ### Get Values
 
 ```bash
-spl2 config get adapter                    # → echo
-spl2 config get adapters.ollama.timeout    # → 120
-spl2 config get adapters.ollama            # → shows all ollama settings
-spl2 config get text2spl.mode              # → auto
+spl config get adapter                    # → echo
+spl config get adapters.ollama.timeout    # → 120
+spl config get adapters.ollama            # → shows all ollama settings
+spl config get text2spl.mode              # → auto
 ```
 
 ### Set Values
@@ -1258,29 +1258,29 @@ Supports `KEY VALUE` pairs, `KEY=VALUE` syntax, and multiple settings at once:
 
 ```bash
 # Single setting
-spl2 config set adapter ollama
-spl2 config set model gemma3
+spl config set adapter ollama
+spl config set model gemma3
 
 # Multiple settings at once
-spl2 config set adapter ollama model gemma3
+spl config set adapter ollama model gemma3
 
 # KEY=VALUE syntax
-spl2 config set adapter=ollama model=gemma3
+spl config set adapter=ollama model=gemma3
 
 # Dot-path for nested values
-spl2 config set adapters.ollama.timeout 300
-spl2 config set text2spl.mode workflow
+spl config set adapters.ollama.timeout 300
+spl config set text2spl.mode workflow
 
 # Boolean and numeric values auto-detected
-spl2 config set cache true
-spl2 config set log_console false
+spl config set cache true
+spl config set log_console false
 ```
 
 ### Reset to Default
 
 ```bash
-spl2 config reset adapter     # reset adapter to 'echo'
-spl2 config reset log_level   # reset log_level to 'info'
+spl config reset adapter     # reset adapter to 'echo'
+spl config reset log_level   # reset log_level to 'info'
 ```
 
 ### Smart Defaults
@@ -1295,7 +1295,7 @@ storage_dir: .spl
 log_level: info
 log_console: false
 text2spl:
-  adapter: claude_cli        # dedicated compiler adapter (independent of spl2 run)
+  adapter: claude_cli        # dedicated compiler adapter (independent of spl run)
   model: claude-sonnet-4-6   # dedicated compiler model
   mode: auto
   validate: true
@@ -1341,14 +1341,14 @@ CLI flags always override config values. The precedence order:
 
 ```bash
 # Config says adapter=ollama, but CLI overrides:
-spl2 run query.spl --adapter echo    # uses echo, not ollama
+spl run query.spl --adapter echo    # uses echo, not ollama
 ```
 
 ---
 
 ## 16. Logging
 
-Every `spl2 run` and `spl2 text2spl` command automatically writes a log file to `~/.spl/logs/`.
+Every `spl run` and `spl text2spl` command automatically writes a log file to `~/.spl/logs/`.
 
 ### Why Logging Matters
 
@@ -1375,8 +1375,8 @@ Log: /home/user/.spl/logs/hello-ollama-20260318-143022.log
 ### Log Content
 
 ```
-14:30:22  INFO     spl2.cli  spl2 run hello.spl --adapter ollama
-14:30:23  INFO     spl2.cli  Result: model=gemma3 tokens=75 latency=440ms
+14:30:22  INFO     spl.cli  spl run hello.spl --adapter ollama
+14:30:23  INFO     spl.cli  Result: model=gemma3 tokens=75 latency=440ms
 ```
 
 ### Configuration
@@ -1385,13 +1385,13 @@ Control logging behavior via config:
 
 ```bash
 # Set log verbosity: debug, info, warning, error
-spl2 config set log_level debug
+spl config set log_level debug
 
 # Enable console output (logs to both file and terminal)
-spl2 config set log_console true
+spl config set log_console true
 
 # Check log directory
-spl2 config path
+spl config path
 ```
 
 ### Viewing Logs
@@ -1413,7 +1413,7 @@ grep "ERROR" ~/.spl/logs/*.log
 
 ```
 SPL20/
-  spl2/
+  spl/
     __init__.py          # Public API: parse(), validate(), optimize()
     tokens.py            # Token types (115 types)
     lexer.py             # Tokenizer
@@ -1424,7 +1424,7 @@ SPL20/
     executor.py          # Runtime engine
     explain.py           # Plan rendering
     ir.py                # JSON serialization
-    cli.py               # CLI (spl2 command)
+    cli.py               # CLI (spl command)
     config.py            # Configuration management (~/.spl/config.yaml)
     text2spl.py          # NL -> SPL compiler
     code_rag.py          # Code-RAG: ChromaDB store for (description, SPL) pairs
@@ -1470,7 +1470,7 @@ SPL20/
 
 ## 19. Troubleshooting
 
-**`spl2: command not found`**
+**`spl: command not found`**
 ```bash
 pip install -e .   # reinstall to register CLI entry point
 ```
@@ -1488,8 +1488,8 @@ This usually means the Claude CLI can't run nested inside another Claude session
 pip install numpy faiss-cpu
 ```
 
-**`Code-RAG: store empty — run spl2 code-rag import`**
-Run `spl2 code-rag import` once to prime the store with cookbook recipes. After that, every `spl2 compile` call auto-captures pairs.
+**`Code-RAG: store empty — run spl code-rag import`**
+Run `spl code-rag import` once to prime the store with cookbook recipes. After that, every `spl compile` call auto-captures pairs.
 
 **`chromadb` or `onnxruntime` import errors**
 ```bash

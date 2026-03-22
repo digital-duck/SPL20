@@ -5,30 +5,30 @@
 -- score aggregation, and transcript formatting.
 --
 -- Usage (from catalog):
---   spl2 run cookbook/33_interview_sim/interview_sim.spl \
+--   spl run cookbook/33_interview_sim/interview_sim.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/33_interview_sim/tools.py \
 --       role_key=senior_swe focus=system_design candidate_id=alice_senior_swe difficulty=hard
 --
---   spl2 run cookbook/33_interview_sim/interview_sim.spl \
+--   spl run cookbook/33_interview_sim/interview_sim.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/33_interview_sim/tools.py \
 --       role_key=data_scientist focus=statistics candidate_id=carol_data_scientist
 --
---   spl2 run cookbook/33_interview_sim/interview_sim.spl \
+--   spl run cookbook/33_interview_sim/interview_sim.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/33_interview_sim/tools.py \
 --       role_key=devops_engineer focus=kubernetes candidate_id=dave_devops difficulty=hard
 --
 -- Usage (freeform, no catalog):
---   spl2 run cookbook/33_interview_sim/interview_sim.spl \
+--   spl run cookbook/33_interview_sim/interview_sim.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/33_interview_sim/tools.py \
 --       role="ML Engineer" focus="deep learning" difficulty=medium experience="3 years"
 --
 -- Discover what is available:
---   spl2 run ... role_key=list     (lists all roles)
---   spl2 run ... candidate_id=list (lists all candidates)
+--   spl run ... role_key=list     (lists all roles)
+--   spl run ... candidate_id=list (lists all candidates)
 
 -- ── Persona functions (zero LLM cost — injected as system context) ──────────
 

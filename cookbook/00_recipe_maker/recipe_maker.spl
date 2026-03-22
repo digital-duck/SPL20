@@ -7,20 +7,20 @@
 --   CALL (load patterns + data + resources) → GENERATE (plan + components) → CALL (write + notify)
 --
 -- Usage:
---   spl2 run cookbook/00_recipe_maker/recipe_maker.spl \
+--   spl run cookbook/00_recipe_maker/recipe_maker.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/00_recipe_maker/tools.py \
 --       concept="Customer churn predictor with SHAP explainability" \
 --       output_dir="cookbook/38_churn_predictor/"
 --
---   spl2 run cookbook/00_recipe_maker/recipe_maker.spl \
+--   spl run cookbook/00_recipe_maker/recipe_maker.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/00_recipe_maker/tools.py \
 --       concept="Resume screener for software engineering roles" \
 --       dataset="data/resumes.json" \
 --       output_dir="cookbook/39_resume_screener/"
 --
---   spl2 run cookbook/00_recipe_maker/recipe_maker.spl \
+--   spl run cookbook/00_recipe_maker/recipe_maker.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/00_recipe_maker/tools.py \
 --       concept="Legal contract risk analyser" \
@@ -83,7 +83,7 @@ CREATE FUNCTION tools_py_guide()
 RETURNS TEXT AS $$
 SPL 2.0 tools.py Pattern:
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 @spl_tool
 def tool_name(param1: str, param2: str = "default") -> str:

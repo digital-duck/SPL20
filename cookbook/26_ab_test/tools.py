@@ -9,7 +9,7 @@ Tools:
                                           Format a side-by-side tie report with scores.
 
 Usage:
-  spl2 run cookbook/26_ab_test/ab_test.spl \\
+  spl run cookbook/26_ab_test/ab_test.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/26_ab_test/tools.py \\
       experiment_id=neural_networks
@@ -19,7 +19,7 @@ import json
 import os
 import textwrap
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _DATA_DIR = os.path.dirname(__file__)
 

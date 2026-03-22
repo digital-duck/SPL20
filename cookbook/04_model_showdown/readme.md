@@ -7,16 +7,16 @@ Uses parallel CTEs to fan out the prompt across models in a single SPL workflow,
 ## Usage
 
 ```bash
-spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+spl run cookbook/04_model_showdown/showdown.spl --adapter ollama \
     prompt="What is the meaning of life?"
 
-spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+spl run cookbook/04_model_showdown/showdown.spl --adapter ollama \
     prompt="Explain recursion in 3 sentences"
 ```
 
 Override the models:
 ```bash
-spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama prompt="Write a poem about Spring season" model_1=gemma3 model_2=phi3 model_3=qwen2.5
+spl run cookbook/04_model_showdown/showdown.spl --adapter ollama prompt="Write a poem about Spring season" model_1=gemma3 model_2=phi3 model_3=qwen2.5
 ```
 
 ## Parameters

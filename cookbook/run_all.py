@@ -122,7 +122,7 @@ def run_recipe(args: list[str], log_path: Path, cwd: Path) -> tuple[bool, float]
       - in_fence : inside any ```lang...``` block → printed as-is (no prefix)
       - normal   : everything else → printed with '     | ' prefix
 
-    The ```output``` block for LLM results is emitted by `spl2 run` itself
+    The ```output``` block for LLM results is emitted by `spl run` itself
     (via _print_result in cli.py), so run_all only needs to pass it through.
     """
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -161,8 +161,8 @@ def run_recipe(args: list[str], log_path: Path, cwd: Path) -> tuple[bool, float]
 
 
 def apply_overrides(cmd_args: list[str], adapter: str, model: str) -> list[str]:
-    """Apply --adapter and --model overrides to spl2 run commands."""
-    if not cmd_args or cmd_args[0] != "spl2":
+    """Apply --adapter and --model overrides to spl run commands."""
+    if not cmd_args or cmd_args[0] != "spl":
         return cmd_args
 
     result = list(cmd_args)
@@ -196,8 +196,8 @@ def apply_overrides(cmd_args: list[str], adapter: str, model: str) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="SPL 2.0 Cookbook batch runner")
-    parser.add_argument("--adapter", default="", help="Override LLM adapter for all spl2 recipes")
-    parser.add_argument("--model", "-m", default="", help="Override model for all spl2 recipes")
+    parser.add_argument("--adapter", default="", help="Override LLM adapter for all spl recipes")
+    parser.add_argument("--model", "-m", default="", help="Override model for all spl recipes")
     parser.add_argument("--ids", default="", help="Comma-separated recipe IDs to run")
     parser.add_argument("--list", action="store_true", dest="list_recipes", help="List recipes and exit")
     parser.add_argument("--catalog", action="store_true", help="Print full catalog table and exit")

@@ -19,7 +19,7 @@ pytest tests/test_executor.py::TestWorkflowExecution
 pytest tests/test_executor.py::TestWorkflowExecution::test_evaluate_semantic
 
 # Run with coverage
-pytest tests/ --cov=spl2 --cov-report=term-missing
+pytest tests/ --cov=spl --cov-report=term-missing
 ```
 
 ## Test Files
@@ -45,18 +45,18 @@ pytest tests/ --cov=spl2 --cov-report=term-missing
 ```
 Source Code              Test File                 Key Assertions
 ─────────────────────    ─────────────────────     ─────────────────────────────────
-spl2/lexer.py        →   test_lexer.py            115 token types, keyword-as-ident
-spl2/parser.py       →   test_parser.py           All SPL 1.0 + 2.0 constructs
-spl2/ast_nodes.py    →   test_parser.py           30+ AST node types
-spl2/analyzer.py     →   test_analyzer.py         Semantic rules, condition inference
-spl2/optimizer.py    →   test_optimizer.py        Token budgets, workflow plans
-spl2/executor.py     →   test_executor.py         PROMPT + WORKFLOW execution
-spl2/explain.py      →   test_explain.py          Plan rendering
-spl2/ir.py           →   test_ir.py               AST ↔ JSON round-trip
-spl2/cli.py          →   test_cli.py              All CLI commands
-spl2/text2spl.py     →   test_text2spl.py         NL → SPL compilation
-spl2/adapters/       →   test_adapters.py         Registry + 10 adapters
-spl2/storage/        →   test_storage.py          Memory + vector store
+spl/lexer.py        →   test_lexer.py            115 token types, keyword-as-ident
+spl/parser.py       →   test_parser.py           All SPL 1.0 + 2.0 constructs
+spl/ast_nodes.py    →   test_parser.py           30+ AST node types
+spl/analyzer.py     →   test_analyzer.py         Semantic rules, condition inference
+spl/optimizer.py    →   test_optimizer.py        Token budgets, workflow plans
+spl/executor.py     →   test_executor.py         PROMPT + WORKFLOW execution
+spl/explain.py      →   test_explain.py          Plan rendering
+spl/ir.py           →   test_ir.py               AST ↔ JSON round-trip
+spl/cli.py          →   test_cli.py              All CLI commands
+spl/text2spl.py     →   test_text2spl.py         NL → SPL compilation
+spl/adapters/       →   test_adapters.py         Registry + 10 adapters
+spl/storage/        →   test_storage.py          Memory + vector store
 integration          →   test_integration.py      Full pipeline end-to-end
 ```
 
@@ -66,8 +66,8 @@ All 10 adapters are registered and available:
 
 | Adapter | Status | How to use |
 |---------|--------|------------|
-| `echo` | Built-in | `spl2 run file.spl` (default, no setup) |
-| `claude_cli` | Built-in | `spl2 run file.spl --adapter claude_cli` |
+| `echo` | Built-in | `spl run file.spl` (default, no setup) |
+| `claude_cli` | Built-in | `spl run file.spl --adapter claude_cli` |
 | `ollama` | Built-in | `--adapter ollama` (needs Ollama running) |
 | `anthropic` | Built-in | `export ANTHROPIC_API_KEY=...` then `--adapter anthropic` |
 | `openai` | Built-in | `export OPENAI_API_KEY=...` then `--adapter openai` |

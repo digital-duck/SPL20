@@ -3,13 +3,13 @@
 -- Demonstrates memory.get/memory.set, context accumulation, and stateful interactions.
 --
 -- Usage:
---   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="My name is Alice and I'm a data scientist"
---   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What's my name?"
---   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="I prefer Python over R"
---   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What do you know about me?"
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="My name is Alice and I'm a data scientist"
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What's my name?"
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="I prefer Python over R"
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What do you know about me?"
 --
--- Memory persists across runs via `spl2 memory` store.
--- Reset with: spl2 memory delete chat_user_profile
+-- Memory persists across runs via `spl memory` store.
+-- Reset with: spl memory delete chat_user_profile
 
 WORKFLOW memory_conversation
     INPUT: @user_input TEXT

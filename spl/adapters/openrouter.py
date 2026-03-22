@@ -8,8 +8,8 @@ import os
 import re
 import time
 
-from spl2.adapters.base import LLMAdapter, GenerationResult
-from spl2.token_counter import TokenCounter
+from spl.adapters.base import LLMAdapter, GenerationResult
+from spl.token_counter import TokenCounter
 
 try:
     import httpx

@@ -3,10 +3,10 @@
 -- Pattern: a high-level workflow delegates subtasks to reusable PROCEDURE units.
 --
 -- Usage:
---   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
 --       topic="quantum computing" audience="high school students"
 --
---   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+--   spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
 --       topic="CRISPR gene editing" audience="policy makers" depth="deep"
 
 -- Inner PROCEDURE: generate a single explanation layer

@@ -7,7 +7,7 @@ invokable from SPL workflows via the CALL statement:
 
 Usage — decorator style (global registry):
 
-    from spl2.tools import spl_tool
+    from spl.tools import spl_tool
 
     @spl_tool
     def calc_growth_rate(pop_prev: str, pop_curr: str) -> str:
@@ -21,7 +21,7 @@ Usage — programmatic (per-executor):
 
 Usage — load all tools from a module file via CLI:
 
-    spl2 run my.spl --tools tools/my_tools.py
+    spl run my.spl --tools tools/my_tools.py
 """
 
 from __future__ import annotations

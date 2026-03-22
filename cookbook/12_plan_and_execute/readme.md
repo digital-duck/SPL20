@@ -15,7 +15,7 @@ The value of the plan-and-execute pattern is not to ship code directly — it is
 **The intended workflow:**
 
 ```
-spl2 run → review generated files → fix inconsistencies → test → iterate
+spl run → review generated files → fix inconsistencies → test → iterate
 ```
 
 Never assume generated code runs without review. Common things to check:
@@ -58,11 +58,11 @@ plan(task) → @plan
 
 ```bash
 # Basic planning only (no code output)
-spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama \
+spl run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama \
     task="Build a REST API for a todo app"
 
 # Generate and write code to disk (one file per LLM call — reliable for any model)
-spl2 run cookbook/12_plan_and_execute/plan_execute.spl \
+spl run cookbook/12_plan_and_execute/plan_execute.spl \
     --adapter ollama -m "qwen2.5-coder" \
     --tools cookbook/12_plan_and_execute/tools.py \
     task="Build a REST API for a todo app" \
@@ -72,7 +72,7 @@ spl2 run cookbook/12_plan_and_execute/plan_execute.spl \
 
 # code quality is bad, use Claude Code
 
-spl2 run cookbook/12_plan_and_execute/plan_execute.spl \
+spl run cookbook/12_plan_and_execute/plan_execute.spl \
     --adapter claude_cli -m claude-sonnet-4-6 \
     --tools cookbook/12_plan_and_execute/tools.py \
     task="Build a REST API for a todo app" \
@@ -84,10 +84,10 @@ spl2 run cookbook/12_plan_and_execute/plan_execute.spl \
 
 # see /home/gongai/projects/digital-duck/SPL20/cookbook/12_plan_and_execute/output-claude-sonnet4-6/README.md
 
-spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama \
+spl run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama \
     task="Set up a CI/CD pipeline for a Python project"
 
-spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama \
+spl run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama \
     task="Migrate a MySQL database to PostgreSQL"
 ```
 
@@ -213,7 +213,7 @@ Running with `qwen2.5-coder` produced 4 files but they were **not runnable toget
 ### Recommended command (sonnet 4.6)
 
 ```bash
-spl2 run cookbook/12_plan_and_execute/plan_execute.spl \
+spl run cookbook/12_plan_and_execute/plan_execute.spl \
     --adapter claude_cli -m claude-sonnet-4-6 \
     --tools cookbook/12_plan_and_execute/tools.py \
     task="Build a REST API for a todo app" \

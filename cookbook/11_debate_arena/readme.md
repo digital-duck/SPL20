@@ -16,17 +16,18 @@ con_argument(topic, opening)  ──┘
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `topic` | TEXT | *(required)* | The debate motion (e.g. "AI should be open-sourced") |
+| `max_rounds` | INTEGER | `3` | Number of rebuttal rounds before the judge rules |
 
 ## Usage
 
 ```bash
-spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama \
+spl run cookbook/11_debate_arena/debate.spl --adapter ollama \
     topic="AI should be open-sourced"
 
-spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 \
+spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 \
     topic="Remote work is better than office work"
 
-spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama \
+spl run cookbook/11_debate_arena/debate.spl --adapter ollama \
     topic="Tabs are better than spaces"
 ```
 

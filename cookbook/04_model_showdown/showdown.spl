@@ -3,9 +3,9 @@
 -- Uses parallel CTEs instead of a bash loop for a pure-SPL implementation.
 --
 -- Usage:
---   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--   spl run cookbook/04_model_showdown/showdown.spl --adapter ollama \
 --       prompt="What is the meaning of life?"
---   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--   spl run cookbook/04_model_showdown/showdown.spl --adapter ollama \
 --       prompt="Explain recursion in 3 sentences" \
 --       model_1=gemma3 model_2=llama3.2 model_3=mistral
 
@@ -41,7 +41,7 @@ WORKFLOW model_showdown
     INPUT:
         @prompt  TEXT DEFAULT 'What is the meaning of life?',
         @model_1 TEXT DEFAULT 'gemma3',
-        @model_2 TEXT DEFAULT 'phi3',
+        @model_2 TEXT DEFAULT 'phi4',
         @model_3 TEXT DEFAULT 'qwen2.5'
     OUTPUT: @comparison TEXT
 DO

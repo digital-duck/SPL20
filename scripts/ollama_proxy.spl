@@ -2,10 +2,10 @@
 -- General-purpose LLM query — proxy any prompt to any adapter/model.
 --
 -- Usage:
---   spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing in one sentence"
---   spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
---   spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
---   spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter anthropic prompt="Summarise the history of AI"
+--   spl run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing in one sentence"
+--   spl run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
+--   spl run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
+--   spl run cookbook/02_ollama_proxy/proxy.spl --adapter anthropic prompt="Summarise the history of AI"
 --
 -- Parameters:
 --   prompt  (required)  The user prompt / question

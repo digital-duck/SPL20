@@ -1,6 +1,6 @@
 Run it:
 ```bash
-spl2 run cookbook/36_tool_use/tool_use.spl \
+spl run cookbook/36_tool_use/tool_use.spl \
     --adapter ollama \
     --tools cookbook/36_tool_use/tools.py \
     sales="1200,1450,1380,1600,1750,1900" \
@@ -19,8 +19,8 @@ The recipe makes the architectural principle explicit in the comments:
 
 ```bash
 
-pip install -e . -q && \
-spl2 run cookbook/06_react_agent/react_agent.spl \
+pip install -e . 
+spl run cookbook/06_react_agent/react_agent.spl \
     --adapter claude_cli -m claude-sonnet-4-6 \
     --allowed-tools WebSearch \
     --tools cookbook/06_react_agent/tools.py \

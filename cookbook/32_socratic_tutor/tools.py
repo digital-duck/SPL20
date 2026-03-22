@@ -8,7 +8,7 @@ Tools:
   compile_dialogue(...)             Format the completed Socratic dialogue as readable text.
 
 Usage:
-  spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \\
+  spl run cookbook/32_socratic_tutor/socratic_tutor.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/32_socratic_tutor/tools.py \\
       topic_id=sky_blue subject=science student_level="middle school"
@@ -18,7 +18,7 @@ import json
 import os
 import textwrap
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _TOPICS_DIR = os.path.join(os.path.dirname(__file__), "topics")
 

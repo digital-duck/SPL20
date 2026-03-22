@@ -10,15 +10,15 @@ Embed gold-standard examples in `SELECT` context to guide output format and styl
 
 ```bash
 # General sentiment + summary
-spl2 run cookbook/24_few_shot/few_shot.spl --adapter ollama -m gemma3 \
+spl run cookbook/24_few_shot/few_shot.spl --adapter ollama -m gemma3 \
     text="The quarterly results exceeded all analyst forecasts by a significant margin"
 
 # Finance domain
-spl2 run cookbook/24_few_shot/few_shot.spl --adapter ollama \
+spl run cookbook/24_few_shot/few_shot.spl --adapter ollama \
     text="Revenue grew 12% YoY despite headwinds in APAC" domain="finance"
 
 # Ops/incident triage
-spl2 run cookbook/24_few_shot/few_shot.spl --adapter ollama \
+spl run cookbook/24_few_shot/few_shot.spl --adapter ollama \
     text="System outage detected in EU-WEST-2 affecting 15% of users" domain="ops"
 ```
 

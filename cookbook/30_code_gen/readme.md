@@ -23,16 +23,16 @@ implement_function(spec, language) → @implementation
 ## Usage
 
 ```bash
-spl2 run cookbook/30_code_gen/code_gen.spl --adapter ollama \
+spl run cookbook/30_code_gen/code_gen.spl --adapter ollama \
     spec="A function that validates an email address" \
     language="Python"
 
-spl2 run cookbook/30_code_gen/code_gen.spl --adapter ollama \
+spl run cookbook/30_code_gen/code_gen.spl --adapter ollama \
     spec="Binary search over a sorted list, return index or -1" \
     language="Go" \
     test_framework="testing"
 
-spl2 run cookbook/30_code_gen/code_gen.spl --adapter ollama \
+spl run cookbook/30_code_gen/code_gen.spl --adapter ollama \
     spec="Parse a JWT and return its claims as an object" \
     language="TypeScript" \
     test_framework="jest"

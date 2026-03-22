@@ -20,23 +20,23 @@ rm -f .spl/vectors.faiss .spl/vectors_meta.db
 
 Chunking by paragraph gives precise retrieval — `top_k=3` returns the 3 most *semantically relevant* sections rather than the whole document truncated to fit the token budget.
 
-When given a file path, `spl2 rag add` reads the file and chunks by paragraph automatically:
+When given a file path, `spl rag add` reads the file and chunks by paragraph automatically:
 
 ```bash
-spl2 rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
+spl rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
 ```
 
 To index as a single document instead:
 
 ```bash
-spl2 rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md --no-chunk
+spl rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md --no-chunk
 ```
 
 Verify:
 
 ```bash
-spl2 rag count
-spl2 rag query "Who is Wen?" --top-k 3
+spl rag count
+spl rag query "Who is Wen?" --top-k 3
 ```
 
 ## Parameters
@@ -48,20 +48,20 @@ spl2 rag query "Who is Wen?" --top-k 3
 ## Usage
 
 ```bash
-spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama \
+spl run cookbook/08_rag_query/rag_query.spl --adapter ollama \
     question="Who is Wen?" \
     2>&1 | tee cookbook/out/08_rag_query-$(date +%Y%m%d_%H%M%S).md
 
-spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama \
+spl run cookbook/08_rag_query/rag_query.spl --adapter ollama \
     question="What is Momagrid and why was it built?"
 
-spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama \
+spl run cookbook/08_rag_query/rag_query.spl --adapter ollama \
     question="What is the Gang of Four in the ZiNets research team?"
 
-spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama \
+spl run cookbook/08_rag_query/rag_query.spl --adapter ollama \
     question="What is eta_AI and how is it measured?"
 
-spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama \
+spl run cookbook/08_rag_query/rag_query.spl --adapter ollama \
     question="How did Wen transition from physics to software engineering?"
 ```
 
@@ -69,5 +69,5 @@ spl2 run cookbook/08_rag_query/rag_query.spl --adapter ollama \
 
 - The embedding model is persisted in the store's `config` table — the same model is always used for a given index. Reset the store if you need to switch models.
 - `top_k=3` retrieves the 3 most relevant paragraphs by cosine similarity.
-- Run `spl2 rag query "your question"` to inspect retrieved context before running the full prompt.
+- Run `spl rag query "your question"` to inspect retrieved context before running the full prompt.
 - GPU acceleration is not required; CPU inference works well for typical document sizes.

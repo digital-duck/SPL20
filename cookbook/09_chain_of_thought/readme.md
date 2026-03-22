@@ -19,13 +19,13 @@ research(topic) → @research
 ## Usage
 
 ```bash
-spl2 run cookbook/09_chain_of_thought/chain.spl --adapter ollama \
+spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama \
     topic="distributed AI inference"
 
-spl2 run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m llama3.2 \
+spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m llama3.2 \
     topic="quantum computing"
 
-spl2 run cookbook/09_chain_of_thought/chain.spl --adapter ollama \
+spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama \
     topic="the history of the microprocessor" \
     2>&1 | tee cookbook/out/09_chain_of_thought-$(date +%Y%m%d_%H%M%S).md 
 # /home/gongai/projects/digital-duck/SPL20/cookbook/out/run_all_20260320_192010.md

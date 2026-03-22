@@ -142,14 +142,14 @@ The full cookbook passes 100% of recipes on that hardware without modification.
 pip install spl-llm
 
 # Run hello world
-spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
+spl run cookbook/01_hello_world/hello.spl --adapter ollama
 
 # Run with parameters
-spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama \
+spl run cookbook/02_ollama_proxy/proxy.spl --adapter ollama \
     prompt="Explain quantum computing in one sentence"
 
 # Compile natural language to SPL
-spl2 text2spl "summarize a document and extract action items" \
+spl text2spl "summarize a document and extract action items" \
     --adapter ollama --mode prompt
 ```
 

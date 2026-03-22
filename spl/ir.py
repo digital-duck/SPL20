@@ -8,7 +8,7 @@ Produces a portable JSON format suitable for:
 
 from __future__ import annotations
 
-from spl2.ast_nodes import (
+from spl.ast_nodes import (
     Program, PromptStatement, WorkflowStatement, ProcedureStatement,
     CreateFunctionStatement, ExplainStatement, ExecuteStatement,
     SelectItem, SystemRoleCall, ContextRef, RagQuery, MemoryGet,
@@ -19,7 +19,7 @@ from spl2.ast_nodes import (
     SemanticCondition, ComparisonCondition, Condition,
     ExceptionHandler, WhenClause,
 )
-from spl2.optimizer import (
+from spl.optimizer import (
     ExecutionPlan, WorkflowPlan, WorkflowStep,
 )
 

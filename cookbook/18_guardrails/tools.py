@@ -9,12 +9,12 @@ Tools:
   classify_input_keywords(text)   Keyword pre-screen: flags harmful or off-topic inputs.
 
 Usage:
-  spl2 run cookbook/18_guardrails/guardrails.spl \\
+  spl run cookbook/18_guardrails/guardrails.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/18_guardrails/tools.py \\
       input_id=pii_ssn
 
-  spl2 run cookbook/18_guardrails/guardrails.spl \\
+  spl run cookbook/18_guardrails/guardrails.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/18_guardrails/tools.py \\
       user_input="My SSN is 123-45-6789, help me file taxes"
@@ -24,7 +24,7 @@ import json
 import os
 import re
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _DATA_DIR = os.path.dirname(__file__)
 

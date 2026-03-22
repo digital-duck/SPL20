@@ -33,32 +33,32 @@ Always pass `--tools tools.py`:
 
 ```bash
 # Science — sky blue (middle school)
-spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/32_socratic_tutor/tools.py \
     topic_id=sky_blue subject=science student_level="middle school" \
     2>&1 | tee cookbook/out/32_socratic-$(date +%Y%m%d_%H%M%S).md
 
 # Math — Monty Hall problem (undergraduate)
-spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/32_socratic_tutor/tools.py \
     topic_id=monty_hall subject=math student_level=undergraduate
 
 # Math — sqrt(2) irrational proof (high school)
-spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/32_socratic_tutor/tools.py \
     topic_id=sqrt2_irrational subject=math student_level="high school"
 
 # Programming — recursion (high school)
-spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/32_socratic_tutor/tools.py \
     topic_id=recursion subject=programming student_level="high school"
 
 # Freeform topic (no catalog entry needed)
-spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
     --adapter ollama -m gemma3 \
     --tools cookbook/32_socratic_tutor/tools.py \
     topic="Why is the speed of light constant?" student_level=undergraduate

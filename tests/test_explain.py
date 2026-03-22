@@ -1,11 +1,11 @@
 """Tests for SPL 2.0 explain — execution plan rendering."""
 
 import pytest
-from spl2.lexer import Lexer
-from spl2.parser import Parser
-from spl2.analyzer import Analyzer
-from spl2.optimizer import Optimizer
-from spl2.explain import explain_plan, explain_plans
+from spl.lexer import Lexer
+from spl.parser import Parser
+from spl.analyzer import Analyzer
+from spl.optimizer import Optimizer
+from spl.explain import explain_plan, explain_plans
 
 
 def _explain(source: str) -> str:

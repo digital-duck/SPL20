@@ -23,7 +23,7 @@ echo ""
 for model in $MODELS; do
     echo ">>> $model"
     echo "----------------------------------------------"
-    spl2 run "$PROXY" --adapter ollama -m "$model" prompt="$PROMPT"
+    spl run "$PROXY" --adapter ollama -m "$model" prompt="$PROMPT"
     echo ""
 done
 

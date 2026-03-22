@@ -10,11 +10,11 @@ Extract typed, schema-validated data from free-form text using `CREATE FUNCTION`
 
 ```bash
 # Extract person + org data
-spl2 run cookbook/23_structured_output/structured_output.spl --adapter ollama -m gemma3 \
+spl run cookbook/23_structured_output/structured_output.spl --adapter ollama -m gemma3 \
     text="John Smith, 42, joined Acme Corp in March 2021 earning \$95,000/year"
 
 # Extract invoice fields
-spl2 run cookbook/23_structured_output/structured_output.spl --adapter ollama \
+spl run cookbook/23_structured_output/structured_output.spl --adapter ollama \
     text="Invoice #INV-2045 from TechSupplies Ltd dated 15 Jan 2024 for \$3,420.50 due in 30 days"
 ```
 

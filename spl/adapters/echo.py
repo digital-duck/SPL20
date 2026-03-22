@@ -1,7 +1,7 @@
 """Echo adapter: returns the prompt as the response. Useful for testing."""
 
 from __future__ import annotations
-from spl2.adapters.base import LLMAdapter, GenerationResult
+from spl.adapters.base import LLMAdapter, GenerationResult
 
 
 class EchoAdapter(LLMAdapter):

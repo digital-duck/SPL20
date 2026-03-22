@@ -4,9 +4,9 @@
 -- Demonstrates the map-reduce pattern for handling content beyond context limits.
 --
 -- Usage:
---   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama -m gemma3 document="$(cat large_doc.txt)"
---   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="$(cat README.md)" style="bullet points"
---   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="long text here..." style="executive brief"
+--   spl run cookbook/13_map_reduce/map_reduce.spl --adapter ollama -m gemma3 document="$(cat large_doc.txt)"
+--   spl run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="$(cat README.md)" style="bullet points"
+--   spl run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="long text here..." style="executive brief"
 
 WORKFLOW map_reduce_summarizer
     INPUT: @document TEXT, @style TEXT

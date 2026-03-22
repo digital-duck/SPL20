@@ -4,7 +4,7 @@
 --
 -- Each step can target a different model — the right model for each task.
 -- Usage:
---   spl2 run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
+--   spl run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
 
 CREATE FUNCTION research(topic TEXT) RETURNS TEXT AS $$
 You are a research specialist.

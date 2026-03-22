@@ -141,7 +141,7 @@ def get_latest_logs(catalog: dict) -> list[tuple[str, dict, dict]]:
 
 def generate_html(rows: list) -> Path:
     ts_str   = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    filename = f"spl2-cookbook-{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+    filename = f"spl-cookbook-{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
     out_path = COOKBOOK_DIR / filename
 
     total    = len(rows)

@@ -4,26 +4,31 @@ Demonstrates registering deterministic Python functions as SPL CALL-able tools.
 All computation here is pure Python — zero LLM calls, zero hallucination risk.
 
 Load with:
-    spl2 run cookbook/36_tool_use/tool_use.spl \
+    spl run cookbook/36_tool_use/tool_use.spl \
         --adapter ollama \
         --tools cookbook/36_tool_use/tools.py \
         sales="1200,1450,1380,1600,1750,1900"
 """
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
+def parse_csv(csv: str, is_number: bool = True):
+    if is_number:
+        return [float(v.strip()) for v in csv.split(",") if v.strip()]
+    else:
+        return [v.strip() for v in csv.split(",")]
 
 @spl_tool
 def sum_values(csv: str) -> str:
     """Sum a comma-separated list of numbers."""
-    values = [float(v.strip()) for v in csv.split(",") if v.strip()]
+    values = parse_csv(csv)
     return str(sum(values))
 
 
 @spl_tool
 def average_values(csv: str) -> str:
     """Compute the mean of a comma-separated list of numbers."""
-    values = [float(v.strip()) for v in csv.split(",") if v.strip()]
+    values = parse_csv(csv)
     if not values:
         return "0"
     return f"{sum(values) / len(values):.2f}"

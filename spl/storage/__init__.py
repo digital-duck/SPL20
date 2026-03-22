@@ -1,6 +1,6 @@
 """SPL 2.0 storage backends."""
 
-from spl2.storage.memory import MemoryStore
+from spl.storage.memory import MemoryStore
 
 
 def get_vector_store(backend: str = "faiss", storage_dir: str = ".spl",
@@ -31,7 +31,7 @@ def get_vector_store(backend: str = "faiss", storage_dir: str = ".spl",
     """
     if backend == "faiss":
         try:
-            from spl2.storage.vector import VectorStore
+            from spl.storage.vector import VectorStore
         except ImportError as exc:
             raise ImportError(
                 "FAISS vector store requires numpy and faiss-cpu. "

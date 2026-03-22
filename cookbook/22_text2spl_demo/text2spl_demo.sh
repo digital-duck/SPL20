@@ -5,7 +5,7 @@
 # Usage:
 #   bash cookbook/22_text2spl_demo/text2spl_demo.sh [adapter] [model]
 #
-# Requires: spl2 installed, Ollama running with gemma3 (or pass adapter/model)
+# Requires: spl installed, Ollama running with gemma3 (or pass adapter/model)
 
 set -uo pipefail
 
@@ -27,11 +27,11 @@ run_demo() {
 
     # Use --no-validate so generation succeeds even if output has syntax issues;
     # we validate separately to show current maturity of each mode.
-    if spl2 text2spl "$desc" \
+    if spl text2spl "$desc" \
         --adapter "$ADAPTER" -m "$MODEL" --mode "$mode" --no-validate -o "$outfile" 2>&1; then
         echo ""
         echo "  Validating generated code..."
-        if spl2 parse "$outfile" 2>&1; then
+        if spl parse "$outfile" 2>&1; then
             echo "  [validation: OK]"
         else
             echo "  [validation: warning — generated code has issues (known limitation for $mode mode)]"
@@ -69,7 +69,7 @@ ls -la "$OUTDIR"/*.spl 2>/dev/null || echo "  (no files generated)"
 echo ""
 echo "=== Demo complete: $PASS passed, $FAIL failed ==="
 echo "  To view:    cat $OUTDIR/summarize.spl"
-echo "  To execute: spl2 run $OUTDIR/summarize.spl --adapter $ADAPTER"
+echo "  To execute: spl run $OUTDIR/summarize.spl --adapter $ADAPTER"
 
 # Exit non-zero only if all demos failed
 if [ "$PASS" -eq 0 ] && [ "$FAIL" -gt 0 ]; then

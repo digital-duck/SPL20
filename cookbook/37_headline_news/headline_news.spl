@@ -10,13 +10,13 @@
 --     → commit structured daily digest
 --
 -- Usage:
---   spl2 run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
 --       topic="artificial intelligence"
 --
---   spl2 run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
 --       topic="renewable energy" format="executive brief" max_headlines=5
 --
---   spl2 run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
 --       topic="quantum computing" format="bullet points" perspective="global"
 
 CREATE FUNCTION news_format_guide(format TEXT DEFAULT 'structured')
@@ -38,6 +38,73 @@ SELECT CASE perspective
   WHEN 'policy'      THEN 'Focus on regulatory developments, government actions, and policy implications. Note geopolitical dimensions.'
   ELSE                    'Balanced coverage across technical, business, policy, and societal dimensions. Represent multiple viewpoints.'
 END
+$$;
+
+CREATE FUNCTION generate_headlines(topic TEXT, max_headlines TEXT, date TEXT, perspective TEXT) RETURNS TEXT AS $$
+You are a news editor with broad knowledge. Generate the top {max_headlines} headlines about "{topic}" as of {date}.
+
+Coverage perspective: {perspective}
+
+Output a numbered list of headlines only — no summaries yet, just plain text headlines.
+1. First headline here
+2. Second headline here
+$$;
+
+CREATE FUNCTION expand_headlines(headlines TEXT, topic TEXT, perspective TEXT) RETURNS TEXT AS $$
+You are a news analyst. Expand each headline in this list with a 2-3 sentence factual summary.
+
+Topic area: {topic}
+Perspective lens: {perspective}
+
+Headlines to expand:
+{headlines}
+
+For each headline, write:
+[N]. [Original headline]
+Summary: [2-3 sentences of key facts, context, and significance]
+$$;
+
+CREATE FUNCTION evaluate_coverage(expanded TEXT, topic TEXT, perspective TEXT) RETURNS TEXT AS $$
+You are a news editor evaluating coverage quality. Assess how well these summaries cover the major angles for "{topic}".
+
+Perspective: {perspective}
+
+Summaries:
+{expanded}
+
+Reply with ONLY a decimal score between 0.0 and 1.0 representing coverage completeness.
+- 1.0 = all major angles covered
+- 0.75 = most angles covered, minor gaps
+- 0.5 = significant gaps
+- 0.25 = very incomplete
+
+Score only, no explanation.
+$$;
+
+CREATE FUNCTION fill_coverage_gaps(expanded TEXT, topic TEXT, coverage_score TEXT, perspective TEXT) RETURNS TEXT AS $$
+You are a news editor filling coverage gaps. The current digest scored {coverage_score} on coverage.
+
+Topic: {topic}
+Perspective: {perspective}
+
+Current summaries:
+{expanded}
+
+Add 2-3 additional headlines with summaries covering angles that are missing or underrepresented.
+Return the FULL list (original + additions) in the same format.
+$$;
+
+CREATE FUNCTION format_digest(expanded TEXT, topic TEXT, date TEXT, format_guide TEXT) RETURNS TEXT AS $$
+You are a news editor formatting a daily digest.
+
+Topic: {topic}
+Date: {date}
+Format instructions: {format_guide}
+
+Content to format:
+{expanded}
+
+Format the content according to the format instructions. Include a header with topic and date.
 $$;
 
 WORKFLOW headline_news

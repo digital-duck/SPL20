@@ -1,7 +1,7 @@
 """Python tools for recipe 12: Plan and Execute.
 
 Loaded with:
-    spl2 run ... --tools cookbook/12_plan_and_execute/tools.py
+    spl run ... --tools cookbook/12_plan_and_execute/tools.py
 
 CALL write_code_files(@final_report, @output_dir) INTO @files_written
 """
@@ -9,7 +9,7 @@ CALL write_code_files(@final_report, @output_dir) INTO @files_written
 import os
 import re
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 
 @spl_tool

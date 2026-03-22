@@ -13,16 +13,16 @@ Pulls structured fields from messy free-form text using schema-constrained extra
 
 ```bash
 # General extraction (names, dates, amounts, references)
-spl2 run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
+spl run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
     text="Please process payment of USD 4,250.00 to Riverside Consulting (ref: PO-8821) by end of March."
 
 # Invoice extraction
-spl2 run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
+spl run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
     text="$(cat invoice.txt)" \
     format="invoice"
 
 # Contract extraction
-spl2 run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
+spl run cookbook/27_data_extraction/data_extraction.spl --adapter ollama \
     text="$(cat contract.txt)" \
     format="contract"
 ```

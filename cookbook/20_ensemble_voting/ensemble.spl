@@ -3,9 +3,9 @@
 -- Demonstrates ensemble methods, comparative scoring, and consensus-driven output.
 --
 -- Usage:
---   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question="What causes inflation?"
---   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="Is Rust faster than C++?"
---   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="What is the best database for time-series data?"
+--   spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question="What causes inflation?"
+--   spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="Is Rust faster than C++?"
+--   spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="What is the best database for time-series data?"
 
 WORKFLOW ensemble_voting
     INPUT: @question TEXT

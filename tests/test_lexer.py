@@ -4,8 +4,8 @@ Includes all SPL 1.0 backward compatibility tests plus new SPL 2.0 token tests.
 """
 
 import pytest
-from spl2.lexer import Lexer, LexerError
-from spl2.tokens import TokenType
+from spl.lexer import Lexer, LexerError
+from spl.tokens import TokenType
 
 
 class TestLexerSPL1Compat:
@@ -203,7 +203,7 @@ class TestLexerSPL2New:
         assert tokens[1].type == TokenType.OTHERS
         assert tokens[2].type == TokenType.THEN
 
-    def test_full_spl2_workflow(self):
+    def test_full_spl_workflow(self):
         source = """
         WORKFLOW iterative_refinement
           INPUT: @task text

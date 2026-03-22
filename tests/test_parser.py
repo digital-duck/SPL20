@@ -4,9 +4,9 @@ Includes SPL 1.0 backward compatibility tests plus comprehensive SPL 2.0 tests.
 """
 
 import pytest
-from spl2.lexer import Lexer
-from spl2.parser import Parser, ParseError
-from spl2.ast_nodes import (
+from spl.lexer import Lexer
+from spl.parser import Parser, ParseError
+from spl.ast_nodes import (
     Program, PromptStatement, CreateFunctionStatement,
     ExplainStatement, ExecuteStatement,
     SystemRoleCall, ContextRef, RagQuery, MemoryGet,
@@ -717,7 +717,7 @@ class TestIntegrationPatterns:
         stmt = ast.statements[0]
         assert len(stmt.exception_handlers) == 3
 
-    def test_mixed_spl1_and_spl2(self):
+    def test_mixed_spl1_and_spl(self):
         """Test mixing SPL 1.0 and SPL 2.0 statements in same program."""
         source = """
         CREATE FUNCTION summarize(text)

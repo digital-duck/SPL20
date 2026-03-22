@@ -11,12 +11,12 @@ control flow for multi-step agentic patterns.
 
 __version__ = "2.0.0"
 
-from spl2.lexer import Lexer
-from spl2.parser import Parser
-from spl2.analyzer import Analyzer
-from spl2.optimizer import Optimizer
-from spl2.executor import Executor, SPLResult, WorkflowResult
-from spl2.explain import explain_plan, explain_plans
+from spl.lexer import Lexer
+from spl.parser import Parser
+from spl.analyzer import Analyzer
+from spl.optimizer import Optimizer
+from spl.executor import Executor, SPLResult, WorkflowResult
+from spl.explain import explain_plan, explain_plans
 
 
 def parse(source: str):

@@ -23,7 +23,7 @@ DEFAULTS: dict = {
     "log_level": "info",
     "log_console": False,
     # ── text2spl compiler ─────────────────────────────────────────────────────
-    # Separate adapter/model from the runtime adapter used by `spl2 run`.
+    # Separate adapter/model from the runtime adapter used by `spl run`.
     # During development, claude_cli + claude-sonnet-4-6 is the recommended
     # compiler (subscription billing, zero VRAM, highest code quality).
     # Future options: ollama + qwen2.5-coder, or a fine-tuned SPL specialty model.

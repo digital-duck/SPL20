@@ -3,9 +3,9 @@
 -- Demonstrates tool-augmented analysis, multi-criteria evaluation, and structured output.
 --
 -- Usage:
---   spl2 run cookbook/15_code_review/code_review.spl --adapter ollama -m gemma3 code="$(cat myfile.py)"
---   spl2 run cookbook/15_code_review/code_review.spl --adapter ollama code="$(cat main.go)" language="Go"
---   spl2 run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)" language="Python"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama -m gemma3 code="$(cat myfile.py)"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="$(cat main.go)" language="Go"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)" language="Python"
 
 WORKFLOW code_review
     INPUT: @code TEXT, @language TEXT

@@ -4,7 +4,7 @@ import os
 import tempfile
 import pytest
 from click.testing import CliRunner
-from spl2.cli import cli, _parse_params
+from spl.cli import cli, _parse_params
 
 
 EXAMPLES_DIR = os.path.join(os.path.dirname(__file__), "..", "examples")
@@ -197,7 +197,7 @@ class TestCLIMemory:
 class TestCLIRag:
     def test_rag_add_count_query(self, runner):
         try:
-            from spl2.storage.vector import VectorStore
+            from spl.storage.vector import VectorStore
         except ImportError:
             pytest.skip("numpy or faiss-cpu not installed")
 
@@ -228,7 +228,7 @@ class TestCLIVersion:
     def test_version_command(self, runner):
         result = runner.invoke(cli, ["version"])
         assert result.exit_code == 0
-        assert "spl2 2.0.0" in result.output
+        assert "spl 2.0.0" in result.output
 
     def test_version_flag(self, runner):
         result = runner.invoke(cli, ["--version"])

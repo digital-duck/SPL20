@@ -8,7 +8,7 @@ Ready-to-run recipes demonstrating SPL 2.0 capabilities. Each recipe is self-con
 conda create -n spl python=3.11
 conda activate spl
 
-pip install -e ".[dev]"          # install spl2
+pip install -e ".[dev]"          # install spl
 pip install httpx                # for ollama/openrouter/momagrid adapters
 
 ollama pull gemma3               # at least one model
@@ -33,7 +33,7 @@ python cookbook/run_all.py --ids "04,10, 25,26, 29,30, 32,33" 2>&1 | tee cookboo
 
 Run 
 ```bash
-spl2 code-rag parse-log cookbook/out/run_all_20260320_052826.md 
+spl code-rag parse-log cookbook/out/run_all_20260320_052826.md 
 ```
 once the run finishes to capture all 30 new  (prompt, SPL) pairs into Code-RAG       
 
@@ -47,7 +47,7 @@ Status: `✓` done · `-` parser/runtime pending · `todo` not yet written
 
 | # | Recipe | Script | Description | Status |
 |---|--------|--------|-------------|--------|
-| 01 | Hello World | `hello.spl` | Minimal SPL program — verify spl2 + Ollama work | ✓ |
+| 01 | Hello World | `hello.spl` | Minimal SPL program — verify spl + Ollama work | ✓ |
 | 02 | Ollama Proxy | `proxy.spl` | General-purpose LLM query — proxy any Ollama model | ✓ |
 | 03 | Multilingual | `multilingual.spl` | Greet in any language — parametric `lang` demo | ✓ |
 | 04 | Model Showdown | `showdown.spl` | Same prompt to multiple models via CTEs, compare output | ✓ |
@@ -125,8 +125,8 @@ connectors:
 
 ```bash
 # CLI override — same pattern as --adapter
-spl2 run script.spl --connector pdf=pymupdf
-spl2 run script.spl --connector transcribe=assemblyai
+spl run script.spl --connector pdf=pymupdf
+spl run script.spl --connector transcribe=assemblyai
 ```
 
 | # | Recipe | Script | Connector | Status |
@@ -139,13 +139,13 @@ spl2 run script.spl --connector transcribe=assemblyai
 
 ```bash
 # Parse all recipes (no LLM needed)
-for f in cookbook/*/*.spl; do spl2 parse "$f"; done
+for f in cookbook/*/*.spl; do spl parse "$f"; done
 
 # Run hello world with echo adapter (no Ollama needed)
-spl2 run cookbook/01_hello_world/hello.spl
+spl run cookbook/01_hello_world/hello.spl
 
 # Run with Ollama
-spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
+spl run cookbook/01_hello_world/hello.spl --adapter ollama
 
 
 ```
@@ -154,7 +154,7 @@ spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
 ### Test — Hello World
 
 ```bash
-spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
+spl run cookbook/01_hello_world/hello.spl --adapter ollama
 ```
 
 ```
@@ -172,7 +172,7 @@ is a declarative language for orchestrating LLM workflows — think SQL for AI.
 ### Test — Ollama Proxy (any model, any prompt)
 
 ```bash
-spl2 run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
+spl run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
 ```
 
 ```
@@ -189,7 +189,7 @@ Okay, let's break down quantum computing...
 ### Test — Multilingual Greeting
 
 ```bash
-spl2 run cookbook/03_multilingual/multilingual.spl --adapter ollama user_input="hello wen" lang="Chinese"
+spl run cookbook/03_multilingual/multilingual.spl --adapter ollama user_input="hello wen" lang="Chinese"
 ```
 
 ```
@@ -215,14 +215,14 @@ bash cookbook/04_model_showdown/showdown.sh "What is the meaning of life?"
 ### Test — Self-Refining Agent
 
 ```bash
-spl2 run cookbook/05_self_refine/self_refine.spl --adapter ollama -m gemma3 task="Write a haiku about coding"
+spl run cookbook/05_self_refine/self_refine.spl --adapter ollama -m gemma3 task="Write a haiku about coding"
 ```
 
 
 ### Test — Multi-Model Pipeline (per-step model selection)
 
 ```bash
-spl2 run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
+spl run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
 ```
 
 This recipe showcases `GENERATE ... USING MODEL` — each step can target a different model within the same workflow.
@@ -234,7 +234,7 @@ This recipe showcases `GENERATE ... USING MODEL` — each step can target a diff
 bash cookbook/22_text2spl_demo/text2spl_demo.sh
 ```
 
-Demonstrates the `spl2 text2spl` / `spl2 compile` command: natural language descriptions compiled into valid SPL 2.0 code with automatic validation.
+Demonstrates the `spl text2spl` / `spl compile` command: natural language descriptions compiled into valid SPL 2.0 code with automatic validation.
 
 
 ### Test — Batch Test (all models x all recipes)

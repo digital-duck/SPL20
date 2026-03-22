@@ -1,10 +1,10 @@
 -- Recipe 01: Hello World
--- Minimal SPL program — verify spl2 + adapter + model work.
+-- Minimal SPL program — verify spl + adapter + model work.
 --
 -- Usage:
---   spl2 run cookbook/01_hello_world/hello.spl
---   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
---   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama -m gemma3
+--   spl run cookbook/01_hello_world/hello.spl
+--   spl run cookbook/01_hello_world/hello.spl --adapter ollama
+--   spl run cookbook/01_hello_world/hello.spl --adapter ollama -m gemma3
 
 PROMPT hello_world
 SELECT

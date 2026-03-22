@@ -4,9 +4,9 @@
 -- Demonstrates procedural decomposition, CALL-based delegation, and role specialization.
 --
 -- Usage:
---   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
---   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
---   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
+--   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
+--   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
+--   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
 
 -- Agent 1: Researcher — gathers key facts and sources
 PROCEDURE researcher(topic TEXT) RETURNS TEXT

@@ -3,10 +3,10 @@
 -- Demonstrates sequential generation where output of step N is input to step N+1.
 --
 -- Usage:
---   spl2 run cookbook/30_code_gen/code_gen.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama -m gemma3 \
 --       spec="A function that validates an email address" language="Python"
 --
---   spl2 run cookbook/30_code_gen/code_gen.spl --adapter ollama \
+--   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama \
 --       spec="Binary search over a sorted list, return index or -1" language="Go" \
 --       test_framework="testing"
 

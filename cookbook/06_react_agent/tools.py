@@ -1,12 +1,12 @@
 """Python tools for recipe 06: Population Growth.
 
 Registered via @spl_tool and loaded with:
-    spl2 run ... --tools cookbook/06_react_agent/tools.py
+    spl run ... --tools cookbook/06_react_agent/tools.py
 
 CALL calc_growth_rate(@pop_prev, @pop_curr) INTO @rate
 """
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 
 @spl_tool

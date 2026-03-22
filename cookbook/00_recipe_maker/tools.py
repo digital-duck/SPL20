@@ -16,7 +16,7 @@ Tools:
                                       Format a human-readable review notification.
 
 Usage:
-  spl2 run cookbook/00_recipe_maker/recipe_maker.spl \\
+  spl run cookbook/00_recipe_maker/recipe_maker.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/00_recipe_maker/tools.py \\
       concept="Customer churn predictor with explainability" \\
@@ -29,7 +29,7 @@ import os
 import textwrap
 from datetime import datetime
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _RECIPE_DIR = os.path.dirname(__file__)
 _COOKBOOK_DIR = os.path.dirname(_RECIPE_DIR)
@@ -297,7 +297,7 @@ def notify_review(output_dir: str, artifact_list: str, feedback_mode: str) -> st
             f"     {resolved}",
             "",
             "  2. Run the generated workflow:",
-            f"     spl2 run {os.path.join(resolved, 'workflow.spl')} --adapter ollama -m <model>",
+            f"     spl run {os.path.join(resolved, 'workflow.spl')} --adapter ollama -m <model>",
             "        --tools " + os.path.join(resolved, "tools.py"),
             "",
             "  3. Taste the cake — does it produce the expected output?",

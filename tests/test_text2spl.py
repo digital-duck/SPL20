@@ -2,8 +2,8 @@
 
 import asyncio
 import pytest
-from spl2.text2spl import Text2SPL, SPL2_SYSTEM_PROMPT, _MODE_INSTRUCTIONS
-from spl2.adapters.echo import EchoAdapter
+from spl.text2spl import Text2SPL, SPL2_SYSTEM_PROMPT, _MODE_INSTRUCTIONS
+from spl.adapters.echo import EchoAdapter
 
 
 class TestText2SPLValidation:

@@ -10,7 +10,7 @@ Tools:
   compile_transcript(...)                 Format the complete interview as a readable transcript.
 
 Usage:
-  spl2 run cookbook/33_interview_sim/interview_sim.spl \\
+  spl run cookbook/33_interview_sim/interview_sim.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/33_interview_sim/tools.py \\
       role_key=senior_swe focus=system_design candidate_id=alice_senior_swe difficulty=hard
@@ -20,7 +20,7 @@ import json
 import os
 import textwrap
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 

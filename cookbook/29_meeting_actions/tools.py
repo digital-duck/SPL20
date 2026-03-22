@@ -8,7 +8,7 @@ Tools:
   validate_ownership(json_str)        Flag high-priority action items that have no assigned owner.
 
 Usage:
-  spl2 run cookbook/29_meeting_actions/meeting_actions.spl \\
+  spl run cookbook/29_meeting_actions/meeting_actions.spl \\
       --adapter ollama -m gemma3 \\
       --tools cookbook/29_meeting_actions/tools.py \\
       filename=sprint_planning.txt \\
@@ -20,7 +20,7 @@ import os
 import re
 from datetime import date, timedelta
 
-from spl2.tools import spl_tool
+from spl.tools import spl_tool
 
 _TRANSCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "transcripts")
 

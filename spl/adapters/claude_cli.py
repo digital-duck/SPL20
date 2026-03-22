@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import os
 import subprocess
-from spl2.adapters.base import LLMAdapter, GenerationResult
+from spl.adapters.base import LLMAdapter, GenerationResult
 
 
 class ClaudeCLIAdapter(LLMAdapter):

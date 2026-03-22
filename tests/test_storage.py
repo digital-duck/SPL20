@@ -3,7 +3,7 @@
 import os
 import tempfile
 import pytest
-from spl2.storage.memory import MemoryStore
+from spl.storage.memory import MemoryStore
 
 
 class TestMemoryStore:
@@ -62,7 +62,7 @@ class TestVectorStore:
     @pytest.fixture
     def store(self):
         try:
-            from spl2.storage.vector import VectorStore
+            from spl.storage.vector import VectorStore
         except ImportError:
             pytest.skip("numpy or faiss-cpu not installed")
 
@@ -108,13 +108,13 @@ class TestVectorStore:
 
 class TestGetVectorStore:
     def test_unknown_backend(self):
-        from spl2.storage import get_vector_store
+        from spl.storage import get_vector_store
         with pytest.raises(ValueError, match="Unknown"):
             get_vector_store("unknown_backend")
 
     def test_faiss_backend(self):
         try:
-            from spl2.storage import get_vector_store
+            from spl.storage import get_vector_store
             import tempfile
             with tempfile.TemporaryDirectory() as tmpdir:
                 store = get_vector_store("faiss", tmpdir)

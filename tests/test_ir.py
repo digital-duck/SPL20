@@ -2,11 +2,11 @@
 
 import json
 import pytest
-from spl2.lexer import Lexer
-from spl2.parser import Parser
-from spl2.analyzer import Analyzer
-from spl2.optimizer import Optimizer
-from spl2.ir import ast_to_json, plan_to_json, plans_to_json
+from spl.lexer import Lexer
+from spl.parser import Parser
+from spl.analyzer import Analyzer
+from spl.optimizer import Optimizer
+from spl.ir import ast_to_json, plan_to_json, plans_to_json
 
 
 def _parse(source: str):

@@ -3,10 +3,10 @@
 -- Each layer is a compressed, self-contained summary of the previous layer.
 --
 -- Usage:
---   spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 \
 --       text="$(cat long_article.txt)"
 --
---   spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+--   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
 --       text="$(cat research_paper.txt)" audience="executive" layers=3
 
 CREATE FUNCTION summary_constraints(layer TEXT)

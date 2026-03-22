@@ -12,15 +12,15 @@ Greet in any language — demonstrates parametric context passing via `user_inpu
 ## Usage
 
 ```bash
-spl2 run cookbook/03_multilingual/multilingual.spl --adapter ollama \
+spl run cookbook/03_multilingual/multilingual.spl --adapter ollama \
     user_input="Hello Wen-Guang" lang="Chinese"
 
-spl2 run cookbook/03_multilingual/multilingual.spl --adapter ollama \
+spl run cookbook/03_multilingual/multilingual.spl --adapter ollama \
     user_input="Good morning" lang="French"
 
-spl2 run cookbook/03_multilingual/multilingual.spl --adapter ollama \
+spl run cookbook/03_multilingual/multilingual.spl --adapter ollama \
     user_input="How are you?" lang="Japanese"
 
-spl2 run cookbook/03_multilingual/multilingual.spl --adapter ollama \
+spl run cookbook/03_multilingual/multilingual.spl --adapter ollama \
     user_input="See you later" lang="Spanish"
 ```

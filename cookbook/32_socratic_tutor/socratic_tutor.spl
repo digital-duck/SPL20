@@ -4,29 +4,29 @@
 -- with deterministic tools for topic loading, level guidance, and dialogue formatting.
 --
 -- Usage (topic from catalog):
---   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic_id=sky_blue subject=science student_level="middle school"
 --
---   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic_id=sqrt2_irrational subject=math student_level=undergraduate
 --
---   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic_id=recursion subject=programming student_level="high school"
 --
 -- Usage (freeform topic, no catalog):
---   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
 --       --adapter ollama -m gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic="Why is the speed of light constant?" student_level=undergraduate
 --
 -- List available topics:
---   spl2 run ... topic_id=list subject=science    (or math, programming)
+--   spl run ... topic_id=list subject=science    (or math, programming)
 
 -- ── Socratic persona (zero LLM cost — injected as system context) ───────────
 

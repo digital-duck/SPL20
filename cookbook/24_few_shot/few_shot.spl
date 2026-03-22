@@ -3,10 +3,10 @@
 -- Demonstrates in-context learning — no fine-tuning required.
 --
 -- Usage:
---   spl2 run cookbook/24_few_shot/few_shot.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/24_few_shot/few_shot.spl --adapter ollama -m gemma3 \
 --       text="The quarterly results exceeded all analyst forecasts by a significant margin"
 --
---   spl2 run cookbook/24_few_shot/few_shot.spl --adapter ollama \
+--   spl run cookbook/24_few_shot/few_shot.spl --adapter ollama \
 --       text="System outage detected in EU-WEST-2 affecting 15% of users" \
 --       domain="ops"
 

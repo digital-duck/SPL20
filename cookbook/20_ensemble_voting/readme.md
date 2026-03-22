@@ -21,13 +21,13 @@ Generates 5 independent candidate answers, scores each on accuracy/completeness/
 ## Usage
 
 ```bash
-spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama \
+spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama \
     question="What causes inflation?"
 
-spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama \
+spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama \
     question="Is Rust faster than C++?"
 
-spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama -m llama3.2 \
+spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama -m llama3.2 \
     question="What is the best database for time-series data?"
 ```
 

@@ -6,8 +6,8 @@
 -- The bash script (batch_test.sh) is kept for CI/CD and shell-based pipelines.
 --
 -- Usage:
---   spl2 run cookbook/10_batch_test/batch_test.spl --adapter ollama
---   spl2 run cookbook/10_batch_test/batch_test.spl --adapter ollama \
+--   spl run cookbook/10_batch_test/batch_test.spl --adapter ollama
+--   spl run cookbook/10_batch_test/batch_test.spl --adapter ollama \
 --       model_1=gemma3 model_2=mistral
 
 CREATE FUNCTION summarize_results(

@@ -19,7 +19,7 @@
   Special:
   diff       markdown       dockerfile   makefile
 
-  For SPL specifically, there's no spl or spl2 tag registered in any highlighter, so the choices are:
+  For SPL specifically, there's no spl or spl tag registered in any highlighter, so the choices are:
 
   ┌─────────────────┬───────────────────────────────────────────────────────────┐
   │  Block content  │                         Best tag                          │
@@ -35,5 +35,5 @@
   │ Sample output   │ text or console                                           │
   └─────────────────┴───────────────────────────────────────────────────────────┘
 
-  That's already what we're using in the USER-GUIDE and the spl2 run markdown output — sql for .spl source and bash for
+  That's already what we're using in the USER-GUIDE and the spl run markdown output — sql for .spl source and bash for
   the invocation block.
