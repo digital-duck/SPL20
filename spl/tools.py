@@ -75,3 +75,14 @@ def load_tools_module(path: str) -> dict[str, Callable]:
 def get_global_tools() -> dict[str, Callable]:
     """Return a copy of the global tool registry."""
     return dict(_GLOBAL_TOOLS)
+
+
+# Auto-load the standard library so its tools are always available
+# (equivalent to SQL built-in functions — no --tools flag needed).
+def _load_stdlib() -> None:
+    try:
+        import spl.stdlib  # noqa: F401 — imported for its @spl_tool side-effects
+    except ImportError:
+        pass  # stdlib not available in minimal installs — silently skip
+
+_load_stdlib()
