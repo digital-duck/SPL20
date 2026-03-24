@@ -85,5 +85,23 @@ def _register_builtin_adapters():
     except ImportError:
         pass
 
+    try:
+        from spl.adapters.bedrock import BedrockAdapter
+        register_adapter("bedrock", BedrockAdapter)
+    except ImportError:
+        pass
+
+    try:
+        from spl.adapters.vertex import VertexAdapter
+        register_adapter("vertex", VertexAdapter)
+    except ImportError:
+        pass
+
+    try:
+        from spl.adapters.azure_openai import AzureOpenAIAdapter
+        register_adapter("azure_openai", AzureOpenAIAdapter)
+    except ImportError:
+        pass
+
 
 _register_builtin_adapters()

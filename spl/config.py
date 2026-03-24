@@ -76,6 +76,21 @@ DEFAULTS: dict = {
             "default_model": "qwen-plus",
             "timeout": 180,
         },
+        "bedrock": {
+            "region_name": "us-east-1",
+            "default_model": "anthropic.claude-sonnet-4-20250514-v1:0",
+            "timeout": 180,
+        },
+        "vertex": {
+            "location": "us-central1",
+            "default_model": "gemini-2.5-flash",
+            "timeout": 180,
+        },
+        "azure_openai": {
+            "api_version": "2025-01-01-preview",
+            "default_model": "gpt-4o",
+            "timeout": 180,
+        },
     },
 }
 

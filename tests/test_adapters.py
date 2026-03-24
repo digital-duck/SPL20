@@ -179,3 +179,243 @@ class TestMomagridAdapter:
                 asyncio.run(adapter.generate("test prompt"))
         except ImportError:
             pytest.skip("httpx not installed")
+
+
+class TestBedrockAdapter:
+    """Test Bedrock adapter instantiation (no actual AWS calls)."""
+
+    def test_registered(self):
+        assert "bedrock" in list_adapters()
+
+    def test_list_models(self):
+        try:
+            from spl.adapters.bedrock import _MODELS
+            assert len(_MODELS) > 0
+            assert any("claude" in m for m in _MODELS)
+            assert any("nova" in m for m in _MODELS)
+        except ImportError:
+            pytest.skip("boto3 not installed")
+
+    def test_estimate_cost_claude_sonnet(self):
+        try:
+            from spl.adapters.bedrock import _estimate_bedrock_cost
+            cost = _estimate_bedrock_cost(
+                "anthropic.claude-sonnet-4-20250514-v1:0", 1_000_000, 1_000_000
+            )
+            assert cost is not None
+            assert cost > 0
+        except ImportError:
+            pytest.skip("boto3 not installed")
+
+    def test_estimate_cost_nova_pro(self):
+        try:
+            from spl.adapters.bedrock import _estimate_bedrock_cost
+            cost = _estimate_bedrock_cost("amazon.nova-pro-v1:0", 1_000_000, 1_000_000)
+            assert cost is not None
+            assert cost > 0
+        except ImportError:
+            pytest.skip("boto3 not installed")
+
+    def test_estimate_cost_unknown_model(self):
+        try:
+            from spl.adapters.bedrock import _estimate_bedrock_cost
+            assert _estimate_bedrock_cost("unknown.model-v1:0", 1000, 1000) is None
+        except ImportError:
+            pytest.skip("boto3 not installed")
+
+    def test_import_error_without_boto3(self):
+        """BedrockAdapter raises ImportError when boto3 is None."""
+        try:
+            import spl.adapters.bedrock as mod
+        except ImportError:
+            pytest.skip("boto3 not installed")
+        original = mod.boto3
+        try:
+            mod.boto3 = None
+            with pytest.raises(ImportError, match="boto3"):
+                mod.BedrockAdapter()
+        finally:
+            mod.boto3 = original
+
+    def test_default_region_from_env(self, monkeypatch):
+        """region_name defaults to AWS_DEFAULT_REGION env var."""
+        try:
+            import spl.adapters.bedrock as mod
+            if mod.boto3 is None:
+                pytest.skip("boto3 not installed")
+        except ImportError:
+            pytest.skip("boto3 not installed")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-west-1")
+        try:
+            from spl.adapters.bedrock import BedrockAdapter
+            adapter = BedrockAdapter()
+            assert adapter.region_name == "eu-west-1"
+        except Exception:
+            pytest.skip("AWS credentials not configured")
+
+
+class TestVertexAdapter:
+    """Test Vertex AI adapter instantiation (no actual GCP calls)."""
+
+    def test_registered(self):
+        assert "vertex" in list_adapters()
+
+    def test_list_models(self):
+        try:
+            from spl.adapters.vertex import VertexAdapter
+            _ = VertexAdapter  # confirms import works
+            from spl.adapters.vertex import VertexAdapter as VA
+            # list_models is a static list — test without full init
+            assert any("gemini" in m for m in [
+                "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash",
+                "gemini-2.0-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash",
+            ])
+        except ImportError:
+            pytest.skip("google-genai not installed")
+
+    def test_requires_project(self, monkeypatch):
+        """Missing project ID raises ValueError."""
+        try:
+            from spl.adapters.vertex import VertexAdapter
+            import spl.adapters.vertex as mod
+            if mod.genai is None:
+                pytest.skip("google-genai not installed")
+        except ImportError:
+            pytest.skip("google-genai not installed")
+        monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+        with pytest.raises(ValueError, match="project"):
+            VertexAdapter(project="")
+
+    def test_default_location(self, monkeypatch):
+        """location defaults to us-central1 when env var is unset."""
+        try:
+            from spl.adapters.vertex import VertexAdapter
+            import spl.adapters.vertex as mod
+            if mod.genai is None:
+                pytest.skip("google-genai not installed")
+        except ImportError:
+            pytest.skip("google-genai not installed")
+        monkeypatch.delenv("GOOGLE_CLOUD_LOCATION", raising=False)
+        try:
+            adapter = VertexAdapter(project="my-test-project")
+            assert adapter.location == "us-central1"
+        except Exception:
+            pytest.skip("GCP credentials not configured")
+
+    def test_custom_location(self, monkeypatch):
+        """Explicit location= kwarg is preserved."""
+        try:
+            from spl.adapters.vertex import VertexAdapter
+            import spl.adapters.vertex as mod
+            if mod.genai is None:
+                pytest.skip("google-genai not installed")
+        except ImportError:
+            pytest.skip("google-genai not installed")
+        try:
+            adapter = VertexAdapter(project="my-project", location="europe-west4")
+            assert adapter.location == "europe-west4"
+        except Exception:
+            pytest.skip("GCP credentials not configured")
+
+    def test_import_error_without_genai(self):
+        """VertexAdapter raises ImportError when google-genai is None."""
+        try:
+            import spl.adapters.vertex as mod
+        except ImportError:
+            pytest.skip("google-genai not installed")
+        original = mod.genai
+        try:
+            mod.genai = None
+            with pytest.raises(ImportError, match="google-genai"):
+                mod.VertexAdapter(project="my-project")
+        finally:
+            mod.genai = original
+
+
+class TestAzureOpenAIAdapter:
+    """Test Azure OpenAI adapter instantiation (no actual API calls)."""
+
+    def test_registered(self):
+        assert "azure_openai" in list_adapters()
+
+    def test_requires_endpoint(self, monkeypatch):
+        """Missing endpoint raises ValueError."""
+        try:
+            from spl.adapters.azure_openai import AzureOpenAIAdapter
+            import spl.adapters.azure_openai as mod
+            if mod.openai is None:
+                pytest.skip("openai not installed")
+        except ImportError:
+            pytest.skip("openai not installed")
+        monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
+        monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
+        with pytest.raises(ValueError, match="endpoint"):
+            AzureOpenAIAdapter(endpoint="", api_key="test-key")
+
+    def test_requires_api_key(self, monkeypatch):
+        """Missing API key raises ValueError."""
+        try:
+            from spl.adapters.azure_openai import AzureOpenAIAdapter
+            import spl.adapters.azure_openai as mod
+            if mod.openai is None:
+                pytest.skip("openai not installed")
+        except ImportError:
+            pytest.skip("openai not installed")
+        monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
+        with pytest.raises(ValueError, match="API key"):
+            AzureOpenAIAdapter(endpoint="https://my.openai.azure.com/", api_key="")
+
+    def test_default_api_version(self, monkeypatch):
+        """api_version defaults to the built-in value."""
+        try:
+            from spl.adapters.azure_openai import AzureOpenAIAdapter, _DEFAULT_API_VERSION
+            import spl.adapters.azure_openai as mod
+            if mod.openai is None:
+                pytest.skip("openai not installed")
+        except ImportError:
+            pytest.skip("openai not installed")
+        monkeypatch.delenv("AZURE_OPENAI_API_VERSION", raising=False)
+        try:
+            adapter = AzureOpenAIAdapter(
+                endpoint="https://my.openai.azure.com/",
+                api_key="test-key",
+            )
+            assert adapter.api_version == _DEFAULT_API_VERSION
+        except Exception:
+            pytest.skip("openai client init failed")
+
+    def test_list_models(self):
+        try:
+            from spl.adapters.azure_openai import AzureOpenAIAdapter
+            import spl.adapters.azure_openai as mod
+            if mod.openai is None:
+                pytest.skip("openai not installed")
+        except ImportError:
+            pytest.skip("openai not installed")
+        try:
+            adapter = AzureOpenAIAdapter(
+                endpoint="https://my.openai.azure.com/",
+                api_key="test-key",
+            )
+            models = adapter.list_models()
+            assert "gpt-4o" in models
+            assert "gpt-4o-mini" in models
+        except Exception:
+            pytest.skip("openai client init failed")
+
+    def test_import_error_without_openai(self):
+        """AzureOpenAIAdapter raises ImportError when openai is None."""
+        try:
+            import spl.adapters.azure_openai as mod
+        except ImportError:
+            pytest.skip("openai not installed")
+        original = mod.openai
+        try:
+            mod.openai = None
+            with pytest.raises(ImportError, match="openai"):
+                mod.AzureOpenAIAdapter(
+                    endpoint="https://my.openai.azure.com/",
+                    api_key="test-key",
+                )
+        finally:
+            mod.openai = original

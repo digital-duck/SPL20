@@ -32,11 +32,14 @@ pip install httpx
 # For Anthropic adapter:
 pip install anthropic
 
-# For OpenAI adapter:
+# For OpenAI and Azure OpenAI adapters:
 pip install openai
 
-# For Google Gemini adapter:
+# For Google Gemini (direct API) and GCP Vertex AI adapters:
 pip install google-genai
+
+# For AWS Bedrock adapter:
+pip install boto3
 
 # For RAG (vector search):
 pip install numpy faiss-cpu
@@ -75,7 +78,7 @@ WITH OUTPUT BUDGET 1000 tokens;
 ### Parse and Validate
 
 ```bash
-spl parse examples/hello_world.spl
+spl validate examples/hello_world.spl
 ```
 
 Output:
@@ -137,6 +140,15 @@ spl run examples/hello_world.spl --adapter openrouter user_input="hello wen" lan
 # Via Claude Code CLI (subscription)
 spl run examples/hello_world.spl --adapter claude_cli user_input="hello wen" lang="Spanish"
 
+# Via AWS Bedrock (Claude Sonnet in your AWS account)
+spl run examples/hello_world.spl --adapter bedrock user_input="hello wen" lang="German"
+
+# Via GCP Vertex AI (Gemini Flash in your GCP project)
+spl run examples/hello_world.spl --adapter vertex user_input="hello wen" lang="French"
+
+# Via Azure OpenAI (GPT-4o in your Azure subscription)
+spl run examples/hello_world.spl --adapter azure_openai user_input="hello wen" lang="Italian"
+
 # Via Momagrid (decentralized GPU grid)
 export MOMAGRID_HUB_URL="http://localhost:9000"
 spl run examples/hello_world.spl --adapter momagrid user_input="hello wen" lang="Korean"
@@ -155,6 +167,25 @@ spl run query.spl user_input="hello" lang="French"
 
 # Mixed
 spl run query.spl -p user_input="hello" lang="French"
+```
+
+### Advanced Run Flags
+
+```bash
+# Load a file as a named parameter (--dataset NAME=FILE)
+spl run summarize.spl --dataset report=report.pdf
+
+# Multiple datasets
+spl run analyze.spl --dataset q1=q1.csv --dataset q2=q2.csv
+
+# Index a document into doc-rag before execution (--resource FILE)
+spl run rag_query.spl --resource docs/spec.pdf question="What is SPL?"
+
+# Load Python tools for CALL steps (--tools FILE)
+spl run agent.spl --tools tools.py
+
+# Allow specific Claude tools (claude_cli adapter only)
+spl run react.spl --adapter claude_cli --claude-allowed-tools WebSearch country="Japan"
 ```
 
 ### Create Your Own
@@ -658,7 +689,7 @@ Cache is stored in `.spl/memory.db` (SQLite). Cache keys are SHA-256 hashes of t
 ### Parse to JSON AST
 
 ```bash
-spl parse examples/self_refine.spl --json
+spl validate examples/self_refine.spl --json
 ```
 
 Produces a portable JSON representation of the AST — useful for tooling, visualization, or cross-language interop.
@@ -701,7 +732,7 @@ The recommended setup uses the `claude_cli` adapter with `claude-sonnet-4-6`, wh
 
 ```bash
 # No flags needed — picks up text2spl.adapter and text2spl.model from config
-spl compile "summarize a document and store the result"
+spl text2spl "summarize a document and store the result"
 ```
 
 The config section that controls this (in `~/.spl/config.yaml`):
@@ -717,7 +748,7 @@ text2spl:
 
 To override the compiler adapter/model for a single call:
 ```bash
-spl compile "..." --adapter ollama -m qwen2.5-coder   # benchmark another compiler
+spl text2spl "..." --adapter ollama -m qwen2.5-coder   # benchmark another compiler
 ```
 
 To switch the compiler globally:
@@ -730,18 +761,17 @@ spl config set text2spl.model qwen2.5-coder
 
 ```bash
 # Compile (uses text2spl.adapter from config — claude_cli by default)
-spl compile "summarize a document and store the result"
+spl text2spl "summarize a document and store the result"
 
 # Force a workflow
-spl compile "build a review agent that refines until quality > 0.8" --mode workflow
+spl text2spl "build a review agent that refines until quality > 0.8" --mode workflow
 
 # Save to file
-spl compile "translate text to French" -o translate.spl
+spl text2spl "translate text to French" -o translate.spl
 
 # Compile and execute in one step
-spl compile "classify user intent" --execute text="Hello there"
+spl text2spl "classify user intent" --execute text="Hello there"
 
-# text2spl and compile are aliases for the same command
 spl text2spl "summarize a document"
 ```
 
@@ -787,7 +817,7 @@ print(f"Valid: {valid}, Message: {msg}")
 
 ## 10. Code-RAG — Self-Improving Example Retrieval for text2SPL
 
-Code-RAG is a ChromaDB-backed vector store of `(description, SPL source)` pairs. When you run `spl compile`, it retrieves the most semantically similar SPL examples from the store and injects them into the compiler's context — replacing the handful of static hand-written examples with the full richness of your cookbook and any other pairs you have collected.
+Code-RAG is a ChromaDB-backed vector store of `(description, SPL source)` pairs. When you run `spl text2spl`, it retrieves the most semantically similar SPL examples from the store and injects them into the compiler's context — replacing the handful of static hand-written examples with the full richness of your cookbook and any other pairs you have collected.
 
 ### Why Code-RAG
 
@@ -795,7 +825,7 @@ Without Code-RAG, the text2SPL compiler uses 4 fixed examples in its system prom
 
 - **Better coverage** — every cookbook recipe (35+) is available as a retrieval target
 - **Semantic matching** — if you ask for "a loop that refines until quality is high", the WHILE-quality-gate recipe is retrieved, not a generic summariser
-- **Self-learning** — every successful `spl compile` call automatically adds its validated `(description, SPL)` pair back into the store, making the next compile better
+- **Self-learning** — every successful `spl text2spl` call automatically adds its validated `(description, SPL)` pair back into the store, making the next compile better
 
 ### First-Time Setup
 
@@ -811,7 +841,7 @@ spl code-rag count
 # → Code-RAG pairs indexed: 34
 ```
 
-After this, every `spl compile` call automatically uses the store. You will see a status line on stderr:
+After this, every `spl text2spl` call automatically uses the store. You will see a status line on stderr:
 
 ```
 Code-RAG: 34 examples indexed
@@ -883,7 +913,7 @@ spl code-rag import --from ./large_dataset.jsonl --no-validate
 
 ### Auto-Capture
 
-When Code-RAG is enabled (the default), every `spl compile` invocation that produces valid SPL automatically adds the `(description, SPL)` pair to the store. The store grows as you use the compiler — no manual curation needed.
+When Code-RAG is enabled (the default), every `spl text2spl` invocation that produces valid SPL automatically adds the `(description, SPL)` pair to the store. The store grows as you use the compiler — no manual curation needed.
 
 To disable auto-capture:
 ```bash
@@ -1109,13 +1139,118 @@ spl run my_query.spl --adapter qwen -m qwen-max
 
 Models: `qwen-max`, `qwen-plus`, `qwen-turbo`, `qwen-long`, `qwen2.5-72b-instruct`, `qwen2.5-coder-32b-instruct`
 
+### AWS Bedrock
+
+Run Claude, Amazon Nova, Meta Llama, and other models through your AWS account via the Bedrock Converse API. No per-request API key — uses standard AWS credential chain (env vars, `~/.aws/credentials`, IAM role).
+
+```bash
+pip install boto3
+
+# Option A — environment variables
+export AWS_ACCESS_KEY_ID=AKIA...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_DEFAULT_REGION=us-east-1
+
+# Option B — named profile
+AWS_PROFILE=my-work-profile spl run my_query.spl --adapter bedrock
+
+# Option C — IAM role (EC2, ECS, Lambda, etc. — no config needed)
+spl run my_query.spl --adapter bedrock
+```
+
+Enable model access in the AWS Console: **Amazon Bedrock → Model access**
+
+```bash
+# Default model: anthropic.claude-sonnet-4-20250514-v1:0
+spl run my_query.spl --adapter bedrock
+spl run my_query.spl --adapter bedrock -m anthropic.claude-opus-4-0-20250514-v1:0
+spl run my_query.spl --adapter bedrock -m amazon.nova-pro-v1:0
+spl run my_query.spl --adapter bedrock -m meta.llama3-70b-instruct-v1:0
+```
+
+Models: `anthropic.claude-sonnet-4-*`, `anthropic.claude-haiku-4-*`, `amazon.nova-pro-v1:0`, `amazon.nova-lite-v1:0`, `meta.llama3-70b-instruct-v1:0`
+
+Required IAM permission: `bedrock:InvokeModel` or `bedrock:Converse` on `arn:aws:bedrock:<region>::foundation-model/*`
+
+See **Recipe 38** (`cookbook/38_bedrock_quickstart/`) for a multi-model comparison example.
+
+### GCP Vertex AI
+
+Run Gemini models through your GCP project via Vertex AI. Uses Application Default Credentials (ADC) — no API key needed.
+
+```bash
+pip install google-genai
+
+# Option A — local development
+gcloud auth application-default login
+export GOOGLE_CLOUD_PROJECT=my-gcp-project-id
+
+# Option B — service account key
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+export GOOGLE_CLOUD_PROJECT=my-gcp-project-id
+
+# Option C — GCE / GKE / Cloud Run — attached service account, no config needed
+# GOOGLE_CLOUD_PROJECT must still be set
+
+# Enable the Vertex AI API (once per project)
+gcloud services enable aiplatform.googleapis.com
+```
+
+```bash
+# Default region: us-central1 — override with:
+export GOOGLE_CLOUD_LOCATION=europe-west4
+
+# Default model: gemini-2.5-flash
+spl run my_query.spl --adapter vertex
+spl run my_query.spl --adapter vertex -m gemini-2.5-pro
+spl run my_query.spl --adapter vertex -m gemini-2.0-flash-lite
+```
+
+Models: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-1.5-pro`, `gemini-1.5-flash`
+
+Required IAM role: `roles/aiplatform.user`
+
+> **`vertex` vs `google` adapter** — both use the same `google-genai` SDK and same model names. `google` uses a direct API key (Google AI Studio, prototyping). `vertex` uses ADC and routes through your GCP project (enterprise, audit logs, VPC, compliance).
+
+See **Recipe 39** (`cookbook/39_vertex_quickstart/`) for a Gemini Pro/Flash/Lite comparison.
+
+### Azure OpenAI
+
+Run GPT-4o and o-series models through your own Azure subscription via Azure OpenAI Service. Uses the same `openai` SDK as the `openai` adapter, pointed at your Azure endpoint.
+
+```bash
+pip install openai
+
+export AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com/
+export AZURE_OPENAI_API_KEY=<key-from-azure-portal>
+# API version defaults to 2025-01-01-preview — override if needed:
+export AZURE_OPENAI_API_VERSION=2024-12-01-preview
+```
+
+The `--model` flag (or `USING MODEL` in SPL) takes your **deployment name**, which you set when creating a deployment in Azure OpenAI Studio:
+
+```bash
+# Default deployment: gpt-4o
+spl run my_query.spl --adapter azure_openai
+spl run my_query.spl --adapter azure_openai -m gpt-4o-mini
+spl run my_query.spl --adapter azure_openai -m gpt-35-turbo
+```
+
+Common deployment names: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `gpt-35-turbo`, `o1`, `o1-mini`, `o3-mini`
+
+> **`azure_openai` vs `openai` adapter** — both use the same `openai` SDK and similar model names. `openai` calls `api.openai.com` with your OpenAI key. `azure_openai` calls your private Azure endpoint — data stays in your Azure region, billed to your Azure subscription, subject to Azure compliance (HIPAA, SOC 2, etc.).
+
+See **Recipe 40** (`cookbook/40_azure_openai_quickstart/`) for a GPT-4o / GPT-4o mini / GPT-3.5 comparison.
+
 ### List All Adapters
 
 ```bash
 $ spl adapters
-Available LLM adapters (10):
+Available LLM adapters (13):
 
   anthropic      Claude models via Anthropic API (requires anthropic, ANTHROPIC_API_KEY)
+  azure_openai   Azure OpenAI Service — GPT/o-series in your Azure subscription (requires openai, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY)
+  bedrock        AWS Bedrock — Claude, Nova, Llama via Converse API (requires boto3, AWS credentials)
   claude_cli     Wraps claude -p CLI (requires Claude Code installed)
   deepseek       DeepSeek models (requires httpx, DEEPSEEK_API_KEY)
   echo           Returns prompt as response (testing, no setup required)
@@ -1125,6 +1260,7 @@ Available LLM adapters (10):
   openai         GPT/o-series via OpenAI API (requires openai, OPENAI_API_KEY)
   openrouter     100+ models via OpenRouter.ai (requires httpx, OPENROUTER_API_KEY)
   qwen           Qwen models via DashScope (requires httpx, DASHSCOPE_API_KEY)
+  vertex         GCP Vertex AI — Gemini models via ADC (requires google-genai, GOOGLE_CLOUD_PROJECT)
 ```
 
 ---
@@ -1176,14 +1312,14 @@ You can also manage the vector store directly from the command line:
 
 ```bash
 # Add documents
-spl rag add "Python is a programming language"
-spl rag add "JavaScript runs in browsers"
+spl doc-rag add "Python is a programming language"
+spl doc-rag add "JavaScript runs in browsers"
 
 # Check count
-spl rag count
+spl doc-rag count
 
 # Query
-spl rag query "What language runs in browsers?" --top-k 3
+spl doc-rag query "What language runs in browsers?" --top-k 3
 ```
 
 ---
@@ -1468,7 +1604,29 @@ SPL20/
 
 ---
 
-## 19. Troubleshooting
+## 19. text2SPL Knowledge Studio (`spl ui`)
+
+The text2SPL Knowledge Studio is a Streamlit web app that wraps the SPL compiler and runner with a graphical interface. It is bundled in `spl/ui/streamlit/` and can be launched with a single command:
+
+```bash
+spl ui                           # opens on http://localhost:8501
+spl ui --port 8080               # custom port
+spl ui --host 0.0.0.0 --port 8080  # expose to local network
+```
+
+**Three pages:**
+- **Text-to-SPL** — describe a task in plain English, compile to SPL, run it, and save everything to the knowledge base.
+- **Review** — browse all generated scripts and execution history; import/export as YAML.
+- **Code-RAG** — inspect and grow the ChromaDB vector store that feeds the compiler's few-shot context.
+
+```bash
+pip install streamlit pyyaml chromadb  # if not already installed
+spl ui
+```
+
+---
+
+## 20. Troubleshooting
 
 **`spl: command not found`**
 ```bash
@@ -1489,7 +1647,7 @@ pip install numpy faiss-cpu
 ```
 
 **`Code-RAG: store empty — run spl code-rag import`**
-Run `spl code-rag import` once to prime the store with cookbook recipes. After that, every `spl compile` call auto-captures pairs.
+Run `spl code-rag import` once to prime the store with cookbook recipes. After that, every `spl text2spl` call auto-captures pairs.
 
 **`chromadb` or `onnxruntime` import errors**
 ```bash

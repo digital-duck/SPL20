@@ -949,6 +949,12 @@ class Parser:
             # Encode as a semantic condition with all values joined
             return SemanticCondition(semantic_value='contains:' + '|'.join(values))
 
+        # STARTSWITH 'prefix' — deterministic prefix match
+        if tok.type == TokenType.IDENTIFIER and tok.value.lower() == 'startswith':
+            self._advance()  # STARTSWITH
+            prefix = self._expect(TokenType.STRING).value
+            return SemanticCondition(semantic_value='startswith:' + prefix)
+
         # Fall through: could be an expression-based condition
         raise ParseError(
             f"Expected condition (string literal or comparison operator), got {tok.type.name}",
@@ -1273,10 +1279,17 @@ class Parser:
         tok = self._current()
 
         # @param reference — allow keywords as variable names after @
+        # Also handle @var[index] as syntactic sugar for GET(@var, index)
         if tok.type == TokenType.AT:
             self._advance()
             name = self._expect_identifier_or_keyword().value
-            return ParamRef(name=name)
+            param = ParamRef(name=name)
+            if self._check(TokenType.LBRACKET):
+                self._advance()  # consume [
+                index_expr = self._parse_expression()
+                self._expect(TokenType.RBRACKET)
+                return FunctionCall(name="GET", arguments=[param, index_expr])
+            return param
 
         # String literal
         if tok.type == TokenType.STRING:

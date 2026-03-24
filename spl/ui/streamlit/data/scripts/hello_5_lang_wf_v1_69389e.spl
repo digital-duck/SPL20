@@ -1,0 +1,16 @@
+WORKFLOW hello_in_languages
+  INPUT @languages LIST
+  OUTPUT @greetings TEXT
+DO
+  @greetings := '';
+  @index := 0;
+  @count := 5;
+  WHILE @index < @count DO
+    @language := @languages[@index];
+    @greeting := '';
+    GENERATE translate('Hello', @language) INTO @greeting;
+    @greetings := @greetings + @greeting + ', ';
+    @index := @index + 1;
+  END;
+  COMMIT @greetings;
+END;

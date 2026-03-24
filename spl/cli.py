@@ -1,26 +1,23 @@
 """SPL 2.0 Command-Line Interface.
 
 Usage examples:
-    spl init
-    spl validate query.spl
-    spl syntax   query.spl
-    spl explain  query.spl
-    spl run      query.spl --adapter ollama -p task="Write a haiku"
-    spl execute  query.spl --adapter momagrid --cache
-    spl text2spl "summarize a document" --adapter ollama
-    spl compile  "build a review agent" --adapter ollama --execute
+    spl validate  query.spl
+    spl explain   query.spl
+    spl run       query.spl --adapter ollama -p task="Write a haiku"
+    spl run       query.spl -d doc=report.txt -p question="Summarise this"
+    spl run       query.spl --resource context.pdf
+    spl text2spl  "summarize a document" --adapter ollama
+    spl ui
     spl config show
     spl config set adapter ollama
-    spl config get adapter
-    spl config init
     spl adapters
     spl memory list
     spl memory get  <key>
     spl memory set  <key> <value>
-    spl memory delete <key>
-    spl rag add   "document text"
-    spl rag query "search text" --top-k 5
-    spl rag count
+    spl doc-rag add   "document text"
+    spl doc-rag query "search text" --top-k 5
+    spl code-rag import
+    spl code-rag query "summarize a PDF"
     spl version
 """
 
@@ -59,6 +56,29 @@ def _parse_params(raw: tuple[str, ...]) -> dict[str, str]:
         key, value = item.split("=", 1)
         params[key.strip()] = value.strip()
     return params
+
+
+def _load_datasets(datasets: tuple[str, ...]) -> dict[str, str]:
+    """Parse NAME=FILE tuples, read each file, and return {name: content}.
+
+    # TODO (tech-debt): replace with dd-extract for PDF/CSV/DOCX support.
+    """
+    result: dict[str, str] = {}
+    for item in datasets:
+        if "=" not in item:
+            raise click.BadParameter(
+                f"Expected NAME=FILE, got: {item!r}", param_hint="-d/--dataset"
+            )
+        name, filepath = item.split("=", 1)
+        name, filepath = name.strip(), filepath.strip()
+        path = Path(filepath)
+        if not path.exists():
+            raise click.ClickException(f"Dataset file not found: {filepath!r}")
+        try:
+            result[name] = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            result[name] = path.read_text(encoding="utf-8", errors="replace")
+    return result
 
 
 def _ensure_workspace(storage_dir: str = ".spl") -> bool:
@@ -173,7 +193,7 @@ def cli() -> None:
 
 # ── spl init ─────────────────────────────────────────────────────────────────
 
-@cli.command("init")
+@cli.command("init", hidden=True)
 def cmd_init() -> None:
     """Initialise .spl/ workspace in the current directory."""
     if _ensure_workspace(".spl"):
@@ -220,9 +240,6 @@ def cmd_validate(file: str, as_json: bool) -> None:
         raise click.ClickException(str(exc)) from exc
 
 
-# Register aliases: parse, syntax
-cli.add_command(cmd_validate, name="parse")
-cli.add_command(cmd_validate, name="syntax")
 
 
 # ── spl explain ──────────────────────────────────────────────────────────────
@@ -245,9 +262,9 @@ def cmd_explain(file: str) -> None:
         raise click.ClickException(str(exc)) from exc
 
 
-# ── spl execute / run ────────────────────────────────────────────────────────
+# ── spl run ──────────────────────────────────────────────────────────────────
 
-@cli.command("execute", context_settings={"ignore_unknown_options": True})
+@cli.command("run", context_settings={"ignore_unknown_options": True})
 @click.argument("file", type=click.Path(dir_okay=False))
 @click.option("--adapter", default=None, metavar="NAME",
               help="LLM adapter engine (default from config or 'echo').")
@@ -259,28 +276,37 @@ def cmd_explain(file: str) -> None:
               help="Enable/disable prompt caching (default from config).")
 @click.option("--storage-dir", default=None, show_default=True,
               help="Storage directory for memory/cache (default from config or '.spl').")
-@click.option("--allowed-tools", default=None, metavar="TOOLS",
-              help="Comma-separated tools for claude_cli adapter (e.g. WebSearch,Bash).")
+@click.option("--dataset", "-d", multiple=True, metavar="NAME=FILE",
+              help="Load a file as a named parameter (repeatable): -d doc=report.txt")
+@click.option("--resource", multiple=True, metavar="FILE",
+              help="Index a document into the doc-RAG store before running (repeatable).")
+@click.option("--claude-allowed-tools", "allowed_tools", default=None, metavar="TOOLS",
+              help="Comma-separated tools for the claude_cli adapter (e.g. WebSearch,Bash).")
 @click.option("--tools", "tools_module", default=None, metavar="FILE",
               help="Python module to load as CALL-able tools (e.g. tools/my_tools.py).")
 @click.option("--timeout", default=None, type=int, metavar="SECONDS",
-              help="Per-call timeout in seconds (default: 600 with --allowed-tools, 300 otherwise).")
+              help="Per-call timeout in seconds (default: 600 with --claude-allowed-tools, 300 otherwise).")
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 def cmd_execute(file: str, adapter: str | None, model: str | None,
                 param: tuple[str, ...],
                 cache: bool | None, storage_dir: str | None,
+                dataset: tuple[str, ...],
+                resource: tuple[str, ...],
                 allowed_tools: str | None,
                 tools_module: str | None,
                 timeout: int | None,
                 extra_args: tuple[str, ...]) -> None:
     """Execute FILE and print each PROMPT/WORKFLOW result.
 
-    Parameters can be passed with -p KEY=VALUE or as trailing KEY=VALUE args:
+    Parameters can be passed with -p KEY=VALUE or as trailing KEY=VALUE args.
+    Files can be loaded as named parameters with -d NAME=FILE.
 
     \b
       spl run query.spl -p question="What is SPL?"
       spl run query.spl question="What is SPL?"
-      spl run query.spl --adapter ollama --model gemma3 question="hello"
+      spl run query.spl -d doc=report.txt -p question="Summarise this"
+      spl run query.spl --resource context.pdf --resource notes.txt
+      spl run query.spl --adapter ollama -m gemma3 question="hello"
     """
     # Apply config defaults
     adapter = adapter or _cfg_default("adapter", "echo")
@@ -290,6 +316,32 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
 
     source = _read_file(file)
     params = _parse_params(param + extra_args)
+
+    # Merge dataset files into params (datasets take precedence over --param for same key)
+    if dataset:
+        datasets = _load_datasets(dataset)
+        params.update(datasets)
+
+    # Index resource files into the doc-RAG store before running
+    if resource:
+        import re as _re
+        try:
+            from spl.storage import get_vector_store
+            store = get_vector_store("faiss", storage_dir)
+            total_chunks = 0
+            for res_file in resource:
+                res_path = Path(res_file)
+                if not res_path.exists():
+                    raise click.ClickException(f"Resource file not found: {res_file!r}")
+                content = res_path.read_text(encoding="utf-8", errors="replace")
+                chunks = [c.strip() for c in _re.split(r"\n{2,}", content) if c.strip()]
+                store.add_batch(chunks)
+                total_chunks += len(chunks)
+                click.echo(f"Indexed resource: {res_file} ({len(chunks)} chunks)", err=True)
+            click.echo(f"doc-RAG ready: {total_chunks} chunk(s) added", err=True)
+            store.close()
+        except ImportError as exc:
+            raise click.ClickException(f"doc-RAG unavailable: {exc}") from exc
 
     # Print the invocation and script source for easy review / log readability
     cmd_parts = ["spl", "run", file, "--adapter", adapter]
@@ -367,8 +419,6 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
     click.echo(f"Log: {log_path}", err=True)
 
 
-# Register alias: run
-cli.add_command(cmd_execute, name="run")
 
 
 # ── spl adapters ─────────────────────────────────────────────────────────────
@@ -668,11 +718,11 @@ def memory_delete(key: str, storage_dir: str) -> None:
         raise click.ClickException(f"Key not found: {key}")
 
 
-# ── spl rag ──────────────────────────────────────────────────────────────────
+# ── spl doc-rag ───────────────────────────────────────────────────────────────
 
-@cli.group("rag")
+@cli.group("doc-rag")
 def cmd_rag() -> None:
-    """Manage the SPL vector store for RAG (.spl/vectors)."""
+    """Manage the document RAG vector store (.spl/vectors)."""
 
 
 @cmd_rag.command("add")
@@ -1142,10 +1192,13 @@ def code_rag_parse_log(
               help="Execute the generated code immediately.")
 @click.option("--param", "-p", multiple=True, metavar="KEY=VALUE",
               help="Parameters for execution (use with --execute).")
+@click.option("--code-rag/--no-code-rag", "use_code_rag", default=None,
+              help="Enable/disable Code-RAG context injection (overrides config).")
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 def cmd_text2spl(description: str, adapter: str | None, model: str | None,
                  mode: str | None, validate: bool, output: str | None,
                  execute: bool, param: tuple[str, ...],
+                 use_code_rag: bool | None,
                  extra_args: tuple[str, ...]) -> None:
     """Compile natural language DESCRIPTION into SPL 2.0 code.
 
@@ -1182,9 +1235,10 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
-    # Wire up Code-RAG if enabled in config
+    # Wire up Code-RAG if enabled in config (CLI flag overrides config)
     code_rag = None
-    if _cfg_default("code_rag.enabled", True):
+    rag_enabled = use_code_rag if use_code_rag is not None else _cfg_default("code_rag.enabled", True)
+    if rag_enabled:
         try:
             from spl.code_rag import CodeRAGStore
             code_rag = CodeRAGStore(
@@ -1259,8 +1313,28 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
     click.echo(f"Log: {log_path}", err=True)
 
 
-# Register alias: compile
-cli.add_command(cmd_text2spl, name="compile")
+
+
+
+# ── spl ui ───────────────────────────────────────────────────────────────────
+
+@cli.command("ui")
+@click.option("--port", default=8501, show_default=True, metavar="PORT",
+              help="Port for the Streamlit server.")
+@click.option("--host", default="localhost", show_default=True, metavar="HOST",
+              help="Host address for the Streamlit server.")
+def cmd_ui(port: int, host: str) -> None:
+    """Launch the text2SPL Knowledge Studio (Streamlit app)."""
+    import subprocess as _sp
+    app_path = Path(__file__).parent / "ui" / "streamlit" / "SPL_UI.py"
+    if not app_path.exists():
+        raise click.ClickException(f"Streamlit app not found at {app_path}")
+    click.echo(f"Launching text2SPL Studio → http://{host}:{port}")
+    _sp.run([
+        "streamlit", "run", str(app_path),
+        "--server.port", str(port),
+        "--server.address", host,
+    ])
 
 
 # ── spl version ──────────────────────────────────────────────────────────────

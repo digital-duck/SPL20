@@ -1,0 +1,55 @@
+WORKFLOW intent_router
+    INPUT: @user_input TEXT, @context TEXT DEFAULT ''
+    OUTPUT: @handler_response TEXT
+DO
+    -- Step 1: Classify the user intent
+    GENERATE classify(@user_input, intent_categories()) INTO @intent
+
+    -- Step 2: Extract any entities or parameters needed by handlers
+    GENERATE extract_entities(@user_input) INTO @entities
+
+    -- Step 3: Route to the appropriate handler
+    EVALUATE @intent
+        WHEN 'question' THEN
+            GENERATE answer(@user_input, @context, @entities) INTO @handler_response
+            COMMIT @handler_response WITH handler = 'qa', intent = @intent
+
+        WHEN 'command' THEN
+            GENERATE execute_command(@user_input, @entities) INTO @handler_response
+            COMMIT @handler_response WITH handler = 'command', intent = @intent
+
+        WHEN 'complaint' THEN
+            GENERATE handle_complaint(@user_input, @entities) INTO @handler_response
+            COMMIT @handler_response WITH handler = 'complaint', intent = @intent
+
+        WHEN 'chitchat' THEN
+            GENERATE casual_reply(@user_input) INTO @handler_response
+            COMMIT @handler_response WITH handler = 'chitchat', intent = @intent
+
+        WHEN 'feedback' THEN
+            GENERATE acknowledge_feedback(@user_input, @entities) INTO @handler_response
+            COMMIT @handler_response WITH handler = 'feedback', intent = @intent
+
+        OTHERWISE
+            GENERATE fallback_response(@user_input, @intent) INTO @handler_response
+            COMMIT @handler_response WITH handler = 'fallback', intent = @intent
+    END
+
+EXCEPTION
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+    WHEN RefusalToAnswer THEN
+        GENERATE safe_fallback(@user_input) INTO @handler_response
+        COMMIT @handler_response WITH handler = 'safe_fallback'
+END;
+
+CREATE FUNCTION intent_categories()
+RETURNS TEXT AS $$
+Supported intent categories:
+- question:   user is asking for information or clarification
+- command:    user is requesting an action to be performed
+- complaint:  user is expressing dissatisfaction or reporting a problem
+- chitchat:   casual or social conversation with no specific goal
+- feedback:   user is providing a review, rating, or suggestion
+- unknown:    intent cannot be determined with confidence
+$$;

@@ -48,7 +48,7 @@ Latency: 440ms
 ============================================================
 ```
 
-**Same `.spl` file, any backend** — swap `--adapter ollama` to `openrouter`, `claude_cli`, or `momagrid` without changing a single line of SPL code. That's the power of declarative.
+**Same `.spl` file, any backend** — swap `--adapter ollama` to `openrouter`, `claude_cli`, `bedrock`, `vertex`, `azure_openai`, or `momagrid` without changing a single line of SPL code. That's the power of declarative.
 
 ## Quick Start
 
@@ -63,8 +63,8 @@ pip install -e ".[dev]"
 pytest tests/
 
 # Try it out
-spl parse   examples/hello_world.spl
-spl explain examples/self_refine.spl
+spl validate examples/hello_world.spl
+spl explain  examples/self_refine.spl
 spl run     examples/hello_world.spl
 
 # Run with a real LLM (Ollama)
@@ -163,18 +163,16 @@ See `examples/` for more patterns (ReAct agent, safe generation with exception h
 ## CLI
 
 ```bash
-spl run      <file.spl> [--adapter NAME] [--model MODEL] [-p key=value | key=value ...]
-spl execute  <file.spl> [--adapter NAME] [-m MODEL] [--cache] [key=value ...]
+spl run      <file.spl> [--adapter NAME] [-m MODEL] [-p key=value | key=value ...]
+             [--dataset NAME=FILE ...] [--resource FILE ...] [--tools FILE] [--cache]
+spl validate <file.spl> [--json]     # Validate syntax, optionally dump AST as JSON
 spl explain  <file.spl>              # Show execution plan (no LLM call)
-spl parse    <file.spl> [--json]     # Validate syntax, optionally dump AST as JSON
-spl validate <file.spl>              # Alias for parse
-spl syntax   <file.spl>              # Alias for parse
 spl text2spl "<description>" [--mode auto|prompt|workflow] [--adapter NAME] [-o FILE] [--execute]
-spl compile  "<description>"          # Alias for text2spl
-spl init                              # Initialise .spl/ workspace
 spl adapters                          # List available LLM adapter engines
 spl memory   {list,get,set,delete}    # Manage persistent memory store
-spl rag      {add,query,count}        # Manage RAG vector store
+spl doc-rag  {add,query,count}        # Manage RAG vector store (documents)
+spl code-rag {import,query,count}     # Manage RAG vector store (SPL examples)
+spl ui       [--port PORT] [--host HOST]  # Launch text2SPL Knowledge Studio
 spl version                           # Print version
 ```
 
@@ -190,7 +188,7 @@ spl text2spl "summarize a document" --adapter ollama
 spl text2spl "build a review agent" --mode workflow -o review.spl --adapter ollama
 
 # Compile and execute in one step
-spl compile "translate text to French" --execute --adapter anthropic text="Hello world"
+spl text2spl "translate text to French" --execute --adapter anthropic text="Hello world"
 ```
 
 Parameters can be passed with `-p KEY=VALUE` or as trailing `KEY=VALUE` arguments:
@@ -202,13 +200,15 @@ spl run query.spl question="What is SPL?" lang=en   # multiple params
 
 ## LLM Adapters
 
-SPL 2.0 supports 10 adapter backends — from local inference to major cloud providers:
+SPL 2.0 supports 13 adapter backends — from local inference to all three major cloud providers:
 
 ```bash
 $ spl adapters
-Available LLM adapters (10):
+Available LLM adapters (13):
 
   anthropic      Claude models via Anthropic API (requires anthropic, ANTHROPIC_API_KEY)
+  azure_openai   Azure OpenAI Service — GPT/o-series in your Azure subscription (requires openai, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY)
+  bedrock        AWS Bedrock — Claude, Nova, Llama via Converse API (requires boto3, AWS credentials)
   claude_cli     Wraps claude -p CLI (requires Claude Code installed)
   deepseek       DeepSeek models (requires httpx, DEEPSEEK_API_KEY)
   echo           Returns prompt as response (testing, no setup required)
@@ -218,6 +218,7 @@ Available LLM adapters (10):
   openai         GPT/o-series via OpenAI API (requires openai, OPENAI_API_KEY)
   openrouter     100+ models via OpenRouter.ai (requires httpx, OPENROUTER_API_KEY)
   qwen           Qwen models via DashScope (requires httpx, DASHSCOPE_API_KEY)
+  vertex         GCP Vertex AI — Gemini models via ADC (requires google-genai, GOOGLE_CLOUD_PROJECT)
 ```
 
 | Adapter | Description | Setup |
@@ -232,6 +233,9 @@ Available LLM adapters (10):
 | `qwen` | Qwen models via Alibaba DashScope | `pip install httpx`, set `DASHSCOPE_API_KEY` |
 | `openrouter` | 100+ models via OpenRouter.ai | `pip install httpx`, set `OPENROUTER_API_KEY` |
 | `momagrid` | Decentralized AI inference grid | `pip install httpx`, set `MOMAGRID_HUB_URL` |
+| `bedrock` | **AWS** — Claude, Nova, Llama via Bedrock Converse API | `pip install boto3`, AWS credentials |
+| `vertex` | **GCP** — Gemini models via Vertex AI | `pip install google-genai`, ADC + `GOOGLE_CLOUD_PROJECT` |
+| `azure_openai` | **Azure** — GPT/o-series via Azure OpenAI Service | `pip install openai`, `AZURE_OPENAI_ENDPOINT` + key |
 
 ## Architecture
 
@@ -260,7 +264,7 @@ Lexer --> Parser --> Analyzer --> Optimizer --> Executor
 | IR | `spl/ir.py` | JSON serialization of AST and plans |
 | CLI | `spl/cli.py` | Command-line interface |
 | text2SPL | `spl/text2spl.py` | Natural language to SPL compiler |
-| Adapters | `spl/adapters/` | LLM backend plugins (10 adapters) |
+| Adapters | `spl/adapters/` | LLM backend plugins (13 adapters) |
 | Storage | `spl/storage/` | SQLite memory + FAISS vector store |
 
 ## Requirements
@@ -269,8 +273,9 @@ Lexer --> Parser --> Analyzer --> Optimizer --> Executor
 - `click>=8.0` (CLI framework)
 - Optional: `httpx` (for ollama/openrouter/momagrid/deepseek/qwen adapters)
 - Optional: `anthropic` (for Anthropic adapter)
-- Optional: `openai` (for OpenAI adapter)
-- Optional: `google-genai` (for Google Gemini adapter)
+- Optional: `openai` (for OpenAI and Azure OpenAI adapters)
+- Optional: `google-genai` (for Google Gemini and Vertex AI adapters)
+- Optional: `boto3` (for AWS Bedrock adapter)
 - Optional: `numpy`, `faiss-cpu` (for RAG vector store)
 - Optional: `tiktoken` (for accurate OpenAI token counting)
 

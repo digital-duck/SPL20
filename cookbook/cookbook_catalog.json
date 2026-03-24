@@ -11,7 +11,7 @@
       "name": "Hello World",
       "description": "Minimal SPL program \u2014 verify spl2 + adapter + model work",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./01_hello_world/hello.spl",
         "--adapter",
@@ -28,7 +28,7 @@
       "name": "Ollama Proxy",
       "description": "General-purpose LLM query \u2014 proxy any Ollama model",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./02_ollama_proxy/proxy.spl",
         "--adapter",
@@ -46,7 +46,7 @@
       "name": "Multilingual Greeting",
       "description": "Greet in any language \u2014 parametric context demo",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./03_multilingual/multilingual.spl",
         "--adapter",
@@ -65,7 +65,7 @@
       "name": "Model Showdown",
       "description": "Same prompt to multiple models \u2014 compare output and latency via parallel CTEs",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./04_model_showdown/showdown.spl",
         "--adapter",
@@ -83,7 +83,7 @@
       "name": "Self-Refine",
       "description": "Iterative improvement: draft \u2192 critique \u2192 refine loop",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./05_self_refine/self_refine.spl",
         "--adapter",
@@ -99,16 +99,16 @@
     {
       "id": "06",
       "name": "ReAct Agent",
-      "description": "Population growth via WebSearch + Python tool — requires claude_cli adapter and --allowed-tools WebSearch",
+      "description": "Population growth via WebSearch + Python tool \u2014 requires claude_cli adapter and --allowed-tools WebSearch",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./06_react_agent/react_agent.spl",
         "--adapter",
         "claude_cli",
         "-m",
         "claude-sonnet-4-6",
-        "--allowed-tools",
+        "--claude-allowed-tools",
         "WebSearch",
         "--tools",
         "./06_react_agent/tools.py",
@@ -125,7 +125,7 @@
       "name": "Safe Generation",
       "description": "Exception handling for production LLM safety",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./07_safe_generation/safe_generation.spl",
         "--adapter",
@@ -141,9 +141,9 @@
     {
       "id": "08",
       "name": "RAG Query",
-      "description": "Retrieval-augmented generation over indexed documents — requires: spl2 rag add <doc>",
+      "description": "Retrieval-augmented generation over indexed documents \u2014 requires: spl2 rag add <doc>",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./08_rag_query/rag_query.spl",
         "--adapter",
@@ -161,7 +161,7 @@
       "name": "Chain of Thought",
       "description": "Multi-step reasoning: Research \u2192 Analyze \u2192 Summarize",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./09_chain_of_thought/chain.spl",
         "--adapter",
@@ -179,7 +179,7 @@
       "name": "Batch Test",
       "description": "Automated testing of cookbook recipes across models via parallel CTEs",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./10_batch_test/batch_test.spl",
         "--adapter",
@@ -196,7 +196,7 @@
       "name": "Debate Arena",
       "description": "Adversarial debate between two LLM personas with a judge",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./11_debate_arena/debate.spl",
         "--adapter",
@@ -214,7 +214,7 @@
       "name": "Plan and Execute",
       "description": "Planner decomposes task into steps, executor runs each one",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./12_plan_and_execute/plan_execute.spl",
         "--adapter",
@@ -232,7 +232,7 @@
       "name": "Map-Reduce Summarizer",
       "description": "Split large docs into chunks, summarize each, combine results",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./13_map_reduce/map_reduce.spl",
         "--adapter",
@@ -251,7 +251,7 @@
       "name": "Multi-Agent Collaboration",
       "description": "Researcher \u2192 Analyst \u2192 Writer collaboration via PROCEDURE",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./14_multi_agent/multi_agent.spl",
         "--adapter",
@@ -269,7 +269,7 @@
       "name": "Code Review",
       "description": "Multi-pass review: security, performance, style, bugs",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./15_code_review/code_review.spl",
         "--adapter",
@@ -288,7 +288,7 @@
       "name": "Reflection Agent",
       "description": "Meta-cognitive loop: solve \u2192 reflect \u2192 correct until confident",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./16_reflection/reflection.spl",
         "--adapter",
@@ -306,7 +306,7 @@
       "name": "Tree of Thought",
       "description": "Explore multiple reasoning paths, score and pick the best",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./17_tree_of_thought/tree_of_thought.spl",
         "--adapter",
@@ -324,7 +324,7 @@
       "name": "Guardrails Pipeline",
       "description": "Input/output safety pipeline with PII detection and filtering",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./18_guardrails/guardrails.spl",
         "--adapter",
@@ -342,7 +342,7 @@
       "name": "Memory Conversation",
       "description": "Persistent memory across conversations via memory.get/set",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./19_memory_conversation/memory_chat.spl",
         "--adapter",
@@ -360,7 +360,7 @@
       "name": "Ensemble Voting",
       "description": "Generate multiple answers, score and vote for consensus",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./20_ensemble_voting/ensemble.spl",
         "--adapter",
@@ -378,7 +378,7 @@
       "name": "Multi-Model Pipeline",
       "description": "Per-step model selection with GENERATE...USING MODEL and quality loop",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./21_multi_model_pipeline/multi_model.spl",
         "--adapter",
@@ -410,7 +410,7 @@
       "name": "Structured Output",
       "description": "CREATE FUNCTION with JSON schema \u2014 extract typed data from free text",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./23_structured_output/structured_output.spl",
         "--adapter",
@@ -428,7 +428,7 @@
       "name": "Few-Shot Prompting",
       "description": "Gold-standard examples embedded in SELECT context \u2014 in-context learning",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./24_few_shot/few_shot.spl",
         "--adapter",
@@ -447,7 +447,7 @@
       "name": "Nested Procedures",
       "description": "PROCEDURE calling PROCEDURE \u2014 deep composability without external orchestration",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./25_nested_procs/nested_procs.spl",
         "--adapter",
@@ -466,7 +466,7 @@
       "name": "Prompt A/B Test",
       "description": "CTEs + EVALUATE scoring \u2014 compare two prompt variants, pick winner automatically",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./26_ab_test/ab_test.spl",
         "--adapter",
@@ -486,7 +486,7 @@
       "name": "Data Extraction",
       "description": "Pull structured fields from messy text \u2014 names, dates, amounts, references",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./27_data_extraction/data_extraction.spl",
         "--adapter",
@@ -505,7 +505,7 @@
       "name": "Customer Support Triage",
       "description": "Classify \u2192 route \u2192 draft response in one workflow",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./28_support_triage/support_triage.spl",
         "--adapter",
@@ -523,7 +523,7 @@
       "name": "Meeting Notes to Actions",
       "description": "Transcript in, structured TODO list + owners out",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./29_meeting_actions/meeting_actions.spl",
         "--adapter",
@@ -542,7 +542,7 @@
       "name": "Code Generator + Tests",
       "description": "Generate a function then generate its unit tests in one workflow",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./30_code_gen/code_gen.spl",
         "--adapter",
@@ -561,7 +561,7 @@
       "name": "Sentiment Pipeline",
       "description": "Batch sentiment over a list, aggregate trend statistics",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./31_sentiment_pipeline/sentiment.spl",
         "--adapter",
@@ -580,7 +580,7 @@
       "name": "Socratic Tutor",
       "description": "Ask guiding questions rather than giving answers \u2014 persona-constrained generation",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./32_socratic_tutor/socratic_tutor.spl",
         "--adapter",
@@ -599,7 +599,7 @@
       "name": "Interview Simulator",
       "description": "Two-persona structured Q&A with per-question scoring and overall evaluation",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./33_interview_sim/interview_sim.spl",
         "--adapter",
@@ -618,7 +618,7 @@
       "name": "Progressive Summarizer",
       "description": "Layered summary: sentence \u2192 paragraph \u2192 page with fidelity verification",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./34_progressive_summary/progressive_summary.spl",
         "--adapter",
@@ -637,7 +637,7 @@
       "name": "Hypothesis Tester",
       "description": "Generate hypothesis \u2192 design test \u2192 evaluate evidence \u2192 conclude",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./35_hypothesis_tester/hypothesis.spl",
         "--adapter",
@@ -656,7 +656,7 @@
       "name": "Tool-Use / Function-Call",
       "description": "Register Python functions as CALL-able tools \u2014 deterministic math, zero LLM cost",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./36_tool_use/tool_use.spl",
         "--adapter",
@@ -678,7 +678,7 @@
       "name": "Headline News Aggregator",
       "description": "Generate \u2192 expand \u2192 evaluate coverage \u2192 daily news digest for any topic area",
       "args": [
-        "spl2",
+        "spl",
         "run",
         "./37_headline_news/headline_news.spl",
         "--adapter",
@@ -692,6 +692,60 @@
       "is_active": true,
       "approval_status": "new",
       "category": "application"
+    },
+    {
+      "id": "38",
+      "name": "Bedrock Quickstart",
+      "description": "Fan out to three AWS Bedrock model families (Claude + Nova) and compare \u2014 adapter smoke test for enterprise environments",
+      "args": [
+        "spl",
+        "run",
+        "./38_bedrock_quickstart/bedrock_quickstart.spl",
+        "--adapter",
+        "bedrock",
+        "prompt=Explain the CAP theorem in two sentences."
+      ],
+      "dir": "38_bedrock_quickstart",
+      "log": "bedrock_quickstart",
+      "is_active": false,
+      "approval_status": "new",
+      "category": "basics"
+    },
+    {
+      "id": "39",
+      "name": "Vertex AI Quickstart",
+      "description": "Fan out to three Gemini tiers (Pro / Flash / Lite) on GCP Vertex AI and compare \u2014 adapter smoke test for GCP environments",
+      "args": [
+        "spl",
+        "run",
+        "./39_vertex_quickstart/vertex_quickstart.spl",
+        "--adapter",
+        "vertex",
+        "prompt=Explain the CAP theorem in two sentences."
+      ],
+      "dir": "39_vertex_quickstart",
+      "log": "vertex_quickstart",
+      "is_active": false,
+      "approval_status": "new",
+      "category": "basics"
+    },
+    {
+      "id": "40",
+      "name": "Azure OpenAI Quickstart",
+      "description": "Fan out to three Azure OpenAI deployments (GPT-4o / GPT-4o mini / GPT-3.5 Turbo) and compare \u2014 adapter smoke test for Azure environments",
+      "args": [
+        "spl",
+        "run",
+        "./40_azure_openai_quickstart/azure_openai_quickstart.spl",
+        "--adapter",
+        "azure_openai",
+        "prompt=Explain the CAP theorem in two sentences."
+      ],
+      "dir": "40_azure_openai_quickstart",
+      "log": "azure_openai_quickstart",
+      "is_active": false,
+      "approval_status": "new",
+      "category": "basics"
     }
   ]
 }

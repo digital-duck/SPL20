@@ -659,7 +659,12 @@ class Executor:
 
             if isinstance(cond, SemanticCondition):
                 sv = cond.semantic_value
-                if sv.startswith('contains:'):
+                if sv.startswith('startswith:'):
+                    # Deterministic prefix check: startswith:prefix
+                    prefix = sv[len('startswith:'):]
+                    matched = eval_value.lower().startswith(prefix.lower())
+                    _log.debug("EVALUATE startswith %r -> %s", prefix, matched)
+                elif sv.startswith('contains:'):
                     # Deterministic substring check: contains:val1|val2|...
                     needles = sv[len('contains:'):].split('|')
                     lower_val = eval_value.lower()

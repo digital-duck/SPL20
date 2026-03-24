@@ -139,7 +139,7 @@ spl run script.spl --connector transcribe=assemblyai
 
 ```bash
 # Parse all recipes (no LLM needed)
-for f in cookbook/*/*.spl; do spl parse "$f"; done
+for f in cookbook/*/*.spl; do spl validate "$f"; done
 
 # Run hello world with echo adapter (no Ollama needed)
 spl run cookbook/01_hello_world/hello.spl
@@ -234,7 +234,7 @@ This recipe showcases `GENERATE ... USING MODEL` — each step can target a diff
 bash cookbook/22_text2spl_demo/text2spl_demo.sh
 ```
 
-Demonstrates the `spl text2spl` / `spl compile` command: natural language descriptions compiled into valid SPL 2.0 code with automatic validation.
+Demonstrates the `spl text2spl` / `spl text2spl` command: natural language descriptions compiled into valid SPL 2.0 code with automatic validation.
 
 
 ### Test — Batch Test (all models x all recipes)

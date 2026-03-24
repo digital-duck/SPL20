@@ -158,9 +158,8 @@ Natural language description
 ### CLI usage
 
 ```bash
-# compile natural language to SPL (proposed spl compile command)
-spl compile "summarize a PDF and store the result" --mode workflow
-spl compile "translate an email to French" --adapter ollama -m gemma3
+spl text2spl "summarize a PDF and store the result" --mode workflow
+spl text2spl "translate an email to French" --adapter ollama -m gemma3
 ```
 
 ### Model selection
@@ -184,7 +183,7 @@ This is tracked in the Backlog as **dedicated Text2SPL model config**.
 > **Development workaround (active):** Use the `claude_cli` adapter with `claude-sonnet-4-6` as the Text2SPL compiler. This avoids VRAM pressure entirely (runs via Claude subscription, no local model loaded) and produces the highest-quality `(NL, SPL)` training pairs available — Sonnet 4.6 becomes the **reference oracle** whose outputs will seed fine-tuning of the future specialty model.
 >
 > ```bash
-> spl compile "build a review agent that refines until quality > 0.8" \
+> spl text2spl "build a review agent that refines until quality > 0.8" \
 >   --adapter claude_cli -m claude-sonnet-4-6 --mode workflow
 > ```
 >
@@ -201,7 +200,7 @@ The current `Text2SPL` compiler embeds 4 hand-written examples in the system pro
 
 ### Self-Learning Flywheel
 
-The core insight is that every successful `spl compile` invocation produces a validated `(description, SPL)` pair — a free training signal. Combined with the existing cookbook corpus and user-contributed recipes, the system gets smarter every time it is used.
+The core insight is that every successful `spl text2spl` invocation produces a validated `(description, SPL)` pair — a free training signal. Combined with the existing cookbook corpus and user-contributed recipes, the system gets smarter every time it is used.
 
 ```
           ┌─────────────────────────────────────────────────┐
@@ -236,7 +235,7 @@ The core insight is that every successful `spl compile` invocation produces a va
 
 | Loop | Trigger | Effect |
 |------|---------|--------|
-| **Compile-time RAG** | Every `spl compile` call | Top-k similar examples injected into prompt immediately |
+| **Compile-time RAG** | Every `spl text2spl` call | Top-k similar examples injected into prompt immediately |
 | **DB growth** | Every validated (NL, SPL) pair | Vector DB expands; future retrievals improve |
 | **Model fine-tuning** | Scheduled / when DB reaches threshold | Specialty SPL model retrained on curated pairs; general LLM no longer needed |
 
@@ -247,7 +246,7 @@ All `(description, SPL)` pairs are eligible, regardless of origin:
 | Source | Quality signal |
 |--------|---------------|
 | Cookbook recipes (`cookbook/*/`) | Hand-curated; highest quality |
-| User `spl compile` invocations | Validated by parser+analyzer; auto-accepted |
+| User `spl text2spl` invocations | Validated by parser+analyzer; auto-accepted |
 | Dynamically generated SPL (from workflows calling `Text2SPL`) | Validated; accepted if no retry needed |
 | Rejected/retried generations | Stored as negative examples for fine-tuning |
 
@@ -358,9 +357,9 @@ General LLM + Code-RAG  →  (fine-tuning)  →  Specialty SPL model
 
 | Phase | Scope |
 |-------|-------|
-| 1 — Offline indexer | `spl index-recipes` command; embeds all cookbook `.spl` files into the built-in `VectorStore` |
+| 1 — Offline indexer | `spl code-rag import` command; embeds all cookbook `.spl` files into the built-in `VectorStore` |
 | 2 — Dynamic retrieval | `Text2SPL` accepts optional `rag_store`; injects top-k examples at compile time |
-| 3 — Live pair capture | Every validated `spl compile` invocation appends `(description, SPL)` to the DB automatically |
+| 3 — Live pair capture | Every validated `spl text2spl` invocation appends `(description, SPL)` to the DB automatically |
 | 4 — Self-indexing | Indexer workflow written in SPL; triggered when a recipe is added or updated |
 | 5 — DB pruning | Deduplication, quality scoring, and coverage-based retirement of stale pairs |
 | 6 — Fine-tune export | `spl export-training-data` — exports curated pairs as JSONL for model fine-tuning |
@@ -387,9 +386,45 @@ Three cookbook recipes currently fail due to parser gaps:
 - Reimplement the `spl` binary in Go once SPL v2.0 is thoroughly tested and stabilized — Go's single-binary distribution, startup speed, and cross-platform toolchain make it the natural target for a production CLI
 - `PARALLEL DO ... END` — run independent GENERATE calls concurrently
 - `STREAM INTO @var` — streaming token output for long generations
-- `spl memory` CLI — read/write/delete named memory slots from the command line
 - Workflow-level memory writes (`STORE @var IN memory.key`) — currently stubbed out
 - `spl test` — built-in test runner for `.spl` files with expected output matching
-- `spl compile` — CLI command for Text2SPL (natural language → SPL source)
-- Dedicated Text2SPL model config — allow users to pin a code-generation model (e.g. `deepseek-coder`, `qwen2.5-coder`) for `spl compile` separately from the runtime model used by `spl run`
-- `spl index-recipes` — offline indexer that embeds all cookbook `.spl` files into the vector store for Code-RAG retrieval
+- Dedicated Text2SPL model config — allow users to pin a code-generation model (e.g. `deepseek-coder`, `qwen2.5-coder`) for `spl text2spl` separately from the runtime model used by `spl run`
+
+**Completed items (moved from backlog):**
+- ~~`spl compile`~~ → shipped as `spl text2spl`
+- ~~`spl memory` CLI~~ → shipped as `spl memory {list,get,set,delete}`
+- ~~`spl index-recipes`~~ → shipped as `spl code-rag import`
+
+---
+
+## Tech Debt
+
+Seven items identified during the CLI clean-up (2026-03-23). Address in order after the `spl` command clean-up is complete.
+
+### 1. Replace `spl/storage.py` with `dd-vectordb`
+The doc-rag store (`spl doc-rag`) uses a hand-rolled FAISS wrapper in `spl/storage.py`. `dd-vectordb` provides the same abstraction as a shared library; using it makes the backend swappable (FAISS today, something else tomorrow).
+**Scope:** `spl/storage.py`, `spl/cli.py` doc-rag subcommands.
+
+### 2. Replace `spl/code_rag.py` ChromaDB layer with `dd-vectordb`
+The code-rag store (`spl code-rag`) wraps ChromaDB directly in `spl/code_rag.py`. Same abstraction as #1 — both stores should sit behind the same interface.
+**Scope:** `spl/code_rag.py`.
+
+### 3. Consolidate embeddings with `dd-embed`
+Both doc-rag and code-rag embed text independently (FAISS uses sentence-transformers, ChromaDB uses its own default). A single embedding layer from `dd-embed` would dedup the logic and allow model-swapping in one place.
+**Scope:** `spl/storage.py`, `spl/code_rag.py`.
+
+### 4. Replace `spl/adapters/` with `dd-llm`
+The adapters layer (`spl/adapters/`) is a bespoke multi-provider LLM client. `dd-llm` provides the same abstraction across the digital-duck ecosystem; convergence avoids maintaining two parallel implementations.
+**Scope:** `spl/adapters/` directory, `spl/executor.py`.
+
+### 5. Replace Streamlit `db.py` SQLite layer with `dd-db`
+`spl/ui/streamlit/db.py` is a hand-written SQLite wrapper. `dd-db` provides a shared database abstraction; using it makes the knowledge base backend swappable.
+**Scope:** `streamlit/db.py`.
+
+### 6. Use `dd-extract` for `--dataset FILE` loading
+The `--dataset` flag on `spl run` currently reads files as raw UTF-8 text. `dd-extract` can handle PDF, CSV, DOCX, HTML extraction properly without adding new deps to SPL.
+**Scope:** `spl/cli.py` `run` command dataset loader.
+
+### 7. Replace prompt cache with `dd-cache`
+The prompt result cache (`.spl/memory.db` `prompt_cache` table) is hand-rolled. `dd-cache` provides a shared caching layer.
+**Scope:** `spl/cache.py` (if it exists), `spl/cli.py` cache group.

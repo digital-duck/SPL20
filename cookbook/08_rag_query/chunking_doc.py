@@ -7,7 +7,7 @@ Usage:
     python3 -W ignore chunking_doc.py /path/to/document.md [--query "your question"]
 
 Or via the improved CLI (does the same thing in one command):
-    spl rag add /path/to/document.md
+    spl doc-rag add /path/to/document.md
 """
 
 import argparse

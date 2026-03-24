@@ -8,7 +8,7 @@ Extends SPL 1.0 optimizer with workflow execution planning:
 from __future__ import annotations
 from dataclasses import dataclass, field
 from spl.ast_nodes import (
-    PromptStatement, SelectItem, SystemRoleCall, ContextRef,
+    PromptStatement, SelectItem, SystemRoleCall, ContextRef, ParamRef,
     RagQuery, MemoryGet, Identifier, DottedName, FunctionCall,
     WorkflowStatement, ProcedureStatement,
     EvaluateStatement, WhileStatement, DoBlock,
@@ -185,6 +185,19 @@ class Optimizer:
             return ExecutionStep(
                 operation="load_context",
                 source=f"context.{expr.field_name}",
+                alias=alias,
+                estimated_tokens=estimated,
+                limit_tokens=item.limit_tokens,
+                allocated_tokens=item.limit_tokens or estimated,
+                priority=3,
+            )
+        elif isinstance(expr, ParamRef):
+            # @param_name in SELECT — treat as context.param_name so the
+            # executor resolves it from the params dict like a ContextRef.
+            estimated = item.limit_tokens or 1000
+            return ExecutionStep(
+                operation="load_context",
+                source=f"context.{expr.name}",
                 alias=alias,
                 estimated_tokens=estimated,
                 limit_tokens=item.limit_tokens,

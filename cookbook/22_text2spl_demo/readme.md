@@ -1,6 +1,6 @@
 # Recipe 22: text2SPL Compiler Demo
 
-Demonstrates the natural language → SPL 2.0 compiler. Given a plain-English description, `spl text2spl` generates valid SPL code and validates it with `spl parse`.
+Demonstrates the natural language → SPL 2.0 compiler. Given a plain-English description, `spl text2spl` generates valid SPL code and validates it with `spl validate`.
 
 ## Usage
 
@@ -28,7 +28,7 @@ Default adapter: `ollama`, default model: `gemma3`.
 
 ## Output
 
-Generated `.spl` files are written to `cookbook/22_text2spl_demo/generated/` and validated with `spl parse`. To run a generated file:
+Generated `.spl` files are written to `cookbook/22_text2spl_demo/generated/` and validated with `spl validate`. To run a generated file:
 
 ```bash
 spl run cookbook/22_text2spl_demo/generated/summarize.spl --adapter ollama

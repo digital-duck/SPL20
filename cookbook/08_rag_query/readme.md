@@ -20,23 +20,23 @@ rm -f .spl/vectors.faiss .spl/vectors_meta.db
 
 Chunking by paragraph gives precise retrieval — `top_k=3` returns the 3 most *semantically relevant* sections rather than the whole document truncated to fit the token budget.
 
-When given a file path, `spl rag add` reads the file and chunks by paragraph automatically:
+When given a file path, `spl doc-rag add` reads the file and chunks by paragraph automatically:
 
 ```bash
-spl rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
+spl doc-rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
 ```
 
 To index as a single document instead:
 
 ```bash
-spl rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md --no-chunk
+spl doc-rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md --no-chunk
 ```
 
 Verify:
 
 ```bash
-spl rag count
-spl rag query "Who is Wen?" --top-k 3
+spl doc-rag count
+spl doc-rag query "Who is Wen?" --top-k 3
 ```
 
 ## Parameters
@@ -69,5 +69,5 @@ spl run cookbook/08_rag_query/rag_query.spl --adapter ollama \
 
 - The embedding model is persisted in the store's `config` table — the same model is always used for a given index. Reset the store if you need to switch models.
 - `top_k=3` retrieves the 3 most relevant paragraphs by cosine similarity.
-- Run `spl rag query "your question"` to inspect retrieved context before running the full prompt.
+- Run `spl doc-rag query "your question"` to inspect retrieved context before running the full prompt.
 - GPU acceleration is not required; CPU inference works well for typical document sizes.

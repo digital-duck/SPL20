@@ -1,0 +1,13 @@
+WORKFLOW say_hello_multilingual
+  INPUT @languages LIST
+  OUTPUT @greetings TEXT
+DO
+  @greetings := '';
+  @index := 0;
+  WHILE @index < 5 DO
+    GENERATE translate('Good Night', @languages[@index]) INTO @greeting;
+    @greetings := @greetings + @languages[@index] + ': ' + @greeting + '\n';
+    @index := @index + 1;
+  END;
+  COMMIT @greetings;
+END;

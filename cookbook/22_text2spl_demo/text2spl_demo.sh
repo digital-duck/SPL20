@@ -31,7 +31,7 @@ run_demo() {
         --adapter "$ADAPTER" -m "$MODEL" --mode "$mode" --no-validate -o "$outfile" 2>&1; then
         echo ""
         echo "  Validating generated code..."
-        if spl parse "$outfile" 2>&1; then
+        if spl validate "$outfile" 2>&1; then
             echo "  [validation: OK]"
         else
             echo "  [validation: warning — generated code has issues (known limitation for $mode mode)]"

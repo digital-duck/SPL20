@@ -1,0 +1,52 @@
+WORKFLOW review_agent
+    INPUT @task TEXT, @max_iterations INT DEFAULT 5, @quality_threshold NUMBER DEFAULT 0.8
+    OUTPUT @final_text TEXT
+DO
+    @iteration := 0
+    @quality := 0.0
+
+    -- Initial draft
+    GENERATE draft(@task) INTO @final_text
+
+    -- Critique-refine loop until quality threshold met
+    WHILE @quality < @quality_threshold DO
+        EVALUATE @iteration
+            WHEN >= @max_iterations THEN
+                COMMIT @final_text WITH
+                    status = 'max_iterations_reached',
+                    iterations = @iteration,
+                    quality = @quality
+            OTHERWISE
+                -- Critique current draft
+                GENERATE critique(@final_text, @task) INTO @critique
+
+                -- Score the draft
+                GENERATE score_quality(@final_text, @task, @critique) INTO @quality
+
+                EVALUATE @quality
+                    WHEN >= @quality_threshold THEN
+                        COMMIT @final_text WITH
+                            status = 'complete',
+                            iterations = @iteration,
+                            quality = @quality
+                    OTHERWISE
+                        -- Refine based on critique
+                        GENERATE rewrite(@final_text, @critique, @task) INTO @final_text
+                        @iteration := @iteration + 1
+                END
+        END
+    END
+
+    COMMIT @final_text WITH
+        status = 'complete',
+        iterations = @iteration,
+        quality = @quality
+
+EXCEPTION
+    WHEN QualityBelowThreshold THEN
+        COMMIT @final_text WITH status = 'below_threshold', iterations = @iteration
+    WHEN MaxIterationsReached THEN
+        COMMIT @final_text WITH status = 'max_iterations_reached', iterations = @iteration
+    WHEN BudgetExceeded THEN
+        COMMIT @final_text WITH status = 'budget_exceeded', iterations = @iteration
+END

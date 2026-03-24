@@ -1,0 +1,10 @@
+WORKFLOW hello_five_languages
+  INPUT @greeting TEXT DEFAULT 'hello'
+  OUTPUT @results TEXT
+DO
+  @languages := 'English, Mandarin Chinese, Hindi, Spanish, Arabic';
+
+  GENERATE translate(@greeting, @languages) INTO @results;
+
+  COMMIT @results;
+END;

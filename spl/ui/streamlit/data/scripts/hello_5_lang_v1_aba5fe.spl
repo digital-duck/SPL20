@@ -1,0 +1,4 @@
+PROMPT hello_world_languages
+SELECT
+    system_role('You are a friendly assistant that greets users in multiple languages.')
+GENERATE greeting('hello', 'English, Mandarin Chinese, Hindi, Spanish, and Arabic')

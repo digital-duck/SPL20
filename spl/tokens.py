@@ -103,6 +103,8 @@ class TokenType(Enum):
     RPAREN = auto()
     LBRACE = auto()
     RBRACE = auto()
+    LBRACKET = auto()
+    RBRACKET = auto()
     EQ = auto()
     NEQ = auto()
     GT = auto()

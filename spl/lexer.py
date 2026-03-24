@@ -60,6 +60,12 @@ class Lexer:
             elif ch == '}':
                 self._emit(TokenType.RBRACE, '}')
                 self._advance()
+            elif ch == '[':
+                self._emit(TokenType.LBRACKET, '[')
+                self._advance()
+            elif ch == ']':
+                self._emit(TokenType.RBRACKET, ']')
+                self._advance()
             elif ch == ';':
                 self._emit(TokenType.SEMICOLON, ';')
                 self._advance()

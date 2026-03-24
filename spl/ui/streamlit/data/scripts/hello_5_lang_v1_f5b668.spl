@@ -1,0 +1,3 @@
+PROMPT hello_in_5_languages
+SELECT 'English, Spanish, Mandarin Chinese, Hindi, Arabic' AS languages
+GENERATE answer('Say hello in each of these languages: English, Spanish, Mandarin Chinese, Hindi, Arabic') WITH OUTPUT BUDGET 200 TOKENS;
