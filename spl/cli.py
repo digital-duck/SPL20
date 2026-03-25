@@ -142,6 +142,7 @@ def _setup_logging(run_name: str, adapter: str = "", spl_file: str = ""):
         log_level=log_level,
         log_dir=str(LOG_DIR),
         console=console,
+        log_ext=".md",
     )
     return log_path
 
@@ -397,6 +398,16 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
             for tool_name, tool_fn in loaded.items():
                 executor.register_tool(tool_name, tool_fn)
             log.info("Loaded %d tool(s) from %s", len(loaded), tools_module)
+        else:
+            # Auto-load tools.py from the same directory as the .spl file
+            import pathlib
+            auto_tools = pathlib.Path(file).parent / "tools.py"
+            if auto_tools.exists():
+                from spl.tools import load_tools_module
+                loaded = load_tools_module(str(auto_tools))
+                for tool_name, tool_fn in loaded.items():
+                    executor.register_tool(tool_name, tool_fn)
+                log.info("Auto-loaded %d tool(s) from %s", len(loaded), auto_tools)
         try:
             results = asyncio.run(executor.execute_program(analysis, params=params))
             for result in results:

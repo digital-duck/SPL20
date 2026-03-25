@@ -1,0 +1,180 @@
+
+```bash
+spl2 run ./31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 items=Great product, love it! | Terrible experience, never again | It was okay I guess domain=product_reviews
+```
+
+```spl2
+-- Recipe 31: Sentiment Pipeline
+-- Batch sentiment over a list of inputs, aggregate trend statistics.
+-- Demonstrates iteration over a list with per-item structured output + aggregation.
+--
+-- Usage:
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 \
+--       items="Great product, love it! | Terrible experience, never again | It was okay I guess"
+--
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama \
+--       items="$(cat reviews.txt)" delimiter="\n" domain="product_reviews"
+
+CREATE FUNCTION sentiment_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "label":      {"type": "string", "enum": ["positive", "negative", "neutral", "mixed"]},
+    "score":      {"type": "number", "minimum": -1, "maximum": 1},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "emotions":   {"type": "array", "items": {"type": "string"}},
+    "key_phrases":{"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["label", "score", "confidence"]
+}
+$$;
+
+WORKFLOW sentiment_pipeline
+    INPUT: @items TEXT, @delimiter TEXT DEFAULT '|', @domain TEXT DEFAULT 'general'
+    OUTPUT: @report TEXT
+DO
+    -- Step 1: Parse and clean the input list
+    GENERATE split_and_clean(@items, @delimiter) INTO @item_list
+
+    -- Step 2: Batch sentiment analysis (one result per item)
+    GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) INTO @sentiment_results
+
+    -- Step 3: Aggregate statistics
+    GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+
+    -- Step 4: Identify notable items
+    GENERATE find_extremes(@sentiment_results) INTO @extremes
+
+    -- Step 5: Generate trend summary
+    GENERATE summarize_sentiment_trends(
+        @stats_json,
+        @extremes,
+        @domain
+    ) INTO @trend_summary
+
+    -- Step 6: Assemble full report
+    GENERATE assemble_sentiment_report(
+        @sentiment_results,
+        @stats_json,
+        @trend_summary,
+        @extremes
+    ) INTO @report
+
+    COMMIT @report WITH status = 'complete', domain = @domain
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Too many items — report stats only
+        GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+        COMMIT @stats_json WITH status = 'stats_only', reason = 'too_many_items'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 4011 in / 2603 out
+Latency: 37059ms
+------------------------------------------------------------
+```output
+Here's a concise implementation of the `assemble_sentiment_report` function using Python:
+
+```python
+import re
+from collections import defaultdict
+import nltk
+nltk.download('punkt')
+
+def assemble_sentiment_report(text):
+    # Ensure the input text is not empty
+    if not text:
+        return "Error: Input text cannot be empty."
+
+    # Remove any leading or trailing whitespace from the input text
+    text = text.strip()
+
+    # Tokenize the text using word boundaries as a delimiter
+    sentences = nltk.sent_tokenize(text)
+    
+    def clean_sentence(sentence):
+        # Split the sentence into words and remove punctuation
+        return [word for word in re.sub(r'[^\w\s]+', '', sentence).split()]
+
+    cleaned_sentences = [clean_sentence(sentence) for sentence in sentences]
+
+    sentiment_counts = defaultdict(lambda: [0, 0])
+
+    for review in cleaned_sentences:
+        if all(word.isalpha() or word.isspace() for word in review):
+            for word in review:
+                if word.lower() in ['good', 'great', 'excellent']:
+                    sentiment_counts['positive'][0] += 1
+                elif word.lower() in ['bad', 'terrible', 'awful']:
+                    sentiment_counts['negative'][0] += 1
+
+    # Return the sentiment report as a dictionary
+    return {
+        "Positive Reviews": sentiment_counts['positive'][0],
+        "Negative Reviews": sentiment_counts['negative'][0]
+    }
+
+# Example usage:
+input_text = "Great product, love it! Terrible experience, never again It was okay I guess"
+result = assemble_sentiment_report(input_text)
+print(result)  # Output: {'Positive Reviews': 1, 'Negative Reviews': 2}
+```
+
+This implementation assumes that you have downloaded the necessary NLTK data. If not, use `nltk.download('punkt')` to download the Punkt tokenizer models for efficient sentence tokenization.
+
+Note that this code snippet uses a simple sentiment analysis approach by counting individual words in each review. For more accurate results, consider using machine learning algorithms or more advanced natural language processing techniques.
+```
+------------------------------------------------------------
+Variables:
+  @items = Great product, love it! | Terrible experience, never again | It was okay I guess
+  @domain = product_reviews
+  @item_list = # Split and Clean Task
+The task involves splitting the input text into individual words or sentences and then cleaning the data by removing any unwanted characters or punctuation.
+
+## Step 1: Define t
+  @sentiment_results = The current implementation is already a function that processes the input data. However, it's worth noting that there are a few ways we could improve this function.
+
+Firstly, instead of using `re.spli
+  @stats_json = Here is an updated version of your code with added error checking and some minor improvements for efficiency:
+
+```python
+import re
+
+def compute_sentiment_stats(text):
+    # Check if the input text exi
+  @extremes = Here's an improved version of your function in Python:
+
+```python
+import re
+import nltk
+
+def find_extremes(text):
+    # Ensure the input text is not empty
+    if not text:
+        print("Error: Input 
+  @trend_summary = Here's a Python code snippet that summarizes sentiment trends:
+
+```python
+import re
+from collections import defaultdict
+import nltk
+nltk.download('punkt')
+
+class SentimentTrendAnalyzer:
+    def __init
+  @report = Here's a concise implementation of the `assemble_sentiment_report` function using Python:
+
+```python
+import re
+from collections import defaultdict
+import nltk
+nltk.download('punkt')
+
+def assemble_sent
+============================================================
+Log: /home/gongai/.spl/logs/sentiment-ollama-20260320-081604.log

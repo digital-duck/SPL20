@@ -85,7 +85,7 @@ class TestWorkflowExplain:
                 EVALUATE @text
                     WHEN 'positive' THEN
                         @result := 'good'
-                    OTHERWISE
+                    ELSE
                         @result := 'neutral'
                 END
                 COMMIT @result

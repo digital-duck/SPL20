@@ -38,7 +38,7 @@ DO
                 GENERATE count_steps(@plan) INTO @step_count
                 @step_index := 0
                 @results := ''
-            OTHERWISE
+            ELSE
                 @results := @results + '\n## Step ' + @step_index + '\n' + @step_result
                 @step_index := @step_index + 1
         END

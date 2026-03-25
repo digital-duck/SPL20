@@ -33,15 +33,21 @@ END
 $$;
 
 WORKFLOW code_gen_with_tests
-    INPUT: @spec TEXT, @language TEXT DEFAULT 'Python', @test_framework TEXT DEFAULT 'default'
+    INPUT:
+        @spec           TEXT,
+        @language       TEXT DEFAULT 'Python',
+        @test_framework TEXT DEFAULT 'default'
     OUTPUT: @final_output TEXT
 DO
+    LOGGING f'Code gen | language={@language} framework={@test_framework}' LEVEL INFO
+
     -- Step 1: Generate the implementation
     GENERATE implement_function(
         @spec,
         @language,
         language_conventions(@language)
     ) INTO @implementation
+    LOGGING 'Implementation generated' LEVEL DEBUG
 
     -- Step 2: Self-review the implementation
     GENERATE review_implementation(@implementation, @spec, @language) INTO @review_notes
@@ -49,12 +55,14 @@ DO
     -- Step 3: Refine if issues found
     EVALUATE @review_notes
         WHEN contains('issue') OR contains('error') OR contains('problem') THEN
+            LOGGING 'Issues found — fixing implementation' LEVEL WARN
             GENERATE fix_implementation(@implementation, @review_notes, @language) INTO @implementation
-        OTHERWISE
+        ELSE
             -- Implementation looks good
     END
 
     -- Step 4: Generate unit tests targeting the implementation
+    LOGGING 'Generating unit tests ...' LEVEL DEBUG
     GENERATE generate_tests(
         @implementation,
         @spec,
@@ -64,10 +72,12 @@ DO
 
     -- Step 5: Verify tests compile/parse (static check)
     GENERATE verify_test_syntax(@tests, @language) INTO @syntax_ok
+    LOGGING f'Syntax check: {@syntax_ok}' LEVEL DEBUG
 
     -- Step 6: Assemble final output
     GENERATE assemble_output(@implementation, @tests, @language) INTO @final_output
 
+    LOGGING f'Code gen complete | language={@language}' LEVEL INFO
     COMMIT @final_output WITH
         status = 'complete',
         language = @language,

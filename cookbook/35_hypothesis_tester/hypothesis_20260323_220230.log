@@ -1,0 +1,322 @@
+
+```bash
+spl run ./35_hypothesis_tester/hypothesis.spl --adapter ollama -m gemma3 observation=Remote teams show lower productivity in the first month after joining domain=management
+```
+
+```spl
+-- Recipe 35: Hypothesis Tester
+-- Generate hypothesis → design test → evaluate evidence → conclude.
+-- Demonstrates scientific reasoning pattern: structured inquiry with evidence weighting.
+--
+-- Usage:
+--   spl run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama -m gemma3 \
+--       observation="Remote teams show lower productivity in the first month after joining"
+--
+--   spl run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama \
+--       observation="Users who receive onboarding emails churn 30% less" \
+--       domain="product" confidence_threshold=0.75
+
+CREATE FUNCTION hypothesis_framework()
+RETURNS TEXT AS $$
+Scientific hypothesis format:
+- Null hypothesis (H0): The effect does not exist / is due to chance
+- Alternative hypothesis (H1): The proposed causal or correlational claim
+- Key variables: independent, dependent, confounding
+- Testability: How would we falsify H0?
+$$;
+
+CREATE FUNCTION evidence_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "supports_h1":   {"type": "array", "items": {"type": "string"}},
+    "supports_h0":   {"type": "array", "items": {"type": "string"}},
+    "inconclusive":  {"type": "array", "items": {"type": "string"}},
+    "confidence":    {"type": "number", "minimum": 0, "maximum": 1},
+    "verdict":       {"type": "string", "enum": ["reject_h0", "fail_to_reject_h0", "inconclusive"]},
+    "caveats":       {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["confidence", "verdict"]
+}
+$$;
+
+WORKFLOW hypothesis_tester
+    INPUT: @observation TEXT, @domain TEXT DEFAULT 'general', @confidence_threshold FLOAT DEFAULT 0.7
+    OUTPUT: @conclusion TEXT
+DO
+    -- Step 1: Formulate hypotheses
+    GENERATE formulate_hypotheses(
+        @observation,
+        @domain,
+        hypothesis_framework()
+    ) INTO @hypotheses
+
+    -- Step 2: Design a test plan
+    GENERATE design_test(
+        @hypotheses,
+        @domain
+    ) INTO @test_plan
+
+    -- Step 3: Gather and evaluate available evidence
+    GENERATE evaluate_evidence(
+        @observation,
+        @hypotheses,
+        @test_plan,
+        evidence_schema()
+    ) INTO @evidence_json
+
+    -- Step 4: Extract confidence score
+    GENERATE extract_confidence(@evidence_json) INTO @confidence
+
+    -- Step 5: Draw conclusion based on evidence strength
+    EVALUATE @confidence
+        WHEN >= @confidence_threshold THEN
+            GENERATE write_conclusion(
+                @hypotheses, @evidence_json, @test_plan, 'confident'
+            ) INTO @conclusion
+            COMMIT @conclusion WITH
+                status = 'concluded',
+                verdict = 'h1_supported',
+                confidence = @confidence
+        WHEN >= 0.4 THEN
+            GENERATE write_conclusion(
+                @hypotheses, @evidence_json, @test_plan, 'uncertain'
+            ) INTO @conclusion
+            COMMIT @conclusion WITH
+                status = 'inconclusive',
+                verdict = 'needs_more_data',
+                confidence = @confidence
+        OTHERWISE
+            GENERATE write_conclusion(
+                @hypotheses, @evidence_json, @test_plan, 'refuted'
+            ) INTO @conclusion
+            COMMIT @conclusion WITH
+                status = 'concluded',
+                verdict = 'h0_not_rejected',
+                confidence = @confidence
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT @hypotheses WITH status = 'hypotheses_only', reason = 'evidence_evaluation_failed'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 2608 in / 1765 out
+Latency: 25036ms
+------------------------------------------------------------
+```output
+def write_conclusion(input_data):
+    """
+    Write conclusion based on formulated hypotheses and evaluated evidence.
+
+    Args:
+        input_data (dict): A dictionary containing formulated hypotheses and evaluated evidence.
+            The dictionary should contain a key-value pair where the key is 'formulated_hypotheses' and the value is a list of formulated hypotheses.
+            Additionally, it should contain another key-value pair where the key is 'evaluated_evidence' and the value is a list of dictionaries containing evaluated evidence.
+
+    Returns:
+        str: A string containing the conclusion based on the input data.
+    """
+
+    # Extract formulated hypotheses and evaluated evidence from input data
+    formulated_hypotheses = input_data["formulated_hypotheses"]
+    evaluated_evidence = input_data["evaluated_evidence"]
+
+    # Refute or support each hypothesis based on the evaluated evidence
+    conclusions = []
+    for hypothesis in formulated_hypotheses:
+        supporting_evidence = next((e for e in evaluated_evidence if e["hypothesis"] == hypothesis), None)
+        refuting_evidence = next((e for e in evaluated_evidence if e["hypothesis"] != hypothesis), None)
+
+        if supporting_evidence:
+            conclusion = f"{hypothesis['name']} is supported because {supporting_evidence['evidence']}."
+        elif refuting_evidence:
+            conclusion = f"{hypothesis['name']} is refuted because {refuting_evidence['evidence']}."
+        else:
+            conclusion = f"Insufficient evidence to support or refute {hypothesis['name']}."
+
+        conclusions.append(conclusion)
+
+    # Write the conclusion
+    conclusion_string = "\n".join(conclusions)
+    return conclusion_string
+```
+------------------------------------------------------------
+Variables:
+  @observation = Remote teams show lower productivity in the first month after joining
+  @domain = management
+  @confidence_threshold = 0.7
+  @hypotheses = def formulate_hypotheses(input_data):
+    """
+    Formulate hypotheses based on given input data.
+
+    Args:
+        input_data (list): A list containing statements related to remote teams and productivity.
+            The first element should be a statement about the initial state of remote teams,
+            the second element is 'management', and the third element is a hypothesis framework.
+
+    Returns:
+        dict: A dictionary containing formulated hypotheses based on the provided input data.
+    """
+
+    # Extract input data
+    statement1 = input_data[0]
+    management_role = "management" if isinstance(input_data[1], str) else None  # Assuming management role is a string if not already specified in input_data
+    hypothesis_framework = input_data[2]
+
+    # Formulate hypotheses based on the given statements and hypothesis framework
+    hypotheses = []
+
+    # Hypothesis 1: Remote teams show lower productivity in the first month after joining
+    if statement1:
+        hypotheses.append(hypothesis_framework.generate_hypothesis("H1", "statement1", management_role))
+
+    return {"formulated_hypotheses": hypotheses}
+  @test_plan = Based on the provided Input 2, I will modify the `formulate_hypotheses` function to handle the `management` role as a string.
+
+```python
+def formulate_hypotheses(input_data):
+    """
+    Formulate hypotheses based on given input data.
+
+    Args:
+        input_data (list): A list containing statements related to remote teams and productivity.
+            The first element should be a statement about the initial state of remote teams,
+            the second element is 'management', and the third element is a hypothesis framework.
+
+    Returns:
+        dict: A dictionary containing formulated hypotheses based on the provided input data.
+    """
+
+    # Extract input data
+    statement1 = input_data[0]
+    management_role = "management" if isinstance(input_data[1], str) else input_data[1]  # Set management role to string if not already specified in input_data
+    hypothesis_framework = input_data[2]
+
+    # Formulate hypotheses based on the given statements and hypothesis framework
+    hypotheses = []
+
+    # Hypothesis 1: Remote teams show lower productivity in the first month after joining
+    if statement1:
+        hypotheses.append(hypothesis_framework.generate_hypothesis("H1", "statement1", management_role))
+
+    return {"formulated_hypotheses": hypotheses}
+```
+
+With this modification, when `management` is passed as a string, it will be correctly assigned to the `management_role` variable.
+  @evidence_json = To evaluate the evidence for remote teams and productivity, we can use the following steps:
+
+1. Extract relevant information from the input data:
+   - Statement about initial state of remote teams
+   - Management role (if specified)
+2. Formulate hypotheses based on the given statements and hypothesis framework.
+3. Evaluate the evidence against these formulated hypotheses.
+
+Here is an example of how we can evaluate the evidence using Python:
+
+```python
+def evaluate_evidence(input_data, evidence_schema):
+    """
+    Evaluate evidence for remote teams and productivity.
+
+    Args:
+        input_data (list): A list containing statements related to remote teams and productivity.
+            The first element should be a statement about the initial state of remote teams,
+            the second element is 'management', and the third element is a hypothesis framework.
+        evidence_schema (dict): A dictionary containing schema for evaluating evidence.
+
+    Returns:
+        dict: A dictionary containing evaluated evidence and its corresponding weight.
+    """
+
+    # Extract input data
+    statement1 = input_data[0]
+    management_role = "management" if isinstance(input_data[1], str) else input_data[1]  # Set management role to string if not already specified in input_data
+    hypothesis_framework = input_data[2]
+
+    # Formulate hypotheses based on the given statements and hypothesis framework
+    hypotheses = []
+    if statement1:
+        hypotheses.append(hypothesis_framework.generate_hypothesis("H1", "statement1", management_role))
+
+    # Define evidence schema
+    evidence_schema["evaluators"] = {
+        "expert": 0.8,
+        "research": 0.6,
+        "empirical_study": 0.9
+    }
+
+    # Evaluate evidence against formulated hypotheses
+    evaluated_evidence = []
+    for hypothesis in hypotheses:
+        evidence = evidence_schema[hypothesis["type"]]
+        weight = evidence["evaluators"].get(hypothesis["source"], 0)
+        evaluated_evidence.append({"hypothesis": hypothesis, "evidence": statement1, "weight": weight})
+
+    return {"evaluated_evidence": evaluated_evidence}
+```
+
+In this example, we define an `evaluate_evidence` function that takes input data and evidence schema as arguments. The function extracts the relevant information from the input data and formulates hypotheses based on the given statements and hypothesis framework.
+
+We then evaluate the evidence against these formulated hypotheses using the provided evidence schema. The schema contains evaluators for different types of evidence, such as expert opinions, research studies, and empirical studies. Each evaluator has a corresponding weight that represents its reliability or credibility.
+
+The function returns a dictionary containing the evaluated evidence and its corresponding weight.
+  @confidence = ## Extract Confidence
+
+### Function Definition
+```python
+import numpy as np
+
+def extract_confidence(evidence: dict) -> float:
+    """
+    Extract confidence from evaluated evidence.
+
+    Args:
+        evidence (dict): A dictionary containing evaluated evidence and its corresponding weights.
+            The dictionary should have the format {"hypothesis": ..., "evidence": ..., "weight": ...}.
+
+    Returns:
+        float: The extracted confidence value.
+
+    Raises:
+        ValueError: If the input evidence is empty or missing required keys.
+    """
+
+    # Check if evidence is empty
+    if not evidence:
+        raise ValueError("Evidence is empty")
+
+    # Extract weights from evidence dictionary
+    weights = [evidence[hypothesis]["weight"] for hypothesis in evidence]
+
+    # Calculate confidence using weighted average
+    confidence = np.mean(weights, axis=0)
+
+    return confidence
+```
+
+### Example Usage
+
+```python
+# Assume we have the following evaluated evidence and its corresponding weights
+evaluated_evidence = {
+    "H1": {"evidence": "statement1", "weight": 0.7},
+    "H2": {"evidence": "statement2", "weight": 0.3}
+}
+
+confidence = extract_confidence(evaluated_evidence)
+print(confidence)  # Output: 0.5
+```
+
+In this example, we define an `extract_confidence` function that takes a dictionary containing evaluated evidence and its corresponding weights as input.
+
+The function calculates the confidence by taking a weighted average of the weights from the evidence dictionary.
+
+Note that if the input evidence is empty or missing required keys, the function raises a ValueError with a descriptive error message.
+============================================================
+Log: /home/gongai/.spl/logs/hypothesis-ollama-20260323-220230.log

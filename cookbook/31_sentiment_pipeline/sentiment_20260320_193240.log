@@ -1,0 +1,562 @@
+
+```bash
+spl2 run ./31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 items=Great product, love it! | Terrible experience, never again | It was okay I guess domain=product_reviews
+```
+
+```spl2
+-- Recipe 31: Sentiment Pipeline
+-- Batch sentiment over a list of inputs, aggregate trend statistics.
+-- Demonstrates iteration over a list with per-item structured output + aggregation.
+--
+-- Usage:
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 \
+--       items="Great product, love it! | Terrible experience, never again | It was okay I guess"
+--
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama \
+--       items="$(cat reviews.txt)" delimiter="\n" domain="product_reviews"
+
+CREATE FUNCTION sentiment_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "label":      {"type": "string", "enum": ["positive", "negative", "neutral", "mixed"]},
+    "score":      {"type": "number", "minimum": -1, "maximum": 1},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "emotions":   {"type": "array", "items": {"type": "string"}},
+    "key_phrases":{"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["label", "score", "confidence"]
+}
+$$;
+
+WORKFLOW sentiment_pipeline
+    INPUT: @items TEXT, @delimiter TEXT DEFAULT '|', @domain TEXT DEFAULT 'general'
+    OUTPUT: @report TEXT
+DO
+    -- Step 1: Parse and clean the input list
+    GENERATE split_and_clean(@items, @delimiter) INTO @item_list
+
+    -- Step 2: Batch sentiment analysis (one result per item)
+    GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) INTO @sentiment_results
+
+    -- Step 3: Aggregate statistics
+    GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+
+    -- Step 4: Identify notable items
+    GENERATE find_extremes(@sentiment_results) INTO @extremes
+
+    -- Step 5: Generate trend summary
+    GENERATE summarize_sentiment_trends(
+        @stats_json,
+        @extremes,
+        @domain
+    ) INTO @trend_summary
+
+    -- Step 6: Assemble full report
+    GENERATE assemble_sentiment_report(
+        @sentiment_results,
+        @stats_json,
+        @trend_summary,
+        @extremes
+    ) INTO @report
+
+    COMMIT @report WITH status = 'complete', domain = @domain
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Too many items — report stats only
+        GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+        COMMIT @stats_json WITH status = 'stats_only', reason = 'too_many_items'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 5554 in / 3960 out
+Latency: 61078ms
+------------------------------------------------------------
+```output
+Here is the complete Python solution that uses the NLTK library to perform sentiment analysis:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# download required NLTK data if not already downloaded
+nltk.download('vader_lexicon')
+
+def batch_sentiment(product_reviews):
+    """
+    Analyze sentiment of product reviews.
+
+    Args:
+        product_reviews (list): List of cleaned and split text from input 2.
+            Each element in the list is a string representing a review.
+
+    Returns:
+        dict: A dictionary containing various sentiment statistics for all reviews.
+    """
+    sia = SentimentIntensityAnalyzer()
+
+    results = {
+        "total_reviews": len(product_reviews),
+        "positive_score": 0,
+        "negative_score": 0,
+        "neutral_score": 0,
+        "compound_mean": 0.0,
+        "positive_count": 0,
+        "negative_count": 0,
+        "neutral_count": 0,
+    }
+
+    for review in product_reviews:
+        # create a dictionary to store the results of this review
+        result = {
+            "original_text": review,
+            "cleaned_text": review.replace("|", "").replace(" ",),
+            "split_text": review.split(),
+            "positive_score": 0.5,  # default value for positive sentiment score
+            "negative_score": 0.5,  # default value for negative sentiment score
+            "compound_score": 0.0,
+        }
+
+        if result["cleaned_text"]:
+            scores = sia.polarity_scores(result["cleaned_text"])
+            result["positive_score"] = scores["pos"]
+            result["negative_score"] = scores["neg"]
+            result["compound_score"] = scores["compound"]
+
+        # update the overall results
+        results["total_reviews"] += 1
+
+        if result["positive_score"] > 0.05:
+            results["positive_count"] += 1
+            results["positive_score"] += result["positive_score"]
+        elif result["negative_score"] < -0.05:
+            results["negative_count"] += 1
+            results["negative_score"] += result["negative_score"]
+
+    # calculate the mean scores for each category
+    if results["total_reviews"] > 0:
+        results["neutral_count"] = len(product_reviews) - results["positive_count"] - results["negative_count"]
+        results["neutral_score"] = (results["compound_score"] + sum([review["compound_score"] for review in product_reviews])) / len(product_reviews)
+    else:
+        results["neutral_score"] = 0.5
+
+    # calculate the mean compound scores
+    if results["total_reviews"] > 0:
+        results["compound_mean"] = (results["compound_score"] + sum([review["compound_score"] for review in product_reviews])) / len(product_reviews)
+    else:
+        results["compound_mean"] = 0.5
+
+    # calculate the extremes
+    max_min_scores = {
+        'positive': float('-inf'),
+        'negative': float('inf')
+    }
+    
+    for review in product_reviews:
+        result = {
+            "original_text": review,
+            "cleaned_text": review.replace("|", "").replace(" ",),
+            "split_text": review.split(),
+            "positive_score": 0.5,  # default value for positive sentiment score
+            "negative_score": 0.5,  # default value for negative sentiment score
+            "compound_score": 0.0,
+        }
+
+        if result["cleaned_text"]:
+            scores = sia.polarity_scores(result["cleaned_text"])
+            result["positive_score"] = scores["pos"]
+            result["negative_score"] = scores["neg"]
+            result["compound_score"] = scores["compound"]
+
+            # Update maximum and minimum scores
+            max_min_scores['positive'] = max(max_min_scores['positive'], result['positive_score'])
+            max_min_scores['negative'] = min(max_min_scores['negative'], result['negative_score'])
+
+    return {
+        'all_results': results,
+        "max_min_scores": max_min_scores
+    }
+
+# Example usage:
+product_reviews_1 = ["I'll help with that."]
+product_reviews_2 = []
+
+results_1 = batch_sentiment(product_reviews_1)
+print(results_1)
+
+results_2 = batch_sentiment(product_reviews_2)
+print(results_2)
+```
+
+This solution first calculates the various sentiment statistics for each review, including the positive and negative scores. It then uses these results to calculate the mean scores for each category (positive, negative, neutral) as well as the extremes of the data.
+
+Please note that you can adjust the threshold values for the positive, negative, and neutral sentiments according to your specific requirements.
+```
+------------------------------------------------------------
+Variables:
+  @items = Great product, love it! | Terrible experience, never again | It was okay I guess
+  @domain = product_reviews
+  @delimiter = |
+  @item_list = I'll help with that.
+
+To "split_and_clean" means to clean the text by removing any unwanted characters and then splitting it into individual words. Here are the results:
+
+**Input 1:**
+
+ Original text: Great product, love it! | Terrible experience, never again | It was okay I guess
+ Cleaned text: Greatproductloveit|Terriblexperienceneveragain|Itwasokayiggess
+ Split text:
+["Great", "product", "love", "it"]
+["Terrible", "experience", "never", "again"]
+["It", "was", "okay", "I", "guess"]
+
+**Input 2:**
+
+ Original text: |
+ Cleaned text: (empty string)
+ Split text: []
+  @sentiment_results = Here is a Python solution that uses the NLTK library to perform the sentiment analysis:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# download required NLTK data if not already downloaded
+nltk.download('vader_lexicon')
+
+def batch_sentiment(product_reviews):
+    """
+    Analyze sentiment of product reviews.
+
+    Args:
+        product_reviews (list): List of cleaned and split text from input 2.
+            Each element in the list is a string representing a review.
+
+    Returns:
+        list: A list of dictionaries, where each dictionary contains the 
+            original text, cleaned text, split text, score for positive sentiment,
+            score for negative sentiment, and compound score.
+    """
+    sia = SentimentIntensityAnalyzer()
+
+    results = []
+    for review in product_reviews:
+        # create a dictionary to store the results of this review
+        result = {
+            "original_text": review,
+            "cleaned_text": review.replace("|", "").replace(" ",'),
+            "split_text": review.split(),
+            "positive_score": 0.5,  # default value for positive sentiment score
+            "negative_score": 0.5,  # default value for negative sentiment score
+            "compound_score": 0.0,
+        }
+
+        if result["cleaned_text"]:
+            scores = sia.polarity_scores(result["cleaned_text"])
+            result["positive_score"] = scores["pos"]
+            result["negative_score"] = scores["neg"]
+            result["compound_score"] = scores["compound"]
+
+        results.append(result)
+
+    return results
+
+# Example usage:
+product_reviews_1 = ["I'll help with that."]
+product_reviews_2 = []
+
+results_1 = batch_sentiment(product_reviews_1)
+print(results_1)
+
+results_2 = batch_sentiment(product_reviews_2)
+print(results_2)
+```
+
+This solution works by iterating over each review in the input list. For each review, it uses the `SentimentIntensityAnalyzer` from NLTK's VADER sentiment analysis tool to calculate the sentiment scores for the cleaned text. It then stores these results in a dictionary and adds it to the output list.
+
+Note that this is just one approach to performing sentiment analysis, and there are many other tools and techniques available depending on your specific needs and requirements.
+  @stats_json = It seems like you've provided a Python solution to compute sentiment statistics. However, the task was not clearly defined in your prompt.
+
+To clarify, I will provide an updated version of the code that computes additional sentiment statistics.
+
+Here's an updated version of the `batch_sentiment` function:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# download required NLTK data if not already downloaded
+nltk.download('vader_lexicon')
+
+def batch_sentiment(product_reviews):
+    """
+    Analyze sentiment of product reviews.
+
+    Args:
+        product_reviews (list): List of cleaned and split text from input 2.
+            Each element in the list is a string representing a review.
+
+    Returns:
+        dict: A dictionary containing various sentiment statistics for all reviews.
+    """
+    sia = SentimentIntensityAnalyzer()
+
+    results = {
+        "total_reviews": len(product_reviews),
+        "positive_score": 0,
+        "negative_score": 0,
+        "neutral_score": 0,
+        "compound_mean": 0.0,
+        "positive_count": 0,
+        "negative_count": 0,
+        "neutral_count": 0,
+    }
+
+    for review in product_reviews:
+        # create a dictionary to store the results of this review
+        result = {
+            "original_text": review,
+            "cleaned_text": review.replace("|", "").replace(" ",),
+            "split_text": review.split(),
+            "positive_score": 0.5,  # default value for positive sentiment score
+            "negative_score": 0.5,  # default value for negative sentiment score
+            "compound_score": 0.0,
+        }
+
+        if result["cleaned_text"]:
+            scores = sia.polarity_scores(result["cleaned_text"])
+            result["positive_score"] = scores["pos"]
+            result["negative_score"] = scores["neg"]
+            result["compound_score"] = scores["compound"]
+
+        # update the overall results
+        results["total_reviews"] += 1
+
+        if result["positive_score"] > 0.05:
+            results["positive_count"] += 1
+            results["positive_score"] += result["positive_score"]
+        elif result["negative_score"] < -0.05:
+            results["negative_count"] += 1
+            results["negative_score"] += result["negative_score"]
+
+    # calculate the mean scores for each category
+    if results["total_reviews"] > 0:
+        results["neutral_count"] = len(product_reviews) - results["positive_count"] - results["negative_count"]
+        results["neutral_score"] = (results["compound_score"] + sum([review["compound_score"] for review in product_reviews])) / len(product_reviews)
+    else:
+        results["neutral_score"] = 0.5
+
+    # calculate the mean compound scores
+    if results["total_reviews"] > 0:
+        results["compound_mean"] = (results["compound_score"] + sum([review["compound_score"] for review in product_reviews])) / len(product_reviews)
+    else:
+        results["compound_mean"] = 0.5
+
+    return results
+```
+
+This updated version computes the following additional sentiment statistics:
+
+*   Total number of reviews
+*   Mean positive score
+*   Mean negative score
+*   Mean neutral score
+*   Number of reviews with a positive sentiment score greater than 0.05
+*   Number of reviews with a negative sentiment score less than -0.05
+*   Number of reviews with a neutral sentiment score
+
+Please note that you can adjust the threshold values for the positive, negative, and neutral scores according to your specific requirements.
+
+Also, please ensure that you have installed the NLTK library and downloaded the required data before running this code.
+  @extremes = The provided solution uses NLTK's VADER tool for sentiment analysis, but does not actually calculate the extremes of the data. To find the extremes, you would need to modify the code to keep track of the maximum and minimum scores across all reviews.
+
+Here is a modified version of your code that finds the extremes:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# download required NLTK data if not already downloaded
+nltk.download('vader_lexicon')
+
+def batch_sentiment(product_reviews):
+    """
+    Analyze sentiment of product reviews.
+
+    Args:
+        product_reviews (list): List of cleaned and split text from input 2.
+            Each element in the list is a string representing a review.
+
+    Returns:
+        dict: A dictionary containing the maximum and minimum scores for positive 
+            and negative sentiments, as well as all other results.
+    """
+    sia = SentimentIntensityAnalyzer()
+
+    results = []
+    max_min_scores = {'positive': float('-inf'), 'negative': float('inf')}
+    
+    for review in product_reviews:
+        # create a dictionary to store the results of this review
+        result = {
+            "original_text": review,
+            "cleaned_text": review.replace("|", "").replace(" ",'),
+            "split_text": review.split(),
+            "positive_score": 0.5,  # default value for positive sentiment score
+            "negative_score": 0.5,  # default value for negative sentiment score
+            "compound_score": 0.0,
+        }
+
+        if result["cleaned_text"]:
+            scores = sia.polarity_scores(result["cleaned_text"])
+            result["positive_score"] = scores["pos"]
+            result["negative_score"] = scores["neg"]
+            result["compound_score"] = scores["compound"]
+
+            # Update maximum and minimum scores
+            max_min_scores['positive'] = max(max_min_scores['positive'], result['positive_score'])
+            max_min_scores['negative'] = min(max_min_scores['negative'], result['negative_score'])
+
+        results.append(result)
+
+    return {
+        'all_results': results,
+        'max_min_scores': max_min_scores
+    }
+
+# Example usage:
+product_reviews_1 = ["I'll help with that."]
+product_reviews_2 = []
+
+results_1 = batch_sentiment(product_reviews_1)
+print(results_1['all_results'])
+print(results_1['max_min_scores'])
+
+results_2 = batch_sentiment(product_reviews_2)
+print(results_2['all_results'])
+print(results_2['max_min_scores'])
+```
+
+This modified version of your code keeps track of the maximum and minimum scores for positive and negative sentiments in the `batch_sentiment` function, which returns a dictionary containing all results as well as these extremes.
+  @trend_summary = To summarize the sentiment trends in the given product reviews, we can analyze the provided output from the last modified version of your code. Let's calculate some statistics based on this data:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# download required NLTK data if not already downloaded
+nltk.download('vader_lexicon')
+
+def batch_sentiment(product_reviews):
+    """
+    Analyze sentiment of product reviews.
+
+    Args:
+        product_reviews (list): List of cleaned and split text from input 2.
+            Each element in the list is a string representing a review.
+
+    Returns:
+        dict: A dictionary containing various sentiment statistics for all reviews.
+    """
+    sia = SentimentIntensityAnalyzer()
+
+    results = {
+        "total_reviews": len(product_reviews),
+        "positive_score": 0,
+        "negative_score": 0,
+        "neutral_score": 0,
+        "compound_mean": 0.0,
+        "positive_count": 0,
+        "negative_count": 0,
+        "neutral_count": 0,
+    }
+
+    for review in product_reviews:
+        # create a dictionary to store the results of this review
+        result = {
+            "original_text": review,
+            "cleaned_text": review.replace("|", "").replace(" ",),
+            "split_text": review.split(),
+            "positive_score": 0.5,  # default value for positive sentiment score
+            "negative_score": 0.5,  # default value for negative sentiment score
+            "compound_score": 0.0,
+        }
+
+        if result["cleaned_text"]:
+            scores = sia.polarity_scores(result["cleaned_text"])
+            result["positive_score"] = scores["pos"]
+            result["negative_score"] = scores["neg"]
+            result["compound_score"] = scores["compound"]
+
+        # update the overall results
+        results["total_reviews"] += 1
+
+        if result["positive_score"] > 0.05:
+            results["positive_count"] += 1
+            results["positive_score"] += result["positive_score"]
+        elif result["negative_score"] < -0.05:
+            results["negative_count"] += 1
+            results["negative_score"] += result["negative_score"]
+
+    # calculate the mean scores for each category
+    if results["total_reviews"] > 0:
+        results["neutral_count"] = len(product_reviews) - results["positive_count"] - results["negative_count"]
+        results["neutral_score"] = (results["compound_score"] + sum([review["compound_score"] for review in product_reviews])) / len(product_reviews)
+    else:
+        results["neutral_score"] = 0.5
+
+    # calculate the mean compound scores
+    if results["total_reviews"] > 0:
+        results["compound_mean"] = (results["compound_score"] + sum([review["compound_score"] for review in product_reviews])) / len(product_reviews)
+    else:
+        results["compound_mean"] = 0.5
+
+    return results
+
+
+# Example usage:
+product_reviews = ["I'll help with that.", "This is a great product!", "I'm very sad about this issue."]
+
+results = batch_sentiment(product_reviews)
+
+print("Total Reviews:", results['total_reviews'])
+print("Positive Count:", results['positive_count'])
+print("Negative Count:", results['negative_count'])
+print("Neutral Count:", results['neutral_count'])
+
+# Calculate the mean of each sentiment category
+mean_positive_score = results["positive_score"] / results["positive_count"]
+if results["positive_count"] > 0:
+    print(f"Mean Positive Score: {mean_positive_score}")
+else:
+    print("No positive reviews found.")
+
+mean_negative_score = results["negative_score"] / results["negative_count"]
+if results["negative_count"] > 0:
+    print(f"Mean Negative Score: {mean_negative_score}")
+else:
+    print("No negative reviews found.")
+
+print("Compound Mean:", results['compound_mean'])
+
+# Calculate the extremes
+max_positive_score = max([review['positive_score'] for review in product_reviews])
+min_positive_score = min([review['positive_score'] for review in product_reviews])
+max_negative_score = max([review['negative_score'] for review in product_reviews])
+min_negative_score = min([review['negative_score'] for review in product_reviews])
+
+print("Maximum Positive Score:", max_positive_score)
+print("Minimum Positive Score:", min_positive_score)
+print("Maximum Negative Score:", max_negative_score)
+print("Minimum Negative Score:", min_negative_score)
+
+```
+
+In the above code, we have added some additional calculations to help get a better understanding of the sentiment trends in the given product reviews. These include calculating the mean positive score, negative score, and compound scores, as well as finding the maximum and minimum values for both positive and negative sentiments.
+============================================================
+Log: /home/gongai/.spl/logs/sentiment-ollama-20260320-193240.log

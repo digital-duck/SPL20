@@ -1,0 +1,96 @@
+
+```bash
+spl2 run ./33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 role=Senior Software Engineer focus=system design
+```
+
+```sql
+-- Recipe 33: Interview Simulator
+-- Two-persona structured Q&A with evaluation.
+-- Interviewer persona asks questions, candidate persona answers, evaluator scores.
+--
+-- Usage:
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 \
+--       role="Senior Software Engineer" focus="system design"
+--
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama \
+--       role="Data Scientist" focus="machine learning" num_questions=4 difficulty="hard"
+
+CREATE FUNCTION interviewer_persona(role TEXT, focus TEXT, difficulty TEXT DEFAULT 'medium')
+RETURNS TEXT AS $$
+You are an experienced technical interviewer at a top tech company.
+You are interviewing for the role of: $$|| role ||$$
+Focus area: $$|| focus ||$$
+Difficulty: $$|| difficulty ||$$
+
+Ask targeted, probing questions. Follow up on weak answers. Be professional but not warm.
+Ask one question at a time. Do not reveal what a good answer looks like before hearing the response.
+$$;
+
+CREATE FUNCTION candidate_persona(role TEXT, experience TEXT DEFAULT '5 years')
+RETURNS TEXT AS $$
+You are a job candidate interviewing for: $$|| role ||$$
+You have $$|| experience ||$$ of relevant experience.
+
+Answer honestly — you know a lot but may have gaps. Think out loud. Be specific with examples.
+If unsure, say so and explain your reasoning process.
+$$;
+
+CREATE FUNCTION evaluation_rubric()
+RETURNS TEXT AS $$
+Evaluate each answer on:
+1. Technical accuracy (0-10): Is the answer correct?
+2. Depth (0-10): Does the candidate go beyond surface level?
+3. Communication (0-10): Is the answer clear and well-structured?
+4. Practical experience (0-10): Do they reference real scenarios?
+
+Return JSON per answer: {"accuracy": N, "depth": N, "communication": N, "experience": N, "total": N, "feedback": "..."}
+$$;
+
+WORKFLOW interview_sim
+    INPUT: @role TEXT, @focus TEXT, @difficulty TEXT DEFAULT 'medium', @num_questions INT DEFAULT 3, @experience TEXT DEFAULT '5 years'
+    OUTPUT: @evaluation_report TEXT
+DO
+    -- Generate questions upfront
+    GENERATE generate_question_set(
+        @role, @focus, @difficulty, @num_questions,
+        interviewer_persona(@role, @focus, @difficulty)
+    ) INTO @questions_json
+
+    -- Q1: First question + answer + score
+    GENERATE ask_question(@questions_json, 1) INTO @q1
+    GENERATE answer_question(@q1, @role, candidate_persona(@role, @experience)) INTO @a1
+    GENERATE score_answer(@q1, @a1, evaluation_rubric()) INTO @score1
+
+    -- Q2
+    GENERATE ask_question(@questions_json, 2) INTO @q2
+    GENERATE answer_question(@q2, @role, candidate_persona(@role, @experience)) INTO @a2
+    GENERATE score_answer(@q2, @a2, evaluation_rubric()) INTO @score2
+
+    -- Q3
+    GENERATE ask_question(@questions_json, 3) INTO @q3
+    GENERATE answer_question(@q3, @role, candidate_persona(@role, @experience)) INTO @a3
+    GENERATE score_answer(@q3, @a3, evaluation_rubric()) INTO @score3
+
+    -- Compile interview transcript
+    GENERATE compile_transcript(@q1, @a1, @q2, @a2, @q3, @a3) INTO @transcript
+
+    -- Overall evaluation
+    GENERATE overall_evaluation(
+        @transcript,
+        @score1, @score2, @score3,
+        @role, @focus
+    ) INTO @evaluation_report
+
+    COMMIT @evaluation_report WITH
+        status = 'complete',
+        role = @role,
+        focus = @focus,
+        difficulty = @difficulty
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT @transcript WITH status = 'partial', reason = 'evaluation_failed'
+END
+```
+
+Error: Lexer error at 15:41: Unexpected character '|'

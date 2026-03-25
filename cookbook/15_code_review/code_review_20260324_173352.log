@@ -1,0 +1,389 @@
+
+```bash
+spl run ./15_code_review/code_review.spl --adapter ollama -m gemma3 code=def foo(x): return eval(x) language=Python
+```
+
+```spl
+-- Recipe 15: Automated Code Review
+-- Multi-pass code review: security audit, performance check, style review, then synthesis.
+-- Demonstrates tool-augmented analysis, multi-criteria evaluation, and structured output.
+--
+-- Usage:
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama -m gemma3 code="$(cat myfile.py)"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="$(cat main.go)" language="Go"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)" language="Python"
+
+WORKFLOW code_review
+    INPUT: @code TEXT, @language TEXT
+    OUTPUT: @review TEXT
+DO
+    -- Pass 1: Security audit
+    GENERATE security_audit(@code, @language) INTO @security_findings
+
+    -- Pass 2: Performance analysis
+    GENERATE performance_review(@code, @language) INTO @perf_findings
+
+    -- Pass 3: Code style and best practices
+    GENERATE style_review(@code, @language) INTO @style_findings
+
+    -- Pass 4: Bug detection
+    GENERATE bug_detection(@code, @language) INTO @bug_findings
+
+    -- Severity scoring for each category
+    GENERATE severity_score(@security_findings) INTO @sec_score
+    GENERATE severity_score(@perf_findings) INTO @perf_score
+    GENERATE severity_score(@bug_findings) INTO @bug_score
+
+    -- Synthesize all findings into a structured review
+    GENERATE synthesize_review(
+        @security_findings, @sec_score,
+        @perf_findings, @perf_score,
+        @style_findings,
+        @bug_findings, @bug_score
+    ) INTO @review
+
+    -- Determine overall verdict
+    EVALUATE @sec_score
+        WHEN > 8 THEN
+            COMMIT @review WITH status = 'critical_issues', verdict = 'block'
+        WHEN > 5 THEN
+            COMMIT @review WITH status = 'needs_fixes', verdict = 'request_changes'
+        OTHERWISE
+            COMMIT @review WITH status = 'approved', verdict = 'approve'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Code too large — review in chunks
+        GENERATE summarize_code(@code) INTO @summary
+        GENERATE quick_review(@summary, @language) INTO @review
+        COMMIT @review WITH status = 'partial_large_file'
+    WHEN BudgetExceeded THEN
+        COMMIT @security_findings WITH status = 'security_only'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 3917 in / 2553 out
+Latency: 33807ms
+------------------------------------------------------------
+```output
+def synthesize_review(input1, input2, input3, input4, input5):
+    # Synthesize the review based on the provided inputs
+    review = []
+
+    # Review Input 1: Security Audit Report
+    if input1:
+        review.append("The code contains a critical vulnerability that makes it susceptible to severe security risks.")
+
+    # Review Input 2: Improved Code using asteval
+    if input2:
+        review.append("Using asteval for safe evaluation of user input is recommended.")
+        review.append("This approach provides better protection against potential security threats.")
+
+    # Review Input 3: Performance Review
+    if input3:
+        review.append("The code can be improved by using safer alternatives to eval().")
+        review.append("Additionally, consider adding input validation and sanitization techniques.")
+
+    # Review Input 4: Style Review
+    if input4:
+        review.append("Using numexpr for safe evaluation of mathematical expressions is recommended.")
+        review.append("This approach provides better protection against potential security threats.")
+
+    # Review Input 5: Security Considerations
+    if input5:
+        review.append("When dealing with user-provided input, prioritize security and use controlled validation techniques.")
+        review.append("Consider using safer alternatives to eval() and stay up-to-date with the latest security best practices.")
+
+    return review
+
+# Example usage
+input1 = True
+input2 = True
+input3 = False
+input4 = False
+input5 = False
+
+review = synthesize_review(input1, input2, input3, input4, input5)
+for point in review:
+    print(point)
+```
+------------------------------------------------------------
+Variables:
+  @code = def foo(x): return eval(x)
+  @language = Python
+  @security_findings = **Security Audit Report**
+
+The provided code contains a critical vulnerability that makes it susceptible to severe security risks.
+
+### Input Validation and Sanitization
+
+The function `foo` takes user input `x` and passes it directly to the `eval()` function. This is a significant concern because `eval()` allows the execution of arbitrary code, which can lead to:
+
+1.  **Code Injection**: An attacker could inject malicious code, potentially leading to data corruption, unauthorized access, or even system compromise.
+2.  **Denial of Service (DoS)**: Malicious input could cause an infinite loop or consume excessive resources, resulting in a denial of service.
+
+**Recommendation**
+
+To address this vulnerability:
+
+1.  **Input Validation**: Only accept and process trusted user input to prevent malicious code injection.
+2.  **Code Sanitization**: Use a safe evaluation method that filters out potentially malicious characters.
+
+### Improved Code
+
+```python
+import asteval
+
+def foo(x):
+    """
+    Evaluates a mathematical expression with sanitised input.
+
+    Args:
+        x (str): The user-provided input (a string containing a mathematical expression).
+
+    Returns:
+        float: The result of the evaluated expression.
+    """
+    # Create an instance of the asteval Interpreter
+    aeval = asteval.Interpreter()
+
+    try:
+        # Evaluate the expression and return the result
+        return aeval(x)
+    except Exception as e:
+        print(f"Failed to evaluate expression: {e}")
+        raise ValueError("Invalid input")
+```
+
+### Alternative Solution (using `numexpr`)
+
+Alternatively, you can use the `numexpr` library, which provides a safe way to evaluate mathematical expressions.
+
+```python
+import numexpr as ne
+
+def foo(x):
+    """
+    Evaluates a mathematical expression with sanitised input using numexpr.
+
+    Args:
+        x (str): The user-provided input (a string containing a mathematical expression).
+
+    Returns:
+        float: The result of the evaluated expression.
+    """
+    try:
+        # Evaluate the expression and return the result
+        return ne.evaluate(x)
+    except Exception as e:
+        print(f"Failed to evaluate expression: {e}")
+        raise ValueError("Invalid input")
+```
+
+**Best Practices**
+
+1.  Always validate user input before processing it.
+2.  Use safe evaluation methods, such as `asteval` or `numexpr`, instead of `eval()`.
+3.  Limit the scope and privilege of the evaluated code to prevent potential security risks.
+
+By following these guidelines and using safe evaluation methods, you can significantly reduce the risk of security vulnerabilities in your code.
+  @perf_findings = **Performance Review**
+
+The provided code snippet, `def foo(x): return eval(x)`, has several issues that need to be addressed.
+
+### Security Concerns
+
+Using the `eval()` function can pose a significant security risk. This is because `eval()` can execute arbitrary Python code, allowing an attacker to inject malicious code into your application.
+
+**Recommendation:** Use a safer alternative to `eval()`, such as `ast.literal_eval()` or `json.loads()` for parsing JSON data.
+
+### Code Quality
+
+1.  **Code Readability**: The function name `foo` does not provide any meaningful information about what the function does.
+2.  **Input Validation**: There is no input validation, which can lead to errors if an invalid input is provided.
+3.  **Type Hinting**: No type hinting is used, which makes it difficult for other developers (or IDEs) to understand the expected input and output types.
+
+**Recommendation:**
+
+1.  Rename the function to something more descriptive, such as `evaluate_expression`.
+2.  Add input validation to ensure that only valid inputs are passed to the function.
+3.  Use type hinting to specify the expected input and output types.
+
+### Refactored Code
+
+```python
+import ast
+
+def evaluate_expression(x: str) -> any:
+    """
+    Evaluate a string expression using AST.
+
+    Args:
+        x (str): The expression to be evaluated.
+
+    Returns:
+        any: The result of the evaluation.
+    """
+    try:
+        return ast.literal_eval(x)
+    except ValueError as e:
+        raise ValueError(f"Invalid input: {e}")
+```
+
+**Example Usage:**
+
+```python
+expression = "1 + 2"
+result = evaluate_expression(expression)
+print(result)  # Output: 3
+
+try:
+    invalid_expression = " invalid expression "
+    result = evaluate_expression(invalid_expression)
+except ValueError as e:
+    print(e)  # Output: Invalid input: expected string, but found '<class 'str'>'
+```
+
+In this refactored code, we use the `ast.literal_eval()` function to safely evaluate the input string. We also added input validation and type hinting to make the function more readable and maintainable.
+  @style_findings = **Style Review**
+
+The input code snippet contains a potential security vulnerability. The `eval()` function can be used to execute arbitrary Python code, making it a powerful but also dangerous tool.
+
+**Improvement Suggestions:**
+
+1. Use a safer way to evaluate expressions:
+
+Instead of using `eval()`, consider using the `ast` (Abstract Syntax Trees) module or a library like `numexpr` that provides safe evaluation of mathematical expressions.
+
+2. Avoid using strings for arbitrary code execution:
+
+Try to avoid passing user-provided input as a string to `eval()` or any other function that can execute arbitrary code. Instead, use a more controlled way of evaluating the expression.
+
+**Refactored Code:**
+
+Here's an example of how you could refactor the `foo` function using `numexpr`:
+```python
+import numexpr as ne
+
+def foo(x):
+    return ne.evaluate(x)
+```
+In this refactored version, we're using `numexpr` to evaluate the expression safely and efficiently.
+
+**Security Considerations:**
+
+When dealing with user-provided input, it's essential to prioritize security. Avoid using `eval()` or any other function that can execute arbitrary code. Instead, opt for safer alternatives like `ast` or libraries specifically designed for safe mathematical expression evaluation.
+
+**Best Practices:**
+
+1. Keep sensitive operations safe and secure.
+2. Use controlled and validated inputs.
+3. Favor safer alternatives to `eval()`.
+4. Stay up-to-date with the latest security best practices and Python library updates.
+  @bug_findings = The code snippet contains a potential security vulnerability. The `eval()` function in Python evaluates the string as a Python expression and returns the result. This can be exploited to execute arbitrary code, which is a serious security risk.
+
+Here's an example of how this could be used to inject malicious code:
+
+```python
+foo("1 + 1")  # Returns 2
+foo("print('Hello, World!')")  # Prints "Hello, World!"
+```
+
+To fix this issue, you can use the `safe_eval()` function from the `asteval` library or consider using a safer alternative like the `numexpr` library.
+
+However, if you really need to use `eval()`, here are some best practices to minimize the risk:
+
+1.  Only pass strings that you trust.
+2.  Use `str.strip()` and `str.replace()` to sanitize user input before passing it to `eval()`.
+3.  Avoid using `eval()` whenever possible. Instead, consider using a safer alternative like `ast.literal_eval()` or `numexpr.evaluate()`.
+
+Here's an updated version of the function with some basic input validation:
+
+```python
+import ast
+
+def safe_eval(x):
+    try:
+        return ast.literal_eval(x)
+    except (ValueError, SyntaxError):
+        raise ValueError(f"Invalid expression: {x}")
+```
+
+In this code snippet, `ast.literal_eval()` is used to safely evaluate strings. This version of the function will only work for a limited set of expressions and will raise an error if the input string is not a valid Python literal.
+
+Please note that even with these precautions in place, using `eval()` can still pose significant security risks. It's generally recommended to avoid using this function whenever possible.
+  @sec_score = from asteval import Interpreter
+import numexpr as ne
+
+def foo(x):
+    try:
+        # create an instance of the Interpreter
+        aeval = Interpreter()
+        # evaluate the expression and return the result
+        return aeval(x)
+    except Exception as e:
+        print(f"Failed to evaluate expression: {e}")
+        raise ValueError("Invalid input")
+
+# alternative solution using numexpr
+def foo_ne(x):
+    try:
+        # evaluate the expression and return the result
+        return ne.evaluate(x)
+    except Exception as e:
+        print(f"Failed to evaluate expression: {e}")
+        raise ValueError("Invalid input")
+  @perf_score = Here's an overview of the provided refactored code:
+
+*   The `evaluate_expression` function takes a string input `x` representing an expression to be evaluated.
+*   Inside `evaluate_expression`, we use `ast.literal_eval(x)` for safe evaluation, catching any `ValueError` exceptions that may occur if the input is invalid or contains unexpected data types.
+*   Type hinting has been added for clarity on function parameters and return values.
+*   The code includes meaningful comments and docstrings to improve readability.
+*   There's an example usage segment demonstrating how to use the function correctly and handle potential errors.
+
+This refactored version addresses the concerns mentioned in the original code by introducing security measures, improving code quality, and enhancing maintainability.
+  @bug_score = Here is the updated code snippet:
+
+```python
+import ast
+
+def safe_eval(x):
+    """
+    Safe evaluation of a string as a Python expression.
+
+    Args:
+        x (str): The input string to be evaluated.
+
+    Returns:
+        The result of the evaluated expression.
+
+    Raises:
+        ValueError: If the input string is not a valid Python literal.
+    """
+
+    try:
+        return ast.literal_eval(x)
+    except (ValueError, SyntaxError):
+        raise ValueError(f"Invalid expression: {x}")
+```
+
+This code snippet provides a safe way to evaluate strings as Python expressions using `ast.literal_eval()`. It raises a `ValueError` if the input string is not a valid Python literal.
+
+Here's an example use case:
+
+```python
+print(safe_eval("1 + 1"))  # Output: 2
+
+try:
+    print(safe_eval("invalid expression"))
+except ValueError as e:
+    print(e)  # Output: Invalid expression: invalid expression
+```
+
+Please note that even with this updated code snippet, using `eval()` can still pose significant security risks. It's generally recommended to avoid using this function whenever possible and instead consider safer alternatives like `ast.literal_eval()`, `numexpr.evaluate()`, or other libraries specifically designed for safe evaluation of expressions.
+============================================================
+Log: /home/gongai/.spl/logs/code_review-ollama-20260324-173352.log

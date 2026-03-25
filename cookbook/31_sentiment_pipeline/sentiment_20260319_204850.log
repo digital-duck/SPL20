@@ -1,0 +1,212 @@
+
+```bash
+spl2 run ./31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 items=Great product, love it! | Terrible experience, never again | It was okay I guess domain=product_reviews
+```
+
+```sql
+-- Recipe 31: Sentiment Pipeline
+-- Batch sentiment over a list of inputs, aggregate trend statistics.
+-- Demonstrates iteration over a list with per-item structured output + aggregation.
+--
+-- Usage:
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 \
+--       items="Great product, love it! | Terrible experience, never again | It was okay I guess"
+--
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama \
+--       items="$(cat reviews.txt)" delimiter="\n" domain="product_reviews"
+
+CREATE FUNCTION sentiment_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "label":      {"type": "string", "enum": ["positive", "negative", "neutral", "mixed"]},
+    "score":      {"type": "number", "minimum": -1, "maximum": 1},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "emotions":   {"type": "array", "items": {"type": "string"}},
+    "key_phrases":{"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["label", "score", "confidence"]
+}
+$$;
+
+WORKFLOW sentiment_pipeline
+    INPUT: @items TEXT, @delimiter TEXT DEFAULT '|', @domain TEXT DEFAULT 'general'
+    OUTPUT: @report TEXT
+DO
+    -- Step 1: Parse and clean the input list
+    GENERATE split_and_clean(@items, @delimiter) INTO @item_list
+
+    -- Step 2: Batch sentiment analysis (one result per item)
+    GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) INTO @sentiment_results
+
+    -- Step 3: Aggregate statistics
+    GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+
+    -- Step 4: Identify notable items
+    GENERATE find_extremes(@sentiment_results) INTO @extremes
+
+    -- Step 5: Generate trend summary
+    GENERATE summarize_sentiment_trends(
+        @stats_json,
+        @extremes,
+        @domain
+    ) INTO @trend_summary
+
+    -- Step 6: Assemble full report
+    GENERATE assemble_sentiment_report(
+        @sentiment_results,
+        @stats_json,
+        @trend_summary,
+        @extremes
+    ) INTO @report
+
+    COMMIT @report WITH status = 'complete', domain = @domain
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Too many items — report stats only
+        GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+        COMMIT @stats_json WITH status = 'stats_only', reason = 'too_many_items'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 6144 in / 3763 out
+Latency: 60886ms
+------------------------------------------------------------
+Committed: The code you provided appears to be designed for sentiment analysis tasks. Here is an annotated version of the code with explanations:
+
+```python
+import nltk # Natural Language Toolkit library
+
+from nltk.sentiment.vader import SentimentIntensityAnalyzer # Vader sentiment intensity analyzer tool from NLTK's sentiment analysis library
+import pandas as pd # pandas data manipulation and analysis library
+import numpy as np # NumPy library for numerical computations
+
+def batch_sentiment(input_string):
+    """
+    Batch sentiment analysis function.
+    
+    Parameters:
+    input_string (str): The input string to analyze.
+    
+    Returns:
+    list: A list of dictionaries containing the cleaned sentence and its corresponding sentiment scores.
+    """
+
+    # Split the input string into individual sentences
+    sentences = input_string.split('.')
+
+    # Clean each sentence by removing leading/trailing whitespace and converting to lowercase
+    cleaned_sentences = [sentence.strip().lower() for sentence in sentences if sentence.strip() != '']
+
+    si = SentimentIntensityAnalyzer() # Initialize a SentimentIntensityAnalyzer object
+
+    # Initialize an empty list to store the results
+    results = []
+
+    # Iterate over each cleaned sentence
+    for sentence in cleaned_sentences:
+        # Analyze the sentiment of the sentence
+        sentiment_scores = si.polarity_scores(sentence)
+        
+        # Extract the compound sentiment score
+        compound_score = sentiment_scores['compound']
+
+        # Determine the overall sentiment based on the compound score
+        if compound_score >= 0.05:
+            sentiment = 'Positive'
+        elif compound_score <= -0.05:
+            sentiment = 'Negative'
+        else:
+            sentiment = 'Neutral'
+
+        # Store the results in a dictionary
+        result = {
+            'Cleaned Sentence': sentence,
+            'Sentiment': sentiment,
+            'Compound Score': compound_score
+        }
+
+        # Append the result to the list of results
+        results.append(result)
+
+    return results
+
+# Test the function with the provided inputs
+input1 = "Great product, love it! | Terrible experience, never again | It was okay I guess"
+print(batch_sentiment(input1))
+
+```
+
+**Function Explanation**
+
+The `batch_sentiment` function is a batch sentiment analysis tool that splits an input string into individual sentences, cleans each sentence by removing leading/trailing whitespace and converting to lowercase, then uses NLTK's VADER sentiment intensity analyzer to analyze the sentiment of each cleaned sentence.
+
+Here are some key points about this function:
+
+-   It takes an `input_string` as a parameter, which is split into individual sentences using the dot (`.`) character.
+-   Each sentence is then cleaned by removing leading/trailing whitespace and converting it to lowercase using list comprehension. This step ensures that the sentiment analysis tool can handle sentences with varying levels of punctuation or capitalization.
+-   The `SentimentIntensityAnalyzer` object from NLTK's VADER library is used to analyze the sentiment of each cleaned sentence. The `polarity_scores` function returns a dictionary containing various sentiment scores, including the compound score.
+-   Based on the compound score, the overall sentiment of each sentence is determined and stored in the results dictionary.
+
+**Function Usage**
+
+To use this function, you need to provide an input string that contains one or more sentences. The `batch_sentiment` function will return a list of dictionaries containing the cleaned sentence, its corresponding sentiment scores, and the overall sentiment determination.
+
+Here's how to call the function with a test input:
+
+```python
+input_string = "Great product, love it! | Terrible experience, never again | It was okay I guess"
+print(batch_sentiment(input_string))
+```
+
+This will output a list of dictionaries containing the sentiment analysis results for each sentence in the input string.
+
+**Suggestions**
+
+To further improve this function, consider adding additional error handling to account for cases where the input string does not contain any sentences or is otherwise malformed. Additionally, you could modify the function to accept multiple input strings and return a combined list of sentiment analysis results.
+------------------------------------------------------------
+Variables:
+  @items = Great product, love it! | Terrible experience, never again | It was okay I guess
+  @domain = product_reviews
+  @item_list = def split_and_clean(input_string):
+    # Split the input string into individual sentences
+    sentences = input_string.split('.')
+
+    # Clean each sentence by removing leading/trailing whitespace and
+  @sentiment_results = ### Batch Sentiment Analysis Function
+
+The following function will split the input string into individual sentences, clean each sentence, and then use a sentiment analysis model to analyze the sentime
+  @stats_json = import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import pandas as pd
+import numpy as np
+import re
+
+def compute_sentiment_stats(input_string):
+    """
+    Compute sentiment stati
+  @extremes = import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import pandas as pd
+import numpy as np
+
+def find_extremes(input_string):
+    """
+    Find the extremes in a given input string.
+
+  @trend_summary = The provided code consists of three functions:
+
+1. `compute_sentiment_stats`: This function analyzes the sentiment of a given input string by splitting it into individual sentences, cleaning each sent
+  @report = The code you provided appears to be designed for sentiment analysis tasks. Here is an annotated version of the code with explanations:
+
+```python
+import nltk # Natural Language Toolkit library
+
+from n
+============================================================
+Log: /home/gongai/.spl/logs/sentiment-ollama-20260319-204850.log

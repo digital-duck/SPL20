@@ -53,14 +53,17 @@ Declare a winner (PRO or CON) and explain your reasoning in 2-3 paragraphs.
 $$;
 
 WORKFLOW debate_arena
-    INPUT: 
+    INPUT:
         @topic TEXT,
-        @max_rounds integer DEFAULT 3
+        @max_rounds INTEGER DEFAULT 3,
+        @log_dir TEXT DEFAULT 'cookbook/11_debate_arena/logs'
     OUTPUT: @verdict TEXT
 DO
     @round := 0
     @pro_history := ''
     @con_history := ''
+
+    LOGGING f'Debate started | topic: {@topic} | rounds: {@max_rounds}' LEVEL INFO
 
     -- Opening statements
     GENERATE pro_argument(@topic, 'opening statement') INTO @pro
@@ -69,22 +72,35 @@ DO
     @pro_history := @pro
     @con_history := @con
 
+    LOGGING 'Opening statements complete' LEVEL INFO
+    CALL write_file(f'{@log_dir}/opening_pro.md', @pro) INTO @_
+    CALL write_file(f'{@log_dir}/opening_con.md', @con) INTO @_
+
     -- Rebuttal rounds
     WHILE @round < @max_rounds DO
+        LOGGING f'Round {@round} | pro rebuttal ...' LEVEL DEBUG
         -- Pro rebuts Con's latest point
         GENERATE pro_argument(@topic, @con_history) INTO @pro_rebuttal
-        @pro_history := @pro_history + '\n---\n' + @pro_rebuttal
+        @pro_history := @pro_history || '\n---\n' || @pro_rebuttal
+        CALL write_file(f'{@log_dir}/round_{@round}_pro.md', @pro_rebuttal) INTO @_
 
+        LOGGING f'Round {@round} | con rebuttal ...' LEVEL DEBUG
         -- Con rebuts Pro's latest point
         GENERATE con_argument(@topic, @pro_history) INTO @con_rebuttal
-        @con_history := @con_history + '\n---\n' + @con_rebuttal
+        @con_history := @con_history || '\n---\n' || @con_rebuttal
+        CALL write_file(f'{@log_dir}/round_{@round}_con.md', @con_rebuttal) INTO @_
 
         @round := @round + 1
+        LOGGING f'Round {@round} complete' LEVEL INFO
     END
+
+    LOGGING 'All rounds done — judge deliberating ...' LEVEL INFO
 
     -- Judge evaluates both sides
     GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
 
+    LOGGING f'Verdict ready | rounds={@round}' LEVEL INFO
+    CALL write_file(f'{@log_dir}/verdict.md', @verdict) INTO @_
     COMMIT @verdict WITH status = 'complete', rounds = @round
 
 EXCEPTION

@@ -1,0 +1,17 @@
+============================================================
+Status: no_commit
+LLM Calls: 2
+Tokens: 467 in / 697 out
+Latency: 8640ms
+------------------------------------------------------------
+Variables:
+  @prompt = Explain how encryption works
+  @result = Encryption is the process of converting plaintext (readable data) into ciphertext (unreadable data) to protect it from unauthorized access. Here's a step-by-step explanation of how encryption works:
+
+
+  @score = To create a quality score for this text based on its clarity, coherence, and overall readability, I'll assess it as follows:
+
+Clarity: 8/10
+The text provides a clear explanation of encryption concepts
+============================================================
+Log: /home/gongai/.spl/logs/safe_generation-ollama-20260319-022734.log

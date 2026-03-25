@@ -1,0 +1,552 @@
+
+```bash
+spl run ./32_socratic_tutor/socratic_tutor.spl --adapter ollama -m gemma3 topic=Why does the sky appear blue? student_level=middle school
+```
+
+```spl
+-- Recipe 32: Socratic Tutor
+-- Ask guiding questions rather than giving answers directly.
+-- Demonstrates persona-constrained generation + iterative dialogue simulation,
+-- with deterministic tools for topic loading, level guidance, and dialogue formatting.
+--
+-- Usage (topic from catalog):
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic_id=sky_blue subject=science student_level="middle school"
+--
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic_id=sqrt2_irrational subject=math student_level=undergraduate
+--
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic_id=recursion subject=programming student_level="high school"
+--
+-- Usage (freeform topic, no catalog):
+--   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/32_socratic_tutor/tools.py \
+--       topic="Why is the speed of light constant?" student_level=undergraduate
+--
+-- List available topics:
+--   spl run ... topic_id=list subject=science    (or math, programming)
+
+-- ── Socratic persona (zero LLM cost — injected as system context) ───────────
+
+CREATE FUNCTION socratic_persona(student_level TEXT DEFAULT 'high school')
+RETURNS TEXT AS $$
+You are a Socratic tutor. Your role is to guide the student to discover answers themselves.
+
+Core rules — NEVER break these:
+1. Ask exactly ONE clear question at a time. Never give two questions in one turn.
+2. Never state facts or give direct answers. All knowledge must come from the student.
+3. Build on what the student just said — start from their words, not a script.
+4. If a student is stuck, give a hint as another question: "What if you considered...?"
+5. Celebrate partial insights: "Good instinct! Now what does that suggest about...?"
+6. Never say "The answer is...", "You should know that...", or "Actually, it's...".
+
+Student level: {student_level}
+Adjust vocabulary, abstraction level, and question complexity accordingly.
+$$;
+
+-- ── Main workflow ───────────────────────────────────────────────────────────
+
+WORKFLOW socratic_tutor
+    INPUT:  @topic         TEXT DEFAULT '',
+            @topic_id      TEXT DEFAULT '',
+            @subject       TEXT DEFAULT '',
+            @student_level TEXT DEFAULT 'high school',
+            @max_questions INT  DEFAULT 5
+    OUTPUT: @dialogue TEXT
+DO
+    -- Step 1: Load structured topic context from catalog (deterministic — no LLM)
+    CALL load_topic(@topic_id, @subject) INTO @topic_context
+
+    -- Step 2: Get level-appropriate vocabulary and scaffolding guidance (deterministic — no LLM)
+    CALL get_level_guidance(@student_level) INTO @level_guide
+
+    -- Step 3: Opening Socratic question — grounded by topic context and level guide (LLM)
+    GENERATE opening_question(
+        @topic,
+        @topic_context,
+        socratic_persona(@student_level),
+        @level_guide
+    ) INTO @question_1
+
+    -- Step 4: Simulate a typical student response at the given level (LLM)
+    GENERATE simulate_student_response(
+        @question_1,
+        @topic,
+        @topic_context,
+        @student_level
+    ) INTO @student_1
+
+    -- Step 5: Follow-up question that builds on the student's actual response (LLM)
+    GENERATE followup_question(
+        @question_1,
+        @student_1,
+        @topic,
+        @topic_context,
+        socratic_persona(@student_level)
+    ) INTO @question_2
+
+    -- Step 6: Student works further toward understanding (LLM)
+    GENERATE simulate_student_response(
+        @question_2,
+        @topic,
+        @topic_context,
+        @student_level
+    ) INTO @student_2
+
+    -- Step 7: Assess whether understanding is emerging (LLM — returns 0-10 score)
+    GENERATE assess_understanding(
+        @student_1,
+        @student_2,
+        @topic,
+        @topic_context
+    ) INTO @understanding_score
+
+    -- Step 8: Adapt the third question based on understanding score
+    EVALUATE @understanding_score
+        WHEN > 7 THEN
+            -- Student is getting it — consolidation question to cement understanding
+            GENERATE consolidation_question(
+                @topic,
+                @topic_context,
+                @student_2,
+                socratic_persona(@student_level)
+            ) INTO @question_3
+        OTHERWISE
+            -- Student needs more scaffolding — hint question to unblock
+            GENERATE hint_question(
+                @question_2,
+                @topic,
+                @topic_context,
+                socratic_persona(@student_level),
+                @level_guide
+            ) INTO @question_3
+    END
+
+    -- Step 9: Final student response to the third question (LLM)
+    GENERATE simulate_student_response(
+        @question_3,
+        @topic,
+        @topic_context,
+        @student_level
+    ) INTO @student_3
+
+    -- Step 10: Format the complete dialogue (deterministic — no LLM)
+    CALL compile_dialogue(
+        @question_1, @student_1,
+        @question_2, @student_2,
+        @question_3, @student_3,
+        @topic,
+        @understanding_score
+    ) INTO @dialogue
+
+    COMMIT @dialogue WITH status = 'complete', understanding_score = @understanding_score
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 10
+Tokens: 9869 in / 4002 out
+Latency: 61788ms
+------------------------------------------------------------
+```output
+def rayleigh_scattering(wavelength, particle_density):
+    # Inverse square law for scattering cross-section (simplified)
+    scattering_cross_section = 4 * np.pi / (3 * np.pi * wavelength**2)
+
+    # Calculate the probability of scattering per unit path length
+    scattering_probability = particle_density * scattering_cross_section
+
+    return scattered_wavelength * scattering_probability
+
+# Parameters for simulation:
+particle_density = 1e6 / 1000 # particles per cubic meter
+wavelengths_to_scatter = [400, 500, 600] # wavelengths in nanometers
+
+for wavelength in wavelengths_to_scatter:
+    blue_scattered_wavelength = rayleigh_scattering(wavelength, particle_density)
+    
+    print(f"For a light wavelength of {wavelength} nm, the probability of scattering is approximately {blue_scattered_wavelength:.2f}")
+```
+------------------------------------------------------------
+Variables:
+  @topic = Why does the sky appear blue?
+  @student_level = middle school
+  @max_questions = 5
+  @topic_context = I'm not able to execute procedures or access external systems. However, I can provide information on what the `load_topic` procedure might do.
+
+The `load_topic` procedure is likely used in a message broker system such as RabbitMQ. It's purpose is to load predefined topics into the system for later use.
+
+When you run the `load_topic` procedure without any arguments, it will typically:
+
+1. Check if the topic already exists in the system.
+2. If the topic doesn't exist, create it and add it to the list of available topics.
+3. Return a success message or an error code depending on the outcome.
+
+Here's a hypothetical example of how this procedure might be implemented in SQL (using RabbitMQ as an example):
+
+```sql
+CREATE PROCEDURE load_topic(
+    @topic_name VARCHAR(255),
+    @description VARCHAR(255) = NULL,
+    @exchange_name VARCHAR(255) = NULL,
+    @queue_name VARCHAR(255) = NULL
+)
+AS
+BEGIN
+    -- Check if topic already exists
+    IF NOT EXISTS (SELECT 1 FROM topics WHERE name = @topic_name)
+    BEGIN
+        -- Create new topic
+        INSERT INTO topics (name, description, exchange_name, queue_name)
+        VALUES (@topic_name, @description, @exchange_name, @queue_name);
+
+        -- Return success message
+        RETURN 'Topic created successfully';
+    END
+
+    ELSE
+    BEGIN
+        -- Topic already exists
+        RETURN 'Topic already exists';
+    END
+END
+```
+
+Please note that the actual implementation of `load_topic` procedure in RabbitMQ may vary.
+  @level_guide = I don't have the ability to execute code or access specific databases. However, I can provide you with a general outline of what a stored procedure like `get_level_guidance` might look like.
+
+Assuming that this stored procedure is part of an educational management system for middle schools, it might be used to retrieve guidance or recommendations for students at a particular grade level (e.g., 6th-8th grade). Here's an example implementation:
+
+```sql
+CREATE PROCEDURE get_level_guidance(@middle_school VARCHAR(50))
+AS
+BEGIN
+    SELECT 
+        [Grade Level],
+        [Subject(s)], 
+        [Recommendation]
+    FROM 
+        [Guidance Table] 
+    WHERE 
+        [Middle School] = @middle_school;
+END
+```
+
+In this example, the stored procedure takes a single parameter `@middle_school` of type `VARCHAR(50)`, which is used to filter results based on the middle school name.
+
+If you want to include additional parameters (e.g., for subject or grade level ranges), your stored procedure might look something like this:
+
+```sql
+CREATE PROCEDURE get_level_guidance(
+    @middle_school VARCHAR(50),
+    @subject VARCHAR(20) = NULL,
+    @grade_range INT = NULL)
+AS
+BEGIN
+    SELECT 
+        [Grade Level],
+        [Subject(s)], 
+        [Recommendation]
+    FROM 
+        [Guidance Table] 
+    WHERE 
+        [Middle School] = @middle_school;
+
+    IF @subject IS NOT NULL AND @grade_range IS NOT NULL
+    BEGIN
+        SELECT * FROM GuidanceTable
+            WHERE [Middle School] = @middle_school
+                AND [Subject(s)] = @subject
+                AND GradeLevel BETWEEN @grade_range[START] AND @grade_range[END];
+    END;
+END
+```
+
+Please note that the actual implementation may vary based on your specific requirements.
+  @question_1 = The sky appears blue because of a phenomenon called Rayleigh scattering, named after the British physicist Lord Rayleigh. He first described it in the late 19th century.
+
+When sunlight enters Earth's atmosphere, it encounters tiny molecules of gases such as nitrogen and oxygen. These molecules scatter the light in all directions, but they scatter shorter (blue) wavelengths more than longer (red) wavelengths. This is known as Rayleigh scattering.
+
+As a result, the blue light is distributed throughout the sky, giving it its characteristic blue color during the daytime. The color of the sky can also change depending on atmospheric conditions, such as pollution and dust, which can scatter light in different ways and alter the apparent color.
+
+It's worth noting that the color of the sky can appear more vibrant or intense when viewed at sunrise or sunset due to the presence of more scattering particles in the atmosphere.
+  @student_1 = Here's a simple simulation of how a student might respond to these inputs:
+
+**Input 1:**
+The sky appears blue because of a phenomenon called Rayleigh scattering, named after the British physicist Lord Rayleigh. He first described it in the late 19th century.
+
+Student Response:
+"That makes sense! I never thought about why the sky was blue before. It's cool that there's a name for it. Does this mean that the Earth's atmosphere is made up of tiny little particles that scatter light?"
+
+**Input 2:**
+Why does the sky appear blue?
+
+Student Response:
+"I'm not really sure... I just know it looks blue! But my teacher said something about it being because of Rayleigh scattering, which is like when tiny molecules in the air scatter shorter wavelengths of light more than longer ones. Does that sound right?"
+  @question_2 = **Follow-up Question**
+
+Given a basic understanding of Rayleigh scattering, explain how the color of the sky can appear more vibrant or intense during sunrise and sunset. Assume no prior knowledge of atmospheric conditions beyond what is mentioned in Input 2.
+
+Also, please provide an example of how one might simulate this phenomenon using code (e.g., Python).
+
+**Explanation**
+
+The color of the sky appears blue when sunlight enters Earth's atmosphere and encounters tiny molecules of gases such as nitrogen and oxygen. These molecules scatter shorter wavelengths of light (like blue) more than longer wavelengths (like red). During sunrise and sunset, the light travels through a greater thickness of the atmosphere.
+
+This means that more particles in the atmosphere are available to scatter shorter wavelengths of light, making the blue color appear more intense or vibrant during these times. This is because the angle at which the sunlight enters the Earth's atmosphere is lower, allowing it to pass through more of the scattering particles and interact with them more frequently.
+
+**Simulation Example**
+
+Here is a simplified Python simulation illustrating how Rayleigh scattering affects light:
+
+```python
+import numpy as np
+
+def rayleigh_scattering(wavelength, particle_density):
+    # Inverse square law for scattering cross-section (simplified)
+    scattering_cross_section = 4 * np.pi / (3 * np.pi * wavelength**2)
+
+    # Calculate the probability of scattering per unit path length
+    scattering_probability = particle_density * scattering_cross_section
+
+    # For simplicity, assume all scattered light is blue (shorter wavelength)
+    scattered_wavelength = wavelength
+
+    return scattered_wavelength * scattering_probability
+
+# Parameters for simulation:
+particle_density = 1e6 / 1000 # particles per cubic meter
+wavelengths_to_scatter = [400, 500, 600] # wavelengths in nanometers
+
+for wavelength in wavelengths_to_scatter:
+    blue_scattered_wavelength = rayleigh_scattering(wavelength, particle_density)
+    
+    print(f"For a light wavelength of {wavelength} nm, the probability of scattering is approximately {blue_scattered_wavelength:.2f}")
+```
+
+This code simulates how Rayleigh scattering affects different wavelengths of light when passing through particles in the atmosphere. It's an oversimplification but captures the fundamental principle behind why the sky appears blue during the daytime.
+  @student_2 = **Simulation Response**
+
+Given a basic understanding of Rayleigh scattering, the color of the sky can appear more vibrant or intense during sunrise and sunset due to the increased thickness of the atmosphere. This is because more particles are available to scatter shorter wavelengths of light, such as blue.
+
+To simulate this phenomenon using code (e.g., Python), we can use a simple model that takes into account the scattering probability based on wavelength and particle density.
+
+Here's an updated simulation example:
+```python
+import numpy as np
+
+def rayleigh_scattering(wavelength, particle_density):
+    # Inverse square law for scattering cross-section (simplified)
+    scattering_cross_section = 4 * np.pi / (3 * np.pi * wavelength**2)
+
+    # Calculate the probability of scattering per unit path length
+    scattering_probability = particle_density * scattering_cross_section
+
+    return scattering_probability
+
+def simulate_sunrise_sunset(wavelengths, particle_density):
+    scattered_probabilities = []
+
+    for wavelength in wavelengths:
+        blue_scattered_wavelength = rayleigh_scattering(wavelength, particle_density)
+        
+        # Simulate the effect of increased atmospheric thickness
+        # during sunrise and sunset (lower angle of incidence)
+        scattering_probability = blue_scattered_wavelength * 1.5
+
+        scattered_probabilities.append(scattering_probability)
+
+    return scattered_probabilities
+
+# Parameters for simulation:
+particle_density = 1e6 / 1000 # particles per cubic meter
+wavelengths_to_scatter = [400, 500, 600] # wavelengths in nanometers
+
+scattered_probabilities = simulate_sunrise_sunset(wavelengths_to_scatter, particle_density)
+
+for wavelength, probability in zip(wavelengths_to_scatter, scattered_probabilities):
+    print(f"For a light wavelength of {wavelength} nm, the probability of scattering is approximately {probability:.2f}")
+```
+This updated simulation takes into account the increased scattering probability due to the lower angle of incidence during sunrise and sunset. It also assumes that all scattered light is blue (shorter wavelength) for simplicity.
+
+**Explanation**
+
+The code defines two functions: `rayleigh_scattering` and `simulate_sunrise_sunset`. The first function calculates the scattering probability based on the wavelength and particle density, using a simplified inverse square law for the scattering cross-section. The second function simulates the effect of increased atmospheric thickness during sunrise and sunset by multiplying the scattering probability by 1.5.
+
+The simulation example uses two wavelengths (400 nm and 600 nm) to demonstrate how different wavelengths are affected by the increased scattering probability. The output shows the approximate probability of scattering for each wavelength, taking into account the increased atmospheric thickness during sunrise and sunset.
+
+**Additional Notes**
+
+* This simulation is a simplified model that does not take into account other factors affecting the color of the sky, such as dust, water vapor, or pollutants.
+* In reality, the color of the sky during sunrise and sunset can be more complex, with multiple wavelengths contributing to the overall color.
+* This simulation can be extended to include additional parameters, such as the angle of incidence or atmospheric conditions, to better model the behavior of light in the atmosphere.
+  @understanding_score = This task involves assessing a student's understanding of Rayleigh scattering and its relation to the color of the sky. The student response provided appears to demonstrate some understanding, but there are areas where improvement is needed.
+
+The student correctly identifies that the Earth's atmosphere is made up of tiny particles that scatter light. However, they do not fully understand the concept of Rayleigh scattering or how it affects the color of the sky during sunrise and sunset.
+
+Input 2 provides a clearer explanation of Rayleigh scattering, but the student still seems to struggle with applying this knowledge to explain why the sky appears blue during these times. They rely on their teacher's previous statement rather than providing a clear understanding of the phenomenon themselves.
+
+To improve their understanding, the student would benefit from:
+
+1. A deeper exploration of the physics behind Rayleigh scattering and its effects on light.
+2. More practice in applying this knowledge to explain complex phenomena like sunrise and sunset colors.
+
+The code provided in Input 3 is unrelated to the topic of assessing a student's understanding of Rayleigh scattering. However, it does demonstrate some programming skills, such as using Python libraries (numpy) and defining functions to simulate a process.
+
+Input 4 provides information on the `load_topic` procedure in RabbitMQ but is also unrelated to assessing a student's understanding of Rayleigh scattering.
+  @question_3 = **Vibrant Skies: Understanding Rayleigh Scattering**
+
+During sunrise and sunset, the sky can appear more vibrant or intense due to a phenomenon called Rayleigh scattering. Here's how it works:
+
+1.  **Shorter Wavelengths Scatter More**: When sunlight enters Earth's atmosphere, it encounters tiny molecules of gases such as nitrogen and oxygen. These molecules scatter shorter wavelengths of light (like blue) more than longer wavelengths (like red).
+2.  **Angle of Incidence Matters**: During sunrise and sunset, the sun's rays pass through a greater thickness of the atmosphere at a lower angle. This means that more particles in the atmosphere are available to scatter shorter wavelengths of light.
+3.  **Increased Scattering Leads to More Intense Colors**: As a result, the blue color appears more intense or vibrant during these times because it is scattered more frequently by the atmospheric particles.
+
+**Simulating Rayleigh Scattering with Python**
+
+Here's an example code snippet that simulates how Rayleigh scattering affects light:
+
+```python
+import numpy as np
+
+def rayleigh_scattering(wavelength, particle_density):
+    # Inverse square law for scattering cross-section (simplified)
+    scattering_cross_section = 4 * np.pi / (3 * np.pi * wavelength**2)
+
+    # Calculate the probability of scattering per unit path length
+    scattering_probability = particle_density * scattering_cross_section
+
+    # For simplicity, assume all scattered light is blue (shorter wavelength)
+    scattered_wavelength = wavelength
+
+    return scattered_wavelength * scattering_probability
+
+# Parameters for simulation:
+particle_density = 1e6 / 1000 # particles per cubic meter
+wavelengths_to_scatter = [400, 500, 600] # wavelengths in nanometers
+
+for wavelength in wavelengths_to_scatter:
+    blue_scattered_wavelength = rayleigh_scattering(wavelength, particle_density)
+    
+    print(f"For a light wavelength of {wavelength} nm, the probability of scattering is approximately {blue_scattered_wavelength:.2f}")
+```
+
+This code simulates how Rayleigh scattering affects different wavelengths of light when passing through particles in the atmosphere. It's an oversimplification but captures the fundamental principle behind why the sky appears blue during the daytime.
+
+**Load Topic Procedure (Hypothetical SQL Implementation)**
+
+Here's a hypothetical example of how the `load_topic` procedure might be implemented in SQL using RabbitMQ as an example:
+
+```sql
+CREATE PROCEDURE load_topic(
+    @topic_name VARCHAR(255),
+    @description VARCHAR(255) = NULL,
+    @exchange_name VARCHAR(255) = NULL,
+    @queue_name VARCHAR(255) = NULL
+)
+AS
+BEGIN
+    -- Check if topic already exists
+    IF NOT EXISTS (SELECT 1 FROM topics WHERE name = @topic_name)
+    BEGIN
+        -- Create new topic
+        INSERT INTO topics (name, description, exchange_name, queue_name)
+        VALUES (@topic_name, @description, @exchange_name, @queue_name);
+
+        -- Return success message
+        RETURN 'Topic created successfully';
+    END
+
+    ELSE
+    BEGIN
+        -- Topic already exists
+        RETURN 'Topic already exists';
+    END
+END
+```
+
+**Stored Procedure Example (Educational Management System)**
+
+Assuming that this stored procedure is part of an educational management system for middle schools, it might be used to retrieve guidance or recommendations for students at a particular grade level:
+
+```sql
+CREATE PROCEDURE get_level_guidance(
+    @middle_school VARCHAR(50),
+    @subject VARCHAR(20) = NULL,
+    @grade_range INT = NULL)
+AS
+BEGIN
+    SELECT 
+        [Grade Level],
+        [Subject(s)], 
+        [Recommendation]
+    FROM 
+        [Guidance Table] 
+    WHERE 
+        [Middle School] = @middle_school;
+
+    IF @subject IS NOT NULL AND @grade_range IS NOT NULL
+    BEGIN
+        SELECT * FROM GuidanceTable
+            WHERE [Middle School] = @middle_school
+                AND [Subject(s)] = @subject
+                AND GradeLevel BETWEEN @grade_range[START] AND @grade_range[END];
+    END;
+END
+```
+
+This stored procedure takes a single parameter `@middle_school` of type `VARCHAR(50)`, which is used to filter results based on the middle school name. It also includes additional parameters for subject and grade range ranges.
+  @student_3 = To simulate a student response to the topic "Vibrant Skies: Understanding Rayleigh Scattering," you can ask open-ended questions or provide multiple-choice questions related to the topic. Here's an example of how you could design such a simulation:
+
+**Question 1:** What is the primary reason why shorter wavelengths of light are scattered more than longer wavelengths in the atmosphere?
+
+A) Due to the smaller size of the molecules
+B) Because the molecules have a higher density
+C) As a result of the inverse square law for scattering cross-section
+D) The wavelength does not affect the scattering process
+
+**Question 2:** Which phenomenon is responsible for making the sky appear more vibrant or intense during sunrise and sunset?
+
+A) Rayleigh scattering
+B) Mie scattering
+C) Compton scattering
+D) Summation of all scattering processes
+
+**Question 3:** What would happen if we were to remove particles from the atmosphere, which scatter shorter wavelengths of light?
+
+A) The sky will appear more intense during sunrise and sunset
+B) The sky will appear less vibrant or intense during sunrise and sunset
+C) There will be no change in the color of the sky
+D) It is not possible to simulate this scenario
+
+**Question 4:** How does the angle of incidence affect Rayleigh scattering?
+
+A) A smaller angle results in more frequent scattering
+B) A larger angle results in more frequent scattering
+C) The angle of incidence has no effect on Rayleigh scattering
+D) The scattered light is affected by the angle of incidence
+
+**Question 5:** What would be the outcome if we were to simulate a scenario where all scattered light is red (longer wavelength)?
+
+A) The sky will appear more vibrant or intense during sunrise and sunset
+B) The sky will appear less vibrant or intense during sunrise and sunset
+C) There will be no change in the color of the sky
+D) It is not possible to simulate this scenario
+
+**Question 6:** What is the simplified assumption made in the provided Python code that simulates Rayleigh scattering?
+
+A) All scattered light is blue (shorter wavelength)
+B) The scattering cross-section is directly proportional to the particle density
+C) The angle of incidence has no effect on Rayleigh scattering
+D) The wavelength does not affect the scattering process
+============================================================
+Log: /home/gongai/.spl/logs/socratic_tutor-ollama-20260323-215831.log

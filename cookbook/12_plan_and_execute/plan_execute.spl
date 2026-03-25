@@ -52,14 +52,16 @@ Describe in 2-3 sentences what this step produces and list the filenames it crea
 Be brief — no code yet, just the design decision and file list.
 $$;
 
--- Validate that a step produced meaningful output
+-- Validate that a step produced meaningful output (design notes, not code)
 CREATE FUNCTION validate_step(current_step TEXT, step_result TEXT) RETURNS TEXT AS $$
-Did the following implementation successfully address the step?
+Does the following design note meaningfully address the step?
+Note: this is a planning phase — expect a 2-3 sentence description and a file list, NOT code.
 
 Step: {current_step}
-Implementation: {step_result}
+Design note: {step_result}
 
 Reply with exactly one word: "passed" or "failed".
+Only reply "failed" if the design note is empty, completely off-topic, or missing a file list.
 $$;
 
 -- Re-plan after a step failure
@@ -150,52 +152,81 @@ WORKFLOW plan_and_execute
     INPUT:
         @task TEXT DEFAULT 'Build a REST API for a todo app',
         @output_dir TEXT DEFAULT '',
-        @max_steps INTEGER DEFAULT 5
+        @max_steps INTEGER DEFAULT 5,
+        @log_dir TEXT DEFAULT 'cookbook/12_plan_and_execute/logs'
     OUTPUT: @final_report TEXT
 DO
     @step_index := 0
     @results := ''
+    @replan_count := 0
+    @max_replans := 3
+
+    LOGGING f'Plan-and-Execute | task: {@task}' LEVEL INFO
 
     -- Phase 1: Plan
     GENERATE plan(@task) INTO @plan
+    LOGGING f'Plan ready | steps to execute (max={@max_steps})' LEVEL INFO
+    CALL write_file(f'{@log_dir}/plan.md', @plan) INTO @_
 
     -- Phase 2: Count steps (capped at max_steps)
     GENERATE count_steps(@plan, @max_steps) INTO @step_count
+    LOGGING f'Step count: {@step_count}' LEVEL DEBUG
 
     -- Phase 3: Execute each step (brief design notes only — no code)
     WHILE @step_index < @step_count DO
+        LOGGING f'Executing step {@step_index}/{@step_count} ...' LEVEL INFO
         GENERATE extract_step(@plan, @step_index) INTO @current_step
         GENERATE execute_step(@current_step, @results) INTO @step_result
         GENERATE validate_step(@current_step, @step_result) INTO @validation
 
         EVALUATE @validation
             WHEN 'failed' THEN
-                GENERATE replan(@task, @plan, @step_index, @step_result) INTO @plan
-                GENERATE count_steps(@plan, @max_steps) INTO @step_count
-                @step_index := 0
-                @results := ''
-            OTHERWISE
-                @results := @results + '\n## Step ' + @step_index + '\n' + @step_result
+                @replan_count := @replan_count + 1
+                LOGGING f'Step {@step_index} failed — replanning ({@replan_count}/{@max_replans})' LEVEL WARN
+                EVALUATE @replan_count
+                    WHEN >= @max_replans THEN
+                        LOGGING f'Max replans reached — accepting step as-is' LEVEL WARN
+                        @results := @results || '\n## Step ' || @step_index || '\n' || @step_result
+                        CALL write_file(f'{@log_dir}/step_{@step_index}.md', @step_result) INTO @_
+                        @step_index := @step_index + 1
+                    ELSE
+                        GENERATE replan(@task, @plan, @step_index, @step_result) INTO @plan
+                        GENERATE count_steps(@plan, @max_steps) INTO @step_count
+                        @step_index := 0
+                        @results := ''
+                END
+            ELSE
+                @results := @results || '\n## Step ' || @step_index || '\n' || @step_result
+                CALL write_file(f'{@log_dir}/step_{@step_index}.md', @step_result) INTO @_
                 @step_index := @step_index + 1
+                LOGGING f'Step {@step_index} done' LEVEL DEBUG
         END
     END
+
+    LOGGING f'All {@step_count} steps complete — generating files' LEVEL INFO
 
     -- Phase 4: Outline all files to generate
     GENERATE outline_files(@task, @results) INTO @file_outline
     GENERATE count_files(@file_outline) INTO @file_count
+    LOGGING f'File outline ready | {@file_count} files to generate' LEVEL INFO
 
     -- Phase 5: Generate each file individually (one LLM call per file — avoids truncation)
     @file_index := 0
     WHILE @file_index < @file_count DO
+        LOGGING f'Generating file {@file_index}/{@file_count} ...' LEVEL INFO
         GENERATE extract_file(@file_outline, @file_index) INTO @current_file
         GENERATE generate_file(@task, @results, @current_file) INTO @file_code
         CALL write_code_files(@file_code, @output_dir) INTO @file_written
+        LOGGING f'Written: {@file_written}' LEVEL DEBUG
         @file_index := @file_index + 1
     END
+
+    LOGGING f'All {@file_count} files generated' LEVEL INFO
 
     -- Phase 6: Summary report
     GENERATE summarize(@task, @results, @file_outline) INTO @final_report
 
+    CALL write_file(f'{@log_dir}/final_report.md', @final_report) INTO @_
     COMMIT @final_report WITH status = 'complete', steps_executed = @step_index, files_generated = @file_count
 
 EXCEPTION

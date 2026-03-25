@@ -1,0 +1,116 @@
+
+```bash
+spl2 run ./21_multi_model_pipeline/multi_model.spl --adapter ollama -m gemma3 topic=climate change
+```
+
+```sql
+-- Recipe 21: Multi-Model Pipeline
+-- Showcases GENERATE ... USING MODEL per-step model selection
+-- and semantic WHILE loop with variable context.
+--
+-- Each step can target a different model — the right model for each task.
+-- Usage:
+--   spl2 run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
+
+CREATE FUNCTION research(topic TEXT) RETURNS TEXT AS $$
+You are a research specialist.
+Provide key facts, statistics, and recent developments about: {topic}
+Focus on factual accuracy. Be thorough but concise.
+$$;
+
+CREATE FUNCTION analyze(facts TEXT) RETURNS TEXT AS $$
+You are a data analyst.
+Analyze the following research and identify the 3 most significant insights:
+
+{facts}
+
+For each insight, explain why it matters and rate its significance (1-10).
+$$;
+
+CREATE FUNCTION write_summary(analysis TEXT) RETURNS TEXT AS $$
+You are a professional writer.
+Write a clear, engaging 2-paragraph summary based on this analysis:
+
+{analysis}
+
+The first paragraph should present the key findings.
+The second paragraph should discuss implications and outlook.
+$$;
+
+CREATE FUNCTION quality_check(text TEXT) RETURNS TEXT AS $$
+You are a quality reviewer.
+Rate the following text on a scale of 0.0 to 1.0 for:
+- Clarity
+- Accuracy
+- Completeness
+
+Return ONLY a single number (the average score).
+
+Text: {text}
+$$;
+
+WORKFLOW multi_model_pipeline
+  INPUT: @topic TEXT
+  OUTPUT: @final TEXT
+DO
+  -- Step 1: Research with a fast model (good for factual retrieval)
+  GENERATE research(@topic) USING MODEL 'gemma3' INTO @facts;
+
+  -- Step 2: Analysis with a reasoning model
+  GENERATE analyze(@facts) USING MODEL 'gemma3' INTO @analysis;
+
+  -- Step 3: Writing with a creative model
+  GENERATE write_summary(@analysis) USING MODEL 'gemma3' INTO @draft;
+
+  -- Step 4: Quality loop — refine until score > 0.7 (max 3 iterations)
+  @iteration := 0;
+  @quality := 0;
+
+  WHILE @iteration < 3 DO
+    GENERATE quality_check(@draft) INTO @quality;
+
+    EVALUATE @quality
+      WHEN > 0.7 THEN
+        COMMIT @draft WITH status = 'high_quality', score = @quality
+      OTHERWISE
+        GENERATE write_summary(@analysis) INTO @draft
+        @iteration := @iteration + 1
+    END
+  END
+
+  -- Fallback: commit whatever we have
+  COMMIT @draft WITH status = 'max_iterations', score = @quality
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    COMMIT @draft WITH status = 'partial'
+  WHEN ModelOverloaded THEN
+    COMMIT @draft WITH status = 'model_overloaded'
+END;
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 3047 in / 2113 out
+Latency: 90712ms
+------------------------------------------------------------
+```output
+Here is a 2-paragraph summary based on the analysis:
+
+Climate researchers have identified three significant insights that underscore the gravity of the climate crisis. Firstly, human influence is deemed the dominant driver of warming since the mid-20th century, with atmospheric CO2 levels reaching unprecedented heights of over 420 ppm, exceeding levels unseen in at least 800,000 years. This foundational insight establishes causality and urgency, making it a crucial cornerstone for effective action. The record-breaking CO2 levels demonstrate the scale of our impact on the planet's atmosphere.
+
+The research also highlights two critical secondary insights that amplify the problem. Rapid Arctic amplification is causing unprecedented ice melt, while permafrost thaw is releasing significant amounts of methane and CO2, accelerating global warming through a self-reinforcing cycle. Furthermore, extreme weather events are becoming more frequent and intense, with tangible consequences for human populations and ecosystems. The latter insight demonstrates the real-world impacts of climate change, making it a pressing concern that demands attention and action. As these findings underscore, addressing climate change requires a comprehensive approach that incorporates a broader range of scientific data and projections to mitigate its far-reaching effects.
+```
+------------------------------------------------------------
+Variables:
+  @topic = climate change
+  @facts = Okay, here’s a comprehensive overview of climate change, focusing on factual accuracy, statistics, and recent developments. This is a constantly evolving field, so I’ll aim for the most up-to-date inf
+  @analysis = Okay, here’s an analysis of the provided climate change research, identifying the 3 most significant insights, explaining their importance, and rating their significance on a scale of 1-10 (1 being le
+  @draft = Here is a 2-paragraph summary based on the analysis:
+
+Climate researchers have identified three significant insights that underscore the gravity of the climate crisis. Firstly, human influence is deem
+  @iteration = 1.0
+  @quality = 0.9
+============================================================
+Log: /home/gongai/.spl/logs/multi_model-ollama-20260320-055044.log

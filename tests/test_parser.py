@@ -410,14 +410,14 @@ class TestEvaluate:
                   COMMIT @action
                 WHEN 'calculate' THEN
                   COMMIT @action
-                OTHERWISE
+                ELSE
                   COMMIT @action WITH status = 'unknown'
               END
             END
         """)
         eval_stmt = ast.statements[0].body[0]
         assert len(eval_stmt.when_clauses) == 2
-        assert len(eval_stmt.otherwise_statements) == 1
+        assert len(eval_stmt.else_statements) == 1
 
 
 class TestWhile:
@@ -681,7 +681,7 @@ class TestIntegrationPatterns:
             WHEN 'calculate' THEN
               CALL calculator(@task) INTO @answer
               COMMIT @answer
-            OTHERWISE
+            ELSE
               GENERATE general_response(@task) INTO @answer
               COMMIT @answer
           END
@@ -692,7 +692,7 @@ class TestIntegrationPatterns:
         eval_stmt = stmt.body[1]
         assert isinstance(eval_stmt, EvaluateStatement)
         assert len(eval_stmt.when_clauses) == 2
-        assert len(eval_stmt.otherwise_statements) == 2
+        assert len(eval_stmt.else_statements) == 2
 
     def test_exception_handling_pattern(self):
         """Test comprehensive exception handling."""

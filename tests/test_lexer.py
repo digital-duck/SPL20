@@ -156,10 +156,10 @@ class TestLexerSPL2New:
         types = [t.type for t in tokens[:-1]]
         assert types == [TokenType.WHILE, TokenType.DO, TokenType.END]
 
-    def test_when_then_otherwise(self):
-        tokens = Lexer("WHEN THEN OTHERWISE").tokenize()
+    def test_when_then_else(self):
+        tokens = Lexer("WHEN THEN ELSE").tokenize()
         types = [t.type for t in tokens[:-1]]
-        assert types == [TokenType.WHEN, TokenType.THEN, TokenType.OTHERWISE]
+        assert types == [TokenType.WHEN, TokenType.THEN, TokenType.ELSE]
 
     def test_exception_keywords(self):
         tokens = Lexer("EXCEPTION WHEN HallucinationDetected THEN").tokenize()

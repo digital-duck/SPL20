@@ -1,0 +1,1 @@
+The task is to summarize_chunk, but it appears that you haven't provided a chunk of text for me to summarize. Please provide the input text, and I'll be happy to help you with summarizing it.

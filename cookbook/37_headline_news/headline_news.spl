@@ -109,13 +109,15 @@ $$;
 
 WORKFLOW headline_news
     INPUT:
-        @topic            TEXT,
-        @date             TEXT DEFAULT 'today',
-        @max_headlines    INTEGER DEFAULT 7,
-        @format           TEXT DEFAULT 'structured',
-        @perspective      TEXT DEFAULT 'balanced'
+        @topic         TEXT,
+        @date          TEXT    DEFAULT 'today',
+        @max_headlines INTEGER DEFAULT 7,
+        @format        TEXT    DEFAULT 'structured',
+        @perspective   TEXT    DEFAULT 'balanced'
     OUTPUT: @digest TEXT
 DO
+    LOGGING f'Headline news | topic={@topic} max={@max_headlines} perspective={@perspective}' LEVEL INFO
+
     -- Step 1: Generate top headlines for the topic
     GENERATE generate_headlines(
         @topic,
@@ -123,6 +125,7 @@ DO
         @date,
         perspective_guide(@perspective)
     ) INTO @headlines
+    LOGGING f'Headlines generated: {@max_headlines} items' LEVEL DEBUG
 
     -- Step 2: Expand each headline into a brief summary with key facts
     GENERATE expand_headlines(
@@ -130,6 +133,7 @@ DO
         @topic,
         perspective_guide(@perspective)
     ) INTO @expanded
+    LOGGING 'Headlines expanded' LEVEL DEBUG
 
     -- Step 3: Evaluate coverage — are major angles represented?
     GENERATE evaluate_coverage(
@@ -137,6 +141,7 @@ DO
         @topic,
         perspective_guide(@perspective)
     ) INTO @coverage_score
+    LOGGING f'Coverage score: {@coverage_score}' LEVEL INFO
 
     -- Step 4: Refine if coverage gaps detected
     EVALUATE @coverage_score
@@ -150,8 +155,9 @@ DO
             ) INTO @digest
             COMMIT @digest WITH status = 'complete', coverage = @coverage_score
 
-        OTHERWISE
+        ELSE
             -- Coverage gaps — add missing angles and reformat
+            LOGGING f'Coverage gaps detected ({@coverage_score}) — filling ...' LEVEL WARN
             GENERATE fill_coverage_gaps(
                 @expanded,
                 @topic,

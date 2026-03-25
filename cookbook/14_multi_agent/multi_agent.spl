@@ -13,7 +13,7 @@ PROCEDURE researcher(topic TEXT) RETURNS TEXT
 DO
     GENERATE research_facts(topic) INTO @facts
     GENERATE identify_key_themes(@facts) INTO @themes
-    @result := @facts + '\n\nKey Themes:\n' + @themes
+    @result := @facts || '\n\nKey Themes:\n' || @themes
     COMMIT @result
 END
 
@@ -23,7 +23,7 @@ DO
     GENERATE analyze_trends(research) INTO @trends
     GENERATE assess_risks(research, topic) INTO @risks
     GENERATE find_opportunities(research, topic) INTO @opportunities
-    @result := 'Trends:\n' + @trends + '\n\nRisks:\n' + @risks + '\n\nOpportunities:\n' + @opportunities
+    @result := 'Trends:\n' || @trends || '\n\nRisks:\n' || @risks || '\n\nOpportunities:\n' || @opportunities
     COMMIT @result
 END
 
@@ -41,11 +41,17 @@ WORKFLOW multi_agent_report
     INPUT: @topic TEXT
     OUTPUT: @report TEXT
 DO
+    LOGGING f'Multi-agent report | topic={@topic}' LEVEL INFO
+
     -- Delegate to specialized agents
+    LOGGING 'Agent 1: Researcher ...' LEVEL DEBUG
     CALL researcher(@topic) INTO @research
+    LOGGING 'Agent 2: Analyst ...' LEVEL DEBUG
     CALL analyst(@research, @topic) INTO @analysis
+    LOGGING 'Agent 3: Writer ...' LEVEL DEBUG
     CALL writer(@research, @analysis, @topic) INTO @report
 
+    LOGGING 'Report complete' LEVEL INFO
     COMMIT @report WITH status = 'complete'
 
 EXCEPTION

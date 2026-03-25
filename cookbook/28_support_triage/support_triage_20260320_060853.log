@@ -1,0 +1,160 @@
+
+```bash
+spl2 run ./28_support_triage/support_triage.spl --adapter ollama -m gemma3 ticket=My account has been charged twice for the same order #12345
+```
+
+```sql
+-- Recipe 28: Customer Support Triage
+-- Classify → route → draft response in a single workflow.
+-- Demonstrates multi-step pipeline with branching based on classification results.
+--
+-- Usage:
+--   spl2 run cookbook/28_support_triage/support_triage.spl --adapter ollama -m gemma3 \
+--       ticket="My account has been charged twice for the same order #12345"
+--
+--   spl2 run cookbook/28_support_triage/support_triage.spl --adapter ollama \
+--       ticket="I can't log in, password reset email never arrives" \
+--       product="CloudDash" tone="empathetic"
+
+CREATE FUNCTION support_categories()
+RETURNS TEXT AS $$
+Categories and their routing:
+- billing:      finance team, SLA 4h, high priority
+- account:      auth team, SLA 2h, high priority
+- technical:    engineering team, SLA 8h, medium priority
+- product:      product team, SLA 24h, medium priority
+- complaint:    customer success, SLA 1h, urgent
+- general:      first-line support, SLA 48h, low priority
+$$;
+
+CREATE FUNCTION response_tone_guide(tone TEXT DEFAULT 'professional')
+RETURNS TEXT AS $$
+SELECT CASE tone
+  WHEN 'empathetic'   THEN 'Warm and understanding. Acknowledge frustration. Use "I understand" and "I am sorry". Avoid jargon.'
+  WHEN 'formal'       THEN 'Professional and precise. Use formal language. Reference ticket numbers. State next steps clearly.'
+  WHEN 'friendly'     THEN 'Conversational and positive. Use first name. End with an offer to help further.'
+  ELSE                     'Professional but approachable. Concise. Action-oriented. No excessive apologies.'
+END
+$$;
+
+WORKFLOW support_triage
+    INPUT: @ticket TEXT, @product TEXT DEFAULT 'our product', @tone TEXT DEFAULT 'professional'
+    OUTPUT: @drafted_response TEXT
+DO
+    -- Step 1: Classify the ticket
+    GENERATE classify_ticket(@ticket, support_categories()) INTO @classification_json
+
+    -- Step 2: Extract key details
+    GENERATE extract_ticket_details(@ticket) INTO @details_json
+
+    -- Step 3: Check for urgency signals
+    GENERATE detect_urgency(@ticket) INTO @urgency_score
+
+    -- Step 4: Route based on category and urgency
+    EVALUATE @urgency_score
+        WHEN > 8 THEN
+            GENERATE escalation_alert(@ticket, @classification_json) INTO @alert
+            COMMIT @alert WITH status = 'escalated', priority = 'critical'
+        OTHERWISE
+            -- Step 5: Draft the response
+            GENERATE draft_response(
+                @ticket,
+                @classification_json,
+                @details_json,
+                @product,
+                response_tone_guide(@tone)
+            ) INTO @drafted_response
+
+            -- Step 6: Quality check the draft
+            GENERATE check_response_quality(@drafted_response, @ticket) INTO @quality_score
+
+            EVALUATE @quality_score
+                WHEN < 6 THEN
+                    GENERATE improve_response(@drafted_response, @ticket) INTO @drafted_response
+                    COMMIT @drafted_response WITH status = 'drafted_revised'
+                OTHERWISE
+                    COMMIT @drafted_response WITH status = 'drafted', quality = @quality_score
+            END
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        GENERATE fallback_response(@ticket, @product) INTO @drafted_response
+        COMMIT @drafted_response WITH status = 'fallback'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 761 in / 922 out
+Latency: 42640ms
+------------------------------------------------------------
+```output
+Here is the draft response based on the provided inputs:
+
+**Draft Response**
+
+Dear [Customer Name],
+
+Thank you for reaching out to us regarding an issue with your account. We apologize for the inconvenience and are here to help.
+
+We've received your concern about being charged twice for order #12345, and we're looking into this matter immediately. Our team is working on resolving the issue as soon as possible.
+
+Please note that every effort will be made to find a resolution for you, but in some cases, it may take up to [specified timeframe, e.g., 24-48 hours] to resolve complex issues.
+
+If you have any further questions or concerns, please don't hesitate to contact us. We're here to help and appreciate your patience as we work through this matter.
+
+Best regards,
+[Your Name]
+
+**Ticket Details**
+
+Based on our investigation, the following details are available:
+
+* Ticket ID: [Not explicitly mentioned in the input]
+* Order ID: #12345
+* Description: "My account has been charged twice"
+* Category: Billing/ Payment Issue
+* Priority: Medium
+
+Please note that these details are subject to change as we continue our investigation.
+
+**Next Steps**
+
+We'll be in touch with an update on the status of your issue once our team has completed their review. If you have any additional information about this issue, please feel free to share it with us at [support email or phone number].
+
+Thank you for choosing [Company Name], and we look forward to resolving your concern as soon as possible.
+
+Best regards,
+[Your Name]
+```
+------------------------------------------------------------
+Variables:
+  @ticket = My account has been charged twice for the same order #12345
+  @classification_json = Based on the input, I would classify the ticket as:
+
+**Type:** Support Ticket
+**Category:** Billing/ Payment Issue
+**Priority:** Medium (as it's not critical but still a concern for the customer)
+  @details_json = Based on the input, I can attempt to identify some ticket details related to the issue. Here's my attempt:
+
+* Ticket ID: Not explicitly mentioned in the input, but it could be extracted from a databas
+  @urgency_score = This is a text-based input. Based on the content, I would classify this as a "Medium" level urgency detection task.
+
+Reasoning:
+
+* The message mentions a specific issue (account being charged twice) w
+  @drafted_response = Here is the draft response based on the provided inputs:
+
+**Draft Response**
+
+Dear [Customer Name],
+
+Thank you for reaching out to us regarding an issue with your account. We apologize for the inconve
+  @quality_score = Based on the input, I would rate the response quality as follows:
+
+1. **Response format**: The response is in a standard format, which makes it easy to understand and follow.
+2. **Greeting and apology
+============================================================
+Log: /home/gongai/.spl/logs/support_triage-ollama-20260320-060853.log

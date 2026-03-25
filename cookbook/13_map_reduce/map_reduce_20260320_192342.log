@@ -1,0 +1,258 @@
+
+```bash
+spl2 run ./13_map_reduce/map_reduce.spl --adapter ollama -m gemma3 document=The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization. style=bullet points
+```
+
+```spl2
+-- Recipe 13: Map-Reduce Summarizer
+-- Splits a large document into chunks, summarizes each chunk (map),
+-- then combines all summaries into a final summary (reduce).
+-- Demonstrates the map-reduce pattern for handling content beyond context limits.
+--
+-- Usage:
+--   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama -m gemma3 document="$(cat large_doc.txt)"
+--   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="$(cat README.md)" style="bullet points"
+--   spl2 run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="long text here..." style="executive brief"
+
+WORKFLOW map_reduce_summarizer
+    INPUT: @document TEXT, @style TEXT
+    OUTPUT: @final_summary TEXT
+DO
+    @chunk_index := 0
+    @summaries := ''
+
+    -- Step 1: Determine how to split the document
+    GENERATE chunk_plan(@document) INTO @chunk_count
+
+    -- Step 2: MAP — summarize each chunk independently
+    WHILE @chunk_index < @chunk_count DO
+        GENERATE extract_chunk(@document, @chunk_index, @chunk_count) INTO @chunk
+
+        GENERATE summarize_chunk(@chunk, @chunk_index) INTO @chunk_summary
+
+        @summaries := @summaries + '\n[Chunk ' + @chunk_index + ']: ' + @chunk_summary
+        @chunk_index := @chunk_index + 1
+    END
+
+    -- Step 3: REDUCE — combine all chunk summaries into one
+    GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+
+    -- Step 4: Quality check the final summary
+    GENERATE quality_score(@final_summary, @document) INTO @score
+
+    EVALUATE @score
+        WHEN > 0.7 THEN
+            COMMIT @final_summary WITH status = 'complete', chunks = @chunk_count
+        OTHERWISE
+            GENERATE improve_summary(@final_summary, @summaries) INTO @final_summary
+            COMMIT @final_summary WITH status = 'refined', chunks = @chunk_count
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- If document is too large even for chunking, do hierarchical reduction
+        GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+        COMMIT @final_summary WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+        COMMIT @final_summary WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 472 in / 1338 out
+Latency: 15967ms
+------------------------------------------------------------
+```output
+Improved Code:
+
+```python
+import re
+
+def improve_summary(text):
+    """
+    Improves the summary of the given text by removing unnecessary characters.
+
+    Args:
+        text (str): The input text to be improved.
+
+    Returns:
+        str: The improved summary.
+    """
+
+    # Remove bullet points
+    text = re.sub(r'^\* ', '', text, flags=re.MULTILINE)
+    
+    # Remove line breaks and other whitespace characters
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove leading and trailing whitespace characters
+    text = text.strip()
+    
+    return text
+
+# Testing the function
+text1 = """
+Hello World!
+* Item 1
+* Item 2
+"""
+
+print(improve_summary(text1))
+
+text2 = """
+This is a bullet point:
+* Item 1
+* Item 2
+"""
+
+print(improve_summary(text2))
+```
+
+Changes Made:
+
+1. Renamed the function to `improve_summary` for better clarity and readability.
+2. Added a docstring to describe the purpose of the function, its arguments, and return value.
+3. No additional changes were required as the original code was already in good condition.
+
+However, here's an improved version with some minor enhancements:
+
+```python
+import re
+
+def improve_summary(text: str) -> str:
+    """
+    Improves the summary of the given text by removing unnecessary characters.
+
+    Args:
+        text (str): The input text to be improved.
+
+    Returns:
+        str: The improved summary.
+    """
+
+    # Remove bullet points, line breaks and other whitespace characters
+    text = re.sub(r'^\*|\s+', '', text, flags=re.MULTILINE)
+
+    # Remove leading and trailing whitespace characters
+    text = text.strip()
+
+    return text
+
+# Testing the function
+text1 = """
+Hello World!
+* Item 1
+* Item 2
+"""
+
+print(improve_summary(text1))
+
+text2 = """
+This is a bullet point:
+* Item 1
+* Item 2
+"""
+
+print(improve_summary(text2))
+```
+
+In this version, I've applied the following improvements:
+
+1. Added type hints for the function parameters and return value.
+2. Combined the `re.sub` operations to remove both bullet points and whitespace characters in a single line of code.
+3. Used the `strip()` method to remove leading and trailing whitespace characters instead of `text = text.strip()`.
+```
+------------------------------------------------------------
+Variables:
+  @document = The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization.
+  @style = bullet points
+  @chunk_index = 0
+  @chunk_count = In order to chunk this plan, we will need to identify the individual sentences in the text and then determine how many words are contained within each sentence.
+
+Here's an example of how the text can be divided into chunks:
+
+Sentence 1: The quick brown fox jumps over the lazy dog.
+- Chunk A: The
+- Chunk B: quick
+- Chunk C: brown
+- Chunk D: fox
+- Chunk E: jumps
+- Chunk F: over
+- Chunk G: the
+- Chunk H: lazy
+- Chunk I: dog
+
+Sentence 2: This is a test document for map-reduce summarization.
+- Chunk J: This
+- Chunk K: is
+- Chunk L: a
+- Chunk M: test
+- Chunk N: document
+- Chunk O: for
+- Chunk P: map-reduce
+- Chunk Q: summarization
+  @score = Based on the provided input, it appears that you want to create a function called `quality_score` that calculates a score based on the quality of a given text summary. However, there is no clear indication of what metrics or criteria this score should be calculated using.
+
+To make an educated guess, I will assume that you want to calculate a score based on the following factors:
+
+1.  The length of the original document and the summary.
+2.  The number of unique words in both the original document and the summary.
+3.  The similarity between the original document and the summary.
+
+Here is an example implementation for the `quality_score` function:
+
+```python
+import re
+from collections import Counter
+
+def reduce_summaries(text):
+    # Remove bullet points
+    text = re.sub(r'^\* ', '', text, flags=re.MULTILINE)
+    
+    # Remove line breaks and other whitespace characters
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove leading and trailing whitespace characters
+    text = text.strip()
+    
+    return text
+
+def quality_score(original_text, reduced_text):
+    # Calculate the length ratio of original document to summary
+    length_ratio = len(original_text) / len(reduced_text)
+    
+    # Calculate the similarity between the two texts using Jaccard Similarity
+    words_original = Counter(reduced_summaries(original_text).lower().split())
+    words_summary = Counter(reduced_summaries(reduced_text).lower().split())
+    jaccard_similarity = sum(min(words_original[word], words_summary[word]) for word in set(list(words_original.keys()) + list(words_summary.keys()))) / len(set(list(words_original.keys()) + list(words_summary.keys())))
+    
+    # Calculate the quality score
+    quality_score = (length_ratio * 0.3) + jaccard_similarity * 0.7
+    
+    return quality_score
+
+# Testing the function
+text1 = """
+Hello World!
+* Item 1
+* Item 2
+"""
+print(reduce_summaries(text1))
+
+text2 = """
+This is a bullet point:
+* Item 1
+* Item 2
+"""
+
+print(quality_score(text1, text2))
+```
+
+In this example, the `quality_score` function calculates a score based on the length ratio of the original document to the summary and the Jaccard similarity between the two texts. The scores are then combined using a weighted average.
+
+Note that this is just one possible implementation, and you may need to adjust or modify it to suit your specific requirements.
+============================================================
+Log: /home/gongai/.spl/logs/map_reduce-ollama-20260320-192342.log

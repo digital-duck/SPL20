@@ -1,0 +1,494 @@
+
+```bash
+spl run ./28_support_triage/support_triage.spl --adapter ollama -m gemma3 ticket=My account has been charged twice for the same order #12345
+```
+
+```spl
+-- Recipe 28: Customer Support Triage
+-- Classify → route → draft response in a single workflow.
+-- Demonstrates multi-step pipeline with branching, deterministic tool calls for
+-- order lookup, and LLM generation grounded in real order data.
+--
+-- Usage:
+--   spl run cookbook/28_support_triage/support_triage.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/28_support_triage/tools.py \
+--       ticket="My account has been charged twice for the same order #ORD-12345"
+--
+--   spl run cookbook/28_support_triage/support_triage.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/28_support_triage/tools.py \
+--       ticket="Package for order ORD-67890 hasn't arrived, it's been 10 days" \
+--       product="CloudDash" tone="empathetic"
+--
+--   spl run cookbook/28_support_triage/support_triage.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/28_support_triage/tools.py \
+--       ticket="I can't log in, password reset email never arrives" \
+--       tone="friendly"
+
+-- ── Helper functions (evaluated locally, zero LLM cost) ────────────────────
+
+CREATE FUNCTION support_categories()
+RETURNS TEXT AS $$
+Ticket categories and their routing:
+- billing:      finance team, SLA 4h,  high priority
+                Covers: duplicate charges, wrong amounts, refund requests, invoice issues
+- account:      auth team,    SLA 2h,  high priority
+                Covers: login failures, password reset, account locked, 2FA issues
+- shipping:     fulfillment,  SLA 6h,  high priority
+                Covers: delayed delivery, wrong item received, missing package, tracking problems
+- technical:    engineering,  SLA 8h,  medium priority
+                Covers: app bugs, API errors, integration failures, data export issues
+- product:      product team, SLA 24h, medium priority
+                Covers: feature requests, how-to questions, documentation gaps
+- complaint:    customer success, SLA 1h, urgent
+                Covers: angry customers, escalation threats, repeated unresolved issues
+- general:      first-line,   SLA 48h, low priority
+                Covers: general inquiries, account queries, other
+$$;
+
+CREATE FUNCTION response_tone_guide(tone TEXT DEFAULT 'professional')
+RETURNS TEXT AS $$
+SELECT CASE tone
+  WHEN 'empathetic' THEN 'Warm and understanding. Acknowledge frustration. Use "I understand" and "I am sorry". Avoid jargon. Refer to the customer by first name.'
+  WHEN 'formal'     THEN 'Professional and precise. Use formal language. Reference ticket numbers and order IDs explicitly. State next steps clearly.'
+  WHEN 'friendly'   THEN 'Conversational and positive. Use the customer first name. End with an enthusiastic offer to help further.'
+  ELSE                   'Professional but approachable. Concise. Action-oriented. Reference specific order details when available. No excessive apologies.'
+END
+$$;
+
+CREATE FUNCTION order_context_prompt(order_context TEXT)
+RETURNS TEXT AS $$
+SELECT CASE
+  WHEN order_context = 'No order number found in this ticket.'
+    THEN 'No order number was referenced — respond based on the ticket text alone.'
+  WHEN order_context LIKE '%not found in system%'
+    THEN 'The customer referenced an order number but it was not found. Ask them to confirm the order ID.'
+  ELSE
+    'Use the following verified order record to ground your response with accurate details (amounts, dates, status):
+
+' || order_context
+END
+$$;
+
+-- ── Main workflow ───────────────────────────────────────────────────────────
+
+WORKFLOW support_triage
+    INPUT:  @ticket  TEXT,
+            @product TEXT DEFAULT 'CloudDash',
+            @tone    TEXT DEFAULT 'professional'
+    OUTPUT: @drafted_response TEXT
+DO
+    -- Step 1: Extract any order numbers mentioned in the ticket (deterministic tool — no LLM)
+    CALL extract_order_numbers(@ticket) INTO @order_numbers
+
+    -- Step 2: Fetch the matching order record(s) from orders.json (deterministic tool — no LLM)
+    CALL lookup_order(@order_numbers) INTO @order_context
+
+    -- Step 3: Classify the ticket using categories + order data as grounding context
+    GENERATE classify_ticket(@ticket, support_categories(), order_context_prompt(@order_context)) INTO @classification_json
+
+    -- Step 4: Extract key structured details from the ticket
+    GENERATE extract_ticket_details(@ticket, @order_context) INTO @details_json
+
+    -- Step 5: Score urgency 0-10 based on ticket text and classification
+    GENERATE detect_urgency(@ticket, @classification_json) INTO @urgency_score
+
+    -- Step 6: Route — escalate immediately if urgency > 8, otherwise draft response
+    EVALUATE @urgency_score
+        WHEN > 8 THEN
+            GENERATE escalation_alert(@ticket, @classification_json, @order_context) INTO @alert
+            COMMIT @alert WITH status = 'escalated', priority = 'critical'
+        OTHERWISE
+            -- Step 7: Draft a grounded, tone-appropriate response
+            GENERATE draft_response(
+                @ticket,
+                @classification_json,
+                @details_json,
+                @order_context,
+                @product,
+                response_tone_guide(@tone)
+            ) INTO @drafted_response
+
+            -- Step 8: Quality-check the draft (0-10); revise once if score < 6
+            GENERATE check_response_quality(@drafted_response, @ticket, @order_context) INTO @quality_score
+
+            EVALUATE @quality_score
+                WHEN < 6 THEN
+                    GENERATE improve_response(@drafted_response, @ticket, @order_context) INTO @drafted_response
+                    COMMIT @drafted_response WITH status = 'drafted_revised'
+                OTHERWISE
+                    COMMIT @drafted_response WITH status = 'drafted', quality = @quality_score
+            END
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        GENERATE fallback_response(@ticket, @product) INTO @drafted_response
+        COMMIT @drafted_response WITH status = 'fallback'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 4314 in / 3218 out
+Latency: 45755ms
+------------------------------------------------------------
+```output
+Here's a draft response that addresses each input:
+
+**Draft Response**
+
+I'd like to help you with your concern about duplicate charges on your order #12345. Could you please provide more information about the issue, such as when you noticed the duplicates and any error messages you received?
+
+To assist you further, I've extracted some relevant details from our previous conversation:
+
+*   Order number: 12345
+*   Duplicate charges: Yes, according to your input
+
+Based on the provided inputs, I can attempt to classify the task as:
+
+**Task Classification:**
+
+*   **Task Name:** Resolution of a customer support ticket related to duplicate charges.
+*   **Task Type:** Natural Language Processing (NLP) / Sentiment Analysis
+*   **Description:** The input text is related to a customer support ticket that requires classification into a specific category.
+
+If you could provide additional context or clarify the expected resolution for this issue, I'd be happy to refine my understanding and provide more accurate assistance.
+
+To begin with, I can suggest some steps to help resolve the issue:
+
+1.  **Verify charges:** Check your transaction history to confirm that the duplicate charges did indeed occur.
+2.  **Review order status:** Verify that the order was not already fulfilled before charging again.
+3.  **Contact customer support:** Reach out to our customer support team for further assistance and guidance.
+
+Please let me know if there's any additional information you'd like to share or if you have any questions regarding these steps.
+
+Here is a Python class that can be used to extract ticket details based on the input provided:
+
+```python
+class TicketDetailsExtractor:
+    def __init__(self):
+        self.output = []
+
+    def process_input(self, input1, input2):
+        # Step 1: Connect to the database (not applicable in this case)
+        pass
+
+        # Step 2: Run the stored procedure
+        if input1 == "My account has been charged twice for the same order #12345":
+            self.extract_order_numbers(12345)
+
+    def extract_order_numbers(self, order_number):
+        if order_number == 12345:
+            # Simulating database query to get the data
+            orders = [
+                {"order_number": 123, "date": "2022-01-01", "time": "12:00", "account_holder": "John Doe"},
+                {"order_number": 456, "date": "2022-01-02", "time": "14:00", "account_holder": "Jane Smith"},
+                {"order_number": 789, "date": "2022-01-03", "time": "10:00", "account_holder": "Bob Johnson"}
+            ]
+
+            # Step 3: Review the output
+            for order in orders:
+                if order["order_number"] == order_number:
+                    self.output.append({
+                        "order_number": order["order_number"],
+                        "date": order["date"],
+                        "time": order["time"],
+                        "account_holder": order["account_holder"]
+                    })
+
+        elif input1 == "To execute the stored procedure and investigate why an account has been charged twice for the same order number, follow these steps:":
+            self.process_input(input2)
+
+    def print_output(self):
+        if len(self.output) > 0:
+            for detail in self.output:
+                print(f"Order Number: {detail['order_number']}")
+                print(f"Date: {detail['date']}")
+                print(f"Time: {detail['time']}")
+                print(f"Account Holder: {detail['account_holder']}")
+                print("-"*50)
+        else:
+            print("No output found.")
+
+# Example usage
+extractor = TicketDetailsExtractor()
+input1 = "My account has been charged twice for the same order #12345"
+input2 = "To execute the stored procedure and investigate why an account has been charged twice for the same order number, follow these steps:"
+input3 = "My account has been charged again!"
+extractor.process_input(input1, input2)
+extractor.print_output()
+```
+
+**Additional Resources**
+
+If you need more information or would like to explore further assistance, please feel free to ask.
+
+**CloudDash**
+
+We are committed to providing the best possible experience for our customers. If you have any questions or concerns about your order or account, please don't hesitate to reach out.
+
+**[response_tone_guide(...)]**
+
+I hope this helps clarify things and provides a better understanding of how we can work together to resolve your issue.
+
+Please let me know if there's anything else I can do for you.
+```
+------------------------------------------------------------
+Variables:
+  @ticket = My account has been charged twice for the same order #12345
+  @product = CloudDash
+  @tone = professional
+  @order_numbers = To execute the SQL procedure `extract_order_numbers` and investigate why an account has been charged twice for the same order number, we can follow these steps:
+
+1. Connect to the database using a tool like MySQL Workbench or psql.
+2. Run the following query to execute the stored procedure:
+```sql
+CALL extract_order_numbers();
+```
+This will run the procedure and print out any order numbers that have been charged twice.
+
+3. Review the output of the procedure to identify the duplicate order numbers and understand why they were processed multiple times.
+
+Assuming the `extract_order_numbers` procedure is defined as follows:
+
+```sql
+DELIMITER //
+
+CREATE PROCEDURE extract_order_numbers()
+BEGIN
+    SELECT order_number 
+    FROM orders 
+    GROUP BY order_number 
+    HAVING COUNT(*) > 1;
+END//
+
+DELIMITER ;
+```
+This procedure groups the orders by order number and selects those with a count greater than 1, which indicates that they have been charged twice.
+
+4. If you want to investigate further, you can modify the procedure to include additional information, such as the date and time of the charges or the account holder's information:
+```sql
+DELIMITER //
+
+CREATE PROCEDURE extract_order_numbers()
+BEGIN
+    SELECT o.order_number, 
+           o.date, 
+           o.time, 
+           a.account_holder 
+    FROM orders o 
+    JOIN accounts a ON o.account_id = a.id 
+    GROUP BY o.order_number 
+    HAVING COUNT(*) > 1;
+END//
+
+DELIMITER ;
+```
+This modified procedure joins the `orders` table with the `accounts` table to include the account holder's information in the output.
+
+5. Finally, you can use the output of the procedure to identify and resolve the issue by investigating the reasons why the duplicate charges occurred.
+  @order_context = To execute the stored procedure and investigate why an account has been charged twice for the same order number, follow these steps:
+
+**Step 1: Connect to the database**
+
+Open your chosen database tool (e.g., MySQL Workbench or psql) and connect to the database where you want to execute the `extract_order_numbers` procedure.
+
+**Step 2: Run the stored procedure**
+
+Run the following query in your database tool:
+```sql
+CALL extract_order_numbers();
+```
+This will run the procedure and print out any order numbers that have been charged twice.
+
+**Step 3: Review the output**
+
+Review the output of the procedure to identify the duplicate order numbers and understand why they were processed multiple times. The output should show a list of order numbers, along with the date and time of each charge, and the account holder's information.
+
+Example output:
+```markdown
++---------------+------------+--------+-------------------+
+| order_number | date       | time   | account_holder  |
++---------------+------------+--------+-------------------+
+| 123           | 2022-01-01 | 12:00 | John Doe         |
+| 456           | 2022-01-02 | 14:00 | Jane Smith       |
+| 789           | 2022-01-03 | 10:00 | Bob Johnson      |
++---------------+------------+--------+-------------------+
+```
+In this example, the output shows that orders with numbers 123 and 456 were charged twice.
+
+**Step 4: Investigate further (optional)**
+
+If you want to investigate further, you can modify the procedure to include additional information, such as the date and time of the charges or the account holder's information.
+
+Example modified procedure:
+```sql
+DELIMITER //
+
+CREATE PROCEDURE extract_order_numbers()
+BEGIN
+    SELECT o.order_number, 
+           o.date, 
+           o.time, 
+           a.account_holder, 
+           o.charge_date, 
+           o.charge_amount 
+    FROM orders o 
+    JOIN accounts a ON o.account_id = a.id 
+    GROUP BY o.order_number 
+    HAVING COUNT(*) > 1;
+END//
+
+DELIMITER ;
+```
+This modified procedure joins the `orders` table with the `accounts` table and includes additional columns for the charge date, amount, account holder's name, and order number.
+
+**Step 5: Resolve the issue**
+
+Once you have identified the duplicate charges, you can investigate further to determine why they occurred. This may involve reviewing transaction logs, checking for errors in payment processing, or verifying that the orders were not already fulfilled before charging again.
+
+By following these steps, you should be able to identify and resolve the issue of an account being charged twice for the same order number.
+  @classification_json = Based on the provided inputs, I can attempt to classify the task as:
+
+**Task Classification:**
+
+* **Task Name:** Classification of a ticket
+* **Task Type:** Natural Language Processing (NLP) / Sentiment Analysis
+* **Description:** The input text is related to a customer support ticket that requires classification into a specific category.
+
+Please note that without more information about the output or expected classification, it's challenging to provide an exact classification. However, based on the provided inputs, I've attempted to categorize the task as above.
+
+If you could provide additional context or clarify the expected classification (e.g., spam vs. legitimate ticket), I'd be happy to refine the classification.
+  @details_json = Here is a Python class that can be used to extract ticket details based on the input provided:
+
+```python
+class TicketDetailsExtractor:
+    def __init__(self):
+        self.output = []
+
+    def process_input(self, input1, input2):
+        # Step 1: Connect to the database (not applicable in this case)
+        pass
+
+        # Step 2: Run the stored procedure
+        if input1 == "My account has been charged twice for the same order #12345":
+            self.extract_order_numbers(12345)
+
+    def extract_order_numbers(self, order_number):
+        if order_number == 12345:
+            # Simulating database query to get the data
+            orders = [
+                {"order_number": 123, "date": "2022-01-01", "time": "12:00", "account_holder": "John Doe"},
+                {"order_number": 456, "date": "2022-01-02", "time": "14:00", "account_holder": "Jane Smith"},
+                {"order_number": 789, "date": "2022-01-03", "time": "10:00", "account_holder": "Bob Johnson"}
+            ]
+
+            # Step 3: Review the output
+            for order in orders:
+                if order["order_number"] == order_number:
+                    self.output.append({
+                        "order_number": order["order_number"],
+                        "date": order["date"],
+                        "time": order["time"],
+                        "account_holder": order["account_holder"]
+                    })
+
+        elif input1 == "To execute the stored procedure and investigate why an account has been charged twice for the same order number, follow these steps:":
+            self.process_input(input2)
+
+    def print_output(self):
+        if len(self.output) > 0:
+            for detail in self.output:
+                print(f"Order Number: {detail['order_number']}")
+                print(f"Date: {detail['date']}")
+                print(f"Time: {detail['time']}")
+                print(f"Account Holder: {detail['account_holder']}")
+                print("-"*50)
+        else:
+            print("No output found.")
+
+# Example usage
+extractor = TicketDetailsExtractor()
+input1 = "My account has been charged twice for the same order #12345"
+input2 = "To execute the stored procedure and investigate why an account has been charged twice for the same order number, follow these steps:"
+input3 = "My account has been charged again!"
+extractor.process_input(input1, input2)
+extractor.print_output()
+```
+
+In this Python class:
+
+*   The `process_input` method processes the input provided, which includes two inputs: the first is about duplicate charges for an order number and the second describes how to run a stored procedure.
+*   The `extract_order_numbers` method simulates running the stored procedure by processing an order number, extracting relevant details when required.
+*   The `print_output` method prints out the extracted ticket details.
+
+The class can be extended as needed to include more functionality for processing different types of inputs and handling various scenarios.
+  @urgency_score = Based on the input text "My account has been charged twice for the same order #12345", it appears that this is not a typical customer support ticket, but rather an issue with payment processing or billing. The language used suggests a concern about unauthorized charges, which may be related to fraudulent activity.
+
+Considering this additional context, I would revise the task classification as follows:
+
+**Task Classification:**
+
+* **Task Name:** Anomaly detection or Fraud Detection
+* **Task Type:** Natural Language Processing (NLP) / Text analysis
+* **Description:** The input text is a report of an unusual or suspicious event that requires identification and potential action to prevent further unauthorized charges.
+
+Please let me know if this classification better reflects the task, or if additional context or clarification are needed.
+  @quality_score = import re
+from collections import defaultdict
+
+class ResponseChecker:
+    def __init__(self):
+        self.tasks = []
+
+    def check_response_quality(self, response):
+        # Extract task details from the response
+        match = re.search(r'Task Name: (.*)', response)
+        if match:
+            self.tasks.append(match.group(1))
+
+        # Check for consistency in task classification
+        task_classification = re.search(r'Task Type: (.*)', response)
+        if task_classification and len(self.tasks) > 0:
+            if task_classification.group(1) != 'Natural Language Processing (NLP) / Sentiment Analysis':
+                return False
+
+        # Verify that all tasks are resolved
+        for i, task in enumerate(self.tasks):
+            match = re.search(r'Task Number: (\d+)', response)
+            if match:
+                self.tasks[i] = int(match.group(1))
+
+        # Check for consistency in task numbers
+        if len(set(self.tasks)) != 1:
+            return False
+
+        # If all checks pass, the response quality is good
+        return True
+
+# Example usage
+checker = ResponseChecker()
+response = """
+Task Name: Resolution of a customer support ticket related to duplicate charges.
+Task Type: Natural Language Processing (NLP) / Sentiment Analysis
+Description: The input text is related to a customer support ticket that requires classification into a specific category.
+
+Response:
+I'd like to help you with your concern about duplicate charges on your order #12345. Could you please provide more information about the issue, such as when you noticed the duplicates and any error messages you received?
+
+To assist you further, I've extracted some relevant details from our previous conversation:
+
+*   Order number: 12345
+*   Duplicate charges: Yes, according to your input
+
+Based on the provided inputs, I can attempt to classify the task as:
+"""
+
+checker.check_response_quality(response)
+print(checker.tasks)
+============================================================
+Log: /home/gongai/.spl/logs/support_triage-ollama-20260324-174145.log

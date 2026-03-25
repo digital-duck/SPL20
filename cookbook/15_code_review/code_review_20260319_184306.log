@@ -1,0 +1,158 @@
+
+```bash
+spl2 run ./15_code_review/code_review.spl --adapter ollama -m gemma3 code=def foo(x): return eval(x) language=Python
+```
+
+```sql
+-- Recipe 15: Automated Code Review
+-- Multi-pass code review: security audit, performance check, style review, then synthesis.
+-- Demonstrates tool-augmented analysis, multi-criteria evaluation, and structured output.
+--
+-- Usage:
+--   spl2 run cookbook/15_code_review/code_review.spl --adapter ollama -m gemma3 code="$(cat myfile.py)"
+--   spl2 run cookbook/15_code_review/code_review.spl --adapter ollama code="$(cat main.go)" language="Go"
+--   spl2 run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)" language="Python"
+
+WORKFLOW code_review
+    INPUT: @code TEXT, @language TEXT
+    OUTPUT: @review TEXT
+DO
+    -- Pass 1: Security audit
+    GENERATE security_audit(@code, @language) INTO @security_findings
+
+    -- Pass 2: Performance analysis
+    GENERATE performance_review(@code, @language) INTO @perf_findings
+
+    -- Pass 3: Code style and best practices
+    GENERATE style_review(@code, @language) INTO @style_findings
+
+    -- Pass 4: Bug detection
+    GENERATE bug_detection(@code, @language) INTO @bug_findings
+
+    -- Severity scoring for each category
+    GENERATE severity_score(@security_findings) INTO @sec_score
+    GENERATE severity_score(@perf_findings) INTO @perf_score
+    GENERATE severity_score(@bug_findings) INTO @bug_score
+
+    -- Synthesize all findings into a structured review
+    GENERATE synthesize_review(
+        @security_findings, @sec_score,
+        @perf_findings, @perf_score,
+        @style_findings,
+        @bug_findings, @bug_score
+    ) INTO @review
+
+    -- Determine overall verdict
+    EVALUATE @sec_score
+        WHEN > 8 THEN
+            COMMIT @review WITH status = 'critical_issues', verdict = 'block'
+        WHEN > 5 THEN
+            COMMIT @review WITH status = 'needs_fixes', verdict = 'request_changes'
+        OTHERWISE
+            COMMIT @review WITH status = 'approved', verdict = 'approve'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Code too large — review in chunks
+        GENERATE summarize_code(@code) INTO @summary
+        GENERATE quick_review(@summary, @language) INTO @review
+        COMMIT @review WITH status = 'partial_large_file'
+    WHEN BudgetExceeded THEN
+        COMMIT @security_findings WITH status = 'security_only'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 3657 in / 3298 out
+Latency: 46187ms
+------------------------------------------------------------
+Committed: def synthesize_review(input1, input2, input3, input4, input5, input6):
+    review = "Security Audit\n"
+
+    review += "**Why is this a problem?**\n"
+    review += input1
+
+    review += "\n\n**How to fix it?**\n"
+    review += input2
+
+    review += "\n\n**Style Review**\n"
+    review += input5
+
+    review += "\n\n**Bug Detection**\n"
+    review += input6
+
+    return review
+
+input1 = "**Security Audit**\nThe provided `foo` function is a clear example of a security vulnerability. It uses the built-in Python `eval()` function, which can evaluate a string as a Python expression.\n\n**Why is this a problem?**\nThe `eval()` function can execute arbitrary code, allowing an attacker to inject malicious code into your application. This can lead to:\n*   Code injection attacks\n*   Command injection attacks\n*   Execution of system-level commands\n\n**How to fix it?**\nIf you need to dynamically evaluate expressions, consider using a safer alternative such as `ast` (Abstract Syntax Trees) or a dedicated parsing library like `numexpr`. However, if you still want to use `eval()`, make sure to validate and sanitize the input string to prevent code injection attacks.\n\n**Example of safe usage:**\n```python\nimport ast\n\ndef safe_eval(x):\n    try:\n        tree = ast.parse(x)\n        return ast.literal_eval(tree)  # Use ast.literal_eval instead of eval()\n    except (ValueError, SyntaxError):\n        raise ValueError(f"Invalid expression: {x}\")\n```\n\n**Why `ast.literal_eval()`?**\n`ast.literal_eval()` is a safer alternative to `eval()`. It only evaluates literals (e.g., strings, numbers, tuples, lists) and does not allow arbitrary code execution.\nRemember that no security measure can completely eliminate the risk of code injection attacks. Always validate and sanitize user input whenever possible."
+input2 = """Here's an example implementation in Python:\n\n```python\nimport ast\n\ndef severity_score):\n    ""\"\nSeverity score for using eval()\n\nReturns:\nint: Severity score (1-5)\n"""\n# Check if eval() is used\nfoo_function = "eval('1 + 2')"  # Replace with actual code\n\n# Validate input string\ntry:\n    tree = ast.parse(foo_function)\n\n    safe_result = ast.literal_eval(tree)\n\n    return 5  # High severity score\nexcept (ValueError, SyntaxError):\n    # If input is invalid, reduce the severity score\n    return 3\nexcept Exception as e:\n    # If an unexpected error occurs, default to a lower severity score\n    print(f"Unexpected error: {e}")\n    return 2\n\n# Example usage:\nprint(severity_score())\n```"""
+input3 = """**Performance Review**\n\n**Employee:** [Your Name]\n\n**Review Period:** [Current Date] - [End of Review Period]\n\n**Overall Performance:**\nThe employee has demonstrated a good understanding of Python programming and has been able to complete tasks efficiently. However, there are areas for improvement in terms of code quality, security, and best practices.\n\n**Key Strengths:**\n1. Problem-solving skills: The employee has shown ability to break down complex problems into manageable parts.\n2. Code organization: The employee has demonstrated the ability to write clean and organized code.\n\n**Areas for Improvement:**\n1. Code review: The employee could benefit from receiving regular code reviews to ensure that their code is of high quality and meets best practices.\n2. Security: The employee should be more mindful of security vulnerabilities when writing code, such as using safe evaluation methods like `ast.literal_eval` instead of `eval`.\n3. Commenting: The employee could improve by adding more comments to explain the purpose of each section of code.\n\n**Recommendations for Improvement:**\n1. Take a course or attend workshops on Python best practices and security.\n2. Join online communities, such as Reddit's r/learnpython, to connect with other developers and get feedback on your code.\n3. Participate in coding challenges to improve problem-solving skills and learn new techniques.\n\n**Conclusion:**\nThe employee has shown potential for growth and improvement. With the right training and support, they can continue to develop their skills and become an even more valuable member of the team.\n\n**Rating:** 4/5\n\n**Next Review Date:** [Next Review Date]"""
+input
+------------------------------------------------------------
+Variables:
+  @code = def foo(x): return eval(x)
+  @language = Python
+  @security_findings = **Security Audit**
+
+The provided `foo` function is a clear example of a security vulnerability. It uses the built-in Python `eval()` function, which can evaluate a string as a Python expression.
+
+**Wh
+  @perf_findings = **Performance Review**
+
+**Employee:** [Your Name]
+
+**Review Period:** [Current Date] - [End of Review Period]
+
+**Overall Performance:**
+The employee has demonstrated a good understanding of Python pro
+  @style_findings = **Style Review**
+
+The provided input, `def foo(x): return eval(x)`, has several issues regarding code quality and security.
+
+### Issues:
+
+1. **Security Vulnerability**: The `eval()` function can evalu
+  @bug_findings = **Bug Detection**
+
+The given function `foo` has a significant security vulnerability. The use of the `eval()` function can lead to code injection attacks, where an attacker can pass malicious input th
+  @sec_score = Here's an example implementation in Python:
+
+```python
+import ast
+
+def severity_score():
+    """
+    Severity score for using eval()
+    
+    Returns:
+        int: Severity score (1-5)
+    """
+    # C
+  @perf_score = import re
+
+def severity_score(text):
+    # Initialize score
+    score = 0
+    
+    # Check for mentions of specific areas for improvement
+    improvements = ['code quality', 'security', 'best practice
+  @bug_score = import ast
+from simpleeval import simpleeval  # Import the simpleeval library
+
+def severity_score(vulnerability_type):
+    """
+    Evaluates the severity of a given vulnerability type.
+    
+    Args:
+
+  @review = def synthesize_review(input1, input2, input3, input4, input5, input6):
+    review = "Security Audit\n"
+
+    review += "**Why is this a problem?**\n"
+    review += input1
+
+    review += "\n\n**How to f
+============================================================
+Log: /home/gongai/.spl/logs/code_review-ollama-20260319-184306.log

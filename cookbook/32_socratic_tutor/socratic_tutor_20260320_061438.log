@@ -1,0 +1,133 @@
+
+```bash
+spl2 run ./32_socratic_tutor/socratic_tutor.spl --adapter ollama -m gemma3 topic=Why does the sky appear blue? student_level=middle school
+```
+
+```sql
+-- Recipe 32: Socratic Tutor
+-- Ask guiding questions rather than giving answers directly.
+-- Demonstrates persona-constrained generation + iterative dialogue simulation.
+--
+-- Usage:
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl --adapter ollama -m gemma3 \
+--       topic="Why does the sky appear blue?" student_level="middle school"
+--
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl --adapter ollama \
+--       topic="Prove that sqrt(2) is irrational" student_level="undergraduate" \
+--       max_questions=5
+
+CREATE FUNCTION socratic_persona(student_level TEXT DEFAULT 'high school')
+RETURNS TEXT AS $$
+You are a Socratic tutor. Your role is to guide the student to discover answers themselves — never give direct answers.
+
+Rules:
+1. Ask ONE clear question at a time that leads toward understanding
+2. Build on what the student already knows
+3. If the student is stuck, give a hint in the form of another question
+4. Celebrate partial insights: "Good observation! Now what does that imply about...?"
+5. Never say "The answer is..." or "You should know that..."
+
+Student level: {student_level}
+Adjust vocabulary and question complexity accordingly.
+$$;
+
+WORKFLOW socratic_tutor
+    INPUT: @topic TEXT, @student_level TEXT DEFAULT 'high school', @max_questions INT DEFAULT 5
+    OUTPUT: @dialogue TEXT
+DO
+    -- Generate the opening Socratic question
+    GENERATE opening_question(
+        @topic,
+        socratic_persona(@student_level)
+    ) INTO @question_1
+
+    -- Simulate student's first response (what a typical student might say)
+    GENERATE simulate_student_response(@question_1, @topic, @student_level) INTO @student_1
+
+    -- Follow-up question based on student response
+    GENERATE followup_question(
+        @question_1,
+        @student_1,
+        @topic,
+        socratic_persona(@student_level)
+    ) INTO @question_2
+
+    -- Student works toward understanding
+    GENERATE simulate_student_response(@question_2, @topic, @student_level) INTO @student_2
+
+    -- Check if understanding is emerging
+    GENERATE assess_understanding(@student_1, @student_2, @topic) INTO @understanding_score
+
+    EVALUATE @understanding_score
+        WHEN > 7 THEN
+            -- Student is getting it — consolidation question
+            GENERATE consolidation_question(@topic, @student_2, socratic_persona(@student_level)) INTO @question_3
+            GENERATE simulate_student_response(@question_3, @topic, @student_level) INTO @student_3
+            GENERATE compile_dialogue(
+                @question_1, @student_1,
+                @question_2, @student_2,
+                @question_3, @student_3,
+                @topic
+            ) INTO @dialogue
+        OTHERWISE
+            -- Student needs more scaffolding
+            GENERATE hint_question(@question_2, @topic, socratic_persona(@student_level)) INTO @question_3
+            GENERATE simulate_student_response(@question_3, @topic, @student_level) INTO @student_3
+            GENERATE compile_dialogue(
+                @question_1, @student_1,
+                @question_2, @student_2,
+                @question_3, @student_3,
+                @topic
+            ) INTO @dialogue
+    END
+
+    COMMIT @dialogue WITH status = 'complete', understanding_score = @understanding_score
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 1593 in / 866 out
+Latency: 20470ms
+------------------------------------------------------------
+```output
+I'm glad we're getting back on track with "dialogue" questions. I'd love to simulate a response for Input 7:
+
+"Hmm, that's an interesting question! The reason why the sky appears blue is because of something called Rayleigh scattering. When sunlight enters Earth's atmosphere, it encounters tiny molecules of gases like nitrogen and oxygen in the air. These molecules scatter shorter (blue) wavelengths more than longer (red) wavelengths, which is why we see the sky as blue during the day."
+
+Let me know if this response meets your requirements or if you'd like me to simulate another one!
+```
+------------------------------------------------------------
+Variables:
+  @topic = Why does the sky appear blue?
+  @student_level = middle school
+  @question_1 = Opening Question: Why does the sky appear blue?
+  @student_1 = Here is a simulated student response based on the input:
+
+"Oh, that's an easy one! The sky appears blue because of something called Rayleigh scattering. It's like when you're outside and you see all t
+  @question_2 = I'd love to see another simulated student response.
+
+Please go ahead and simulate another response. I'll be happy to provide feedback on the follow-up question!
+  @student_2 = Here is a simulated student response:
+
+Input 1:
+Okay, let's do it! Here's another simulated student response:
+
+"I think this topic is really interesting. Can we learn more about how to make a budget f
+  @understanding_score = Based on Input 2, I will assess the student's understanding of the concept.
+
+The student provides a clear explanation of Rayleigh scattering and its effect on light. They correctly state that:
+
+* The 
+  @question_3 = Let's get back to our conversation.
+
+You asked me to simulate a response for a "hint_question" type of task, and then you provided an input that seemed unrelated (but actually made sense). You wanted 
+  @student_3 = Based on Input 1, here's a simulated student response:
+
+I think the sky appears blue because of something called refraction. When sunlight comes through the atmosphere, it bends and creates a blue col
+  @dialogue = I'm glad we're getting back on track with "dialogue" questions. I'd love to simulate a response for Input 7:
+
+"Hmm, that's an interesting question! The reason why the sky appears blue is because of so
+============================================================
+Log: /home/gongai/.spl/logs/socratic_tutor-ollama-20260320-061438.log

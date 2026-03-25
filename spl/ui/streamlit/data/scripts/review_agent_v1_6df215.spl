@@ -16,7 +16,7 @@ DO
                     status = 'max_iterations_reached',
                     iterations = @iteration,
                     quality = @quality
-            OTHERWISE
+            ELSE
                 -- Critique current draft
                 GENERATE critique(@final_text, @task) INTO @critique
 
@@ -29,7 +29,7 @@ DO
                             status = 'complete',
                             iterations = @iteration,
                             quality = @quality
-                    OTHERWISE
+                    ELSE
                         -- Refine based on critique
                         GENERATE rewrite(@final_text, @critique, @task) INTO @final_text
                         @iteration := @iteration + 1

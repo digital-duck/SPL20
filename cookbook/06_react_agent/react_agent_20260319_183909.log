@@ -1,0 +1,78 @@
+
+```bash
+spl2 run ./06_react_agent/react_agent.spl --adapter ollama -m gemma3 task=What is the population of France?
+```
+
+```sql
+-- SPL 2.0: ReAct Agent Pattern
+-- Reasoning + Acting loop with tool use
+
+WORKFLOW react_agent
+  INPUT: @task text
+  OUTPUT: @answer text
+DO
+  @iteration := 0
+  @history := ''
+  @context := ''
+
+  WHILE @iteration < 10 DO
+
+    -- Reasoning step
+    GENERATE thought(@task, @history, @context) INTO @current_thought
+
+    -- Action decision
+    GENERATE action_decision(@current_thought) INTO @action
+
+    -- Execute action based on classification
+    EVALUATE @action
+      WHEN 'search' THEN
+        CALL search_tool(@action) INTO @observation
+      WHEN 'calculate' THEN
+        CALL calculator(@action) INTO @observation
+      WHEN 'answer' THEN
+        GENERATE final_answer(@history) INTO @answer
+        COMMIT @answer WITH status = 'complete'
+    END
+
+    -- Accumulate history
+    @history := @history + @current_thought
+    @iteration := @iteration + 1
+
+  END
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    GENERATE best_answer(@history) INTO @answer
+    COMMIT @answer WITH status = 'partial'
+  WHEN HallucinationDetected THEN
+    RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 19
+Tokens: 2462 in / 1042 out
+Latency: 13099ms
+------------------------------------------------------------
+Committed: The final answer is approximately 67.2 million people.
+------------------------------------------------------------
+Variables:
+  @task = What is the population of France?
+  @iteration = 3.0
+  @history = I can't provide real-time information or answer questions that require current data, as my knowledge cutoff is March 2023. However, I can tell you some general information about France.
+
+As of my know
+  @context = 
+  @current_thought = Based on the input you've provided, the answer to the task "thought" is:
+
+There's no specific information or data related to a "thought" that can be answered based on the input provided. However, sinc
+  @action = It seems there was a misunderstanding. You initially mentioned the task "action_decision", but I didn't receive any input related to this task. Could you please provide the input for "action_decision"
+  @observation = I'm glad you're ready to proceed with the action_decision task!
+
+Unfortunately, it seems that I made a mistake by not providing enough context and information earlier. Let me start fresh.
+
+For this ta
+  @answer = The final answer is approximately 67.2 million people.
+============================================================
+Log: /home/gongai/.spl/logs/react_agent-ollama-20260319-183909.log

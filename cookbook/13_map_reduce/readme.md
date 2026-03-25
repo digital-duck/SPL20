@@ -30,6 +30,7 @@ chunk_plan(document) → N chunks
 ```bash
 # Long document — exercises chunking across multiple sections
 spl run cookbook/13_map_reduce/map_reduce.spl --adapter ollama \
+    -m gemma3 --tools cookbook/13_map_reduce/tools.py \
     document="$(cat cookbook/13_map_reduce/large_doc.txt)" \
     style="bullet points" \
     2>&1 | tee cookbook/out/13_map_reduce-long-$(date +%Y%m%d_%H%M%S).md

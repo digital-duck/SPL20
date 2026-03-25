@@ -58,17 +58,22 @@ WORKFLOW sentiment_pipeline
             @domain    TEXT DEFAULT 'general'
     OUTPUT: @report TEXT
 DO
+    LOGGING f'Sentiment pipeline | domain={@domain} filename={@filename}' LEVEL INFO
+
     -- Step 1: Load items from file if filename provided (deterministic — no LLM)
     CALL load_items(@filename) INTO @file_content
 
     -- Step 2: Split into a clean JSON array (deterministic — no LLM)
     CALL split_items(@file_content, @items, @delimiter) INTO @item_list
+    LOGGING f'Items loaded and split | list={@item_list}' LEVEL DEBUG
 
     -- Step 3: Batch sentiment — one structured result per item (LLM)
+    LOGGING 'Running batch sentiment ...' LEVEL INFO
     GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) INTO @sentiment_results
 
     -- Step 4: Compute aggregate statistics (deterministic — no LLM)
     CALL compute_stats(@sentiment_results) INTO @stats_json
+    LOGGING f'Stats computed: {@stats_json}' LEVEL DEBUG
 
     -- Step 5: Identify extreme and notable items (deterministic — no LLM)
     CALL find_extremes(@sentiment_results) INTO @extremes
@@ -79,6 +84,7 @@ DO
         @extremes,
         @domain
     ) INTO @trend_summary
+    LOGGING 'Trend narrative ready' LEVEL DEBUG
 
     -- Step 7: Assemble the full report (LLM)
     GENERATE assemble_sentiment_report(
@@ -89,6 +95,7 @@ DO
         @domain
     ) INTO @report
 
+    LOGGING f'Sentiment report complete | domain={@domain}' LEVEL INFO
     COMMIT @report WITH status = 'complete', domain = @domain
 
 EXCEPTION

@@ -71,7 +71,7 @@ Conditional branching:
       <statements>
     WHEN <condition> THEN
       <statements>
-    OTHERWISE
+    ELSE
       <statements>
   END;
 

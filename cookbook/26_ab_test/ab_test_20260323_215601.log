@@ -1,0 +1,337 @@
+
+```bash
+spl run ./26_ab_test/ab_test.spl --adapter ollama -m gemma3 task=Explain neural networks prompt_a=Explain like I'm 5 prompt_b=Give a technical explanation with analogies
+```
+
+```spl
+-- Recipe 26: Prompt A/B Test
+-- Compare two prompt variants using EVALUATE scoring. Pick the winner automatically.
+-- Demonstrates data-driven prompt engineering built into the workflow itself.
+-- Supports pre-built experiments from experiments.json or ad-hoc task + prompt_a + prompt_b.
+--
+-- Usage (from catalog):
+--   spl run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--       --tools cookbook/26_ab_test/tools.py \
+--       experiment_id=neural_networks
+--
+--   spl run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--       --tools cookbook/26_ab_test/tools.py \
+--       experiment_id=standing_desk winner_threshold=2.0
+--
+-- Usage (ad-hoc — no catalog):
+--   spl run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--       --tools cookbook/26_ab_test/tools.py \
+--       task="Explain neural networks" \
+--       prompt_a="Explain like I'm 5" \
+--       prompt_b="Give a technical explanation with analogies"
+--
+-- Discover available experiments:
+--   spl run ... experiment_id=list
+
+-- Scoring rubric as a reusable function
+CREATE FUNCTION scoring_rubric()
+RETURNS TEXT AS $$
+Rate the response on a scale of 0–10 for each criterion:
+1. Clarity (0-10): Is it easy to understand?
+2. Completeness (0-10): Does it fully address the task?
+3. Relevance (0-10): Is every sentence on-topic?
+4. Engagement (0-10): Is it interesting to read?
+
+Return valid JSON only — no prose outside the JSON:
+{"clarity": N, "completeness": N, "relevance": N, "engagement": N, "total": N, "rationale": "one concise sentence"}
+$$;
+
+WORKFLOW ab_test
+    INPUT:  @experiment_id    TEXT DEFAULT '',
+            @task             TEXT DEFAULT '',
+            @prompt_a         TEXT DEFAULT '',
+            @prompt_b         TEXT DEFAULT '',
+            @winner_threshold FLOAT DEFAULT 1.5
+    OUTPUT: @winner_output TEXT
+DO
+    -- Step 1: Load experiment from catalog (deterministic — no LLM)
+    -- Sets @experiment_context with task, prompt_a, prompt_b, and notes.
+    -- If experiment_id is blank, the context will be empty and @task/@prompt_a/@prompt_b are used directly.
+    CALL load_experiment(@experiment_id) INTO @experiment_context
+
+    -- Step 2: Generate Variant A response
+    GENERATE run_variant_a(
+        @task,
+        @prompt_a,
+        @experiment_context
+    ) INTO @response_a
+
+    -- Step 3: Generate Variant B response
+    GENERATE run_variant_b(
+        @task,
+        @prompt_b,
+        @experiment_context
+    ) INTO @response_b
+
+    -- Step 4: Score both variants against the rubric (LLM)
+    GENERATE evaluate_response(@response_a, @task, scoring_rubric()) INTO @score_a_json
+    GENERATE evaluate_response(@response_b, @task, scoring_rubric()) INTO @score_b_json
+
+    -- Step 5: Extract numeric totals (deterministic — no LLM)
+    CALL extract_score_total(@score_a_json) INTO @score_a
+    CALL extract_score_total(@score_b_json) INTO @score_b
+
+    -- Step 6: Pick winner or declare tie
+    EVALUATE (@score_a - @score_b)
+        WHEN > @winner_threshold THEN
+            SET @winner_output = @response_a
+            COMMIT @winner_output WITH
+                winner    = 'A',
+                score_a   = @score_a,
+                score_b   = @score_b,
+                margin    = (@score_a - @score_b)
+        WHEN < (0 - @winner_threshold) THEN
+            SET @winner_output = @response_b
+            COMMIT @winner_output WITH
+                winner    = 'B',
+                score_a   = @score_a,
+                score_b   = @score_b,
+                margin    = (@score_b - @score_a)
+        OTHERWISE
+            -- Scores too close — format both with explanation (deterministic — no LLM)
+            CALL format_tie_result(@response_a, @response_b, @score_a_json, @score_b_json) INTO @winner_output
+            COMMIT @winner_output WITH
+                winner  = 'tie',
+                score_a = @score_a,
+                score_b = @score_b
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'A/B test failed during generation.' WITH status = 'error'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 4391 in / 2663 out
+Latency: 36995ms
+------------------------------------------------------------
+```output
+To format_tie_result, we need to know what the tie result was for.
+
+Can you please tell me more about the tournament and how the players ranked? Also, do you have any details about the specific tiebreaker rule that applies in this case?
+
+I'll do my best to help you format the tie result based on this information.
+```
+------------------------------------------------------------
+Variables:
+  @task = Explain neural networks
+  @prompt_a = Explain like I'm 5
+  @prompt_b = Give a technical explanation with analogies
+  @winner_threshold = 1.5
+  @experiment_context = I'm happy to help you with your question, but I need a bit more information. There are several procedures that could be named `load_experiment`, and without more context, it's difficult for me to provide an accurate response.
+
+Could you please provide the following details:
+
+1. The programming language or framework being used (e.g., Python, R, SQL)
+2. The context in which this procedure is being called (e.g., data analysis, machine learning, web development)
+3. Any relevant code snippets or error messages that might help me understand what's going on
+
+That being said, I can provide a general example of how to implement the `load_experiment` procedure in Python using the Keras API:
+
+```python
+import numpy as np
+from keras.models import Sequential
+from keras.layers import Dense
+
+def load_experiment(experiment_id):
+    # Assuming experiment data is stored in a database or CSV file
+    # Replace with your actual data loading code
+    
+    # For demonstration purposes, let's assume we have an experiment ID and corresponding model
+    experiment_data = {
+        'experiment_id': 1,
+        'model': Sequential([
+            Dense(64, activation='relu', input_shape=(784,)),
+            Dense(32, activation='relu'),
+            Dense(10, activation='softmax')
+        ])
+    }
+    
+    return experiment_data
+
+# Call the procedure
+experiment = load_experiment(1)
+print(experiment['model'])
+```
+
+In this example, the `load_experiment` function takes an `experiment_id` as input and returns a dictionary containing the corresponding model. Please replace the hardcoded data with your actual data loading code.
+
+If you're using SQL or another database management system, the procedure might look something like this:
+
+```sql
+CREATE PROCEDURE load_experiment(experiment_id INT)
+BEGIN
+    -- Retrieve experiment data from database
+    SELECT * INTO @experiment_data FROM experiments WHERE id = experiment_id;
+    
+    -- Create a new model based on the retrieved data
+    CREATE MODEL `model_name` (id INT PRIMARY KEY) 
+    AS SELECT id, ...  -- Add your model columns here
+    
+    INSERT INTO models (name, model_type, experiment_id)
+    VALUES ('experiment_1', 'sequential', experiment_id);
+END;
+```
+
+Please note that this is a simplified example and might need to be adapted to your specific use case. If you have any further questions or would like more information on how to implement the `load_experiment` procedure for your particular framework or database, feel free to ask!
+  @response_a = I can explain neural networks in simple terms.
+
+A neural network is a computer system that's inspired by the way our brains work. It's made up of many layers of interconnected nodes (or "neurons") that process and transform inputs into outputs.
+
+Here's how it works:
+
+1. **Input Layer**: The first layer receives input data, like images, sounds, or text.
+2. **Hidden Layers**: The inputs are then passed through multiple hidden layers, where the neurons apply different transformations to the data. Each neuron takes a small part of the input and adds its own "weight" to it. This is called an activation function.
+3. **Output Layer**: The final layer produces the output, which can be anything from a simple number to a complex decision.
+
+Neural networks are trained using an algorithm that adjusts the weights and connections between neurons based on the error between predicted outputs and actual results. With enough training data and patience, neural networks can learn to recognize patterns in data and make accurate predictions or decisions.
+
+Now, let me try explaining it like you're 5:
+
+Imagine you have a toy box with different colored blocks inside. You want to teach a robot to sort the blocks by color. One way to do this is to show the robot many examples of sorted blocks (like "red block goes in red bin") and then ask it to sort its own blocks. The robot will make mistakes at first, but as it sees more examples, it gets better and better.
+
+A neural network works similarly. It's shown many examples of things it needs to recognize (like pictures of dogs or cats), and then it tries to sort them into groups based on those examples. With practice, the network becomes good at recognizing patterns and can even learn new things on its own!
+
+Does that make sense?
+  @response_b = It seems there was a misunderstanding in the prompt provided. The text appears to be a response to a question about running the "run_variant_b" task and is not directly related to providing a technical explanation of neural networks.
+
+However, I can provide an example of explaining how neural networks work using analogies:
+
+**What are Neural Networks?**
+
+Imagine you're trying to recognize pictures of cats and dogs. You want your computer to be able to look at a picture and say "oh, that's a cat" or "that's a dog".
+
+A traditional approach would be to write a list of all the features of a cat (or dog), like whiskers, fur color, etc., and then check each feature against each picture. This would be very time-consuming and not very efficient.
+
+A neural network is like a team of experts who work together to recognize patterns in pictures. Each expert is called a "neuron," and they're arranged in layers.
+
+**How Do Neurons Work?**
+
+Each neuron looks at a small part of the picture (called an "input") and says "oh, I see something interesting here!" The neuron then talks to its friend next door (another neuron) and says "hey, you should check out this thing too!"
+
+The two neurons will often agree on what they think the pattern is. If most of the neurons in a layer agree, then that's usually the correct answer.
+
+**How Do Layers Work?**
+
+As the signals move through the network, each layer gets to see more and more information. This is like taking a picture from far away (layer 1) and zooming in closer to see more details (later layers).
+
+The final layer of neurons is called the "output" layer, and it's where the computer says "oh, I know what that is! It's a cat!"
+
+**Training the Network**
+
+At first, all of the neurons are just guessing. But as we show them pictures of cats and dogs over and over again, they start to get better at recognizing patterns.
+
+Eventually, when we give the network a new picture it's never seen before (like a weird hybrid animal), the neurons work together to say "oh no! This is not a cat or dog... I think it should be none of those things!"
+
+The more pictures we show the network and the better it does at recognizing patterns, the more accurate its guesses become.
+
+This is a simplified explanation of how neural networks work. If you'd like more information or have specific questions about neural networks, feel free to ask!
+  @score_a_json = Based on the provided input, I will evaluate the response as follows:
+
+Input 1:
+The response provides a clear and concise explanation of neural networks, covering the basic structure and function of the system. The use of simple language and relatable analogies (e.g., sorting blocks) helps to make the concept more accessible to readers with varying levels of technical expertise.
+
+However, the response could benefit from some minor improvements:
+
+* Consider adding a brief example or scenario that illustrates how neural networks are used in real-world applications.
+* Some sentences, such as "This is called an activation function," could be rephrased for better clarity and flow.
+* The response jumps abruptly from explaining how neural networks work to providing an analogy. While the analogy is helpful, it would be better to transition more smoothly between these sections.
+
+Overall score: 8/10
+
+Input 2:
+This input appears to be missing context or information about what "explain" refers to in this scenario. However, assuming that the prompt is asking for a simple explanation of neural networks, I will provide a similar response to Input 1:
+
+A neural network is a computer system inspired by the human brain. It consists of interconnected nodes (neurons) that process and transform inputs into outputs.
+
+To explain how it works, consider the following structure:
+* **Input Layer**: Receives input data
+* **Hidden Layers**: Process and transform inputs through various transformations
+* **Output Layer**: Produces the output
+
+Neural networks are trained using algorithms that adjust weights and connections between neurons based on error between predicted outputs and actual results.
+
+With enough training data, neural networks can learn to recognize patterns in data and make accurate predictions or decisions.
+
+This explanation is brief but covers the basic principles of neural networks. A more detailed response may be required for a higher-scoring evaluation.
+
+Overall score: 6/10
+
+Input 3:
+Since this input contains scoring rubric information, it's not possible to evaluate the response based on content alone. However, I can provide some general guidance:
+
+When scoring a response using a rubric, consider evaluating factors such as:
+
+* Clarity and concision
+* Accuracy and completeness of information
+* Use of relevant examples or analogies
+* Organization and coherence
+
+If you'd like to receive specific feedback on how to improve your scoring, please let me know!
+  @score_b_json = Based on the provided input, I will evaluate the response as follows:
+
+Input 1:
+The evaluation is "Not Evaluable" since it's not a complete response and doesn't contain any text to be evaluated.
+
+Input 2:
+The response is evaluated as "Pass" because it provides an explanation of neural networks using analogies. The analogy of recognizing pictures of cats and dogs helps to simplify the concept of neural networks, making it easier for non-experts to understand.
+
+Input 3:
+Since Input 3 includes a "[scoring_rubric(...)]" which is not a complete response, I will assume that the scoring rubric is not applicable. If you provide the actual scoring rubric, I would be happy to evaluate the response based on it.
+  @score_a = Based on the provided input, I will evaluate the response as follows:
+
+Input 1:
+The response provides a clear and concise explanation of neural networks, covering the basic structure and function of the system. The use of simple language and relatable analogies (e.g., sorting blocks) helps to make the concept more accessible to readers with varying levels of technical expertise.
+
+However, the response could benefit from some minor improvements:
+
+* Consider adding a brief example or scenario that illustrates how neural networks are used in real-world applications.
+* Some sentences, such as "This is called an activation function," could be rephrased for better clarity and flow.
+* The response jumps abruptly from explaining how neural networks work to providing an analogy. While the analogy is helpful, it would be better to transition more smoothly between these sections.
+
+Overall score: 8/10
+
+Input 2:
+This input appears to be missing context or information about what "explain" refers to in this scenario. However, assuming that the prompt is asking for a simple explanation of neural networks, I will provide a similar response:
+
+A neural network is a computer system inspired by the human brain. It consists of interconnected nodes (neurons) that process and transform inputs into outputs.
+
+To explain how it works, consider the following structure:
+* **Input Layer**: Receives input data
+* **Hidden Layers**: Process and transform inputs through various transformations
+* **Output Layer**: Produces the output
+
+Neural networks are trained using algorithms that adjust weights and connections between neurons based on error between predicted outputs and actual results.
+
+With enough training data, neural networks can learn to recognize patterns in data and make accurate predictions or decisions.
+
+This explanation is brief but covers the basic principles of neural networks. A more detailed response may be required for a higher-scoring evaluation.
+
+Overall score: 6/10
+
+Input 3:
+Since this input contains scoring rubric information, it's not possible to evaluate the response based on content alone. However, I can provide some general guidance:
+
+When scoring a response using a rubric, consider evaluating factors such as:
+
+* Clarity and concision
+* Accuracy and completeness of information
+* Use of relevant examples or analogies
+* Organization and coherence
+
+If you'd like to receive specific feedback on how to improve your scoring, please let me know!
+
+Note: Since Input 3 contains scoring rubric information, it's not possible to evaluate the response based on content alone.
+  @score_b = I'd be happy to help you with the procedure "extract_score_total". However, I don't see any input provided for me to work with.
+
+Could you please provide the input that you would like me to process using the "extract_score_total" procedure? I'll do my best to execute it and provide a response based on your evaluation criteria.
+============================================================
+Log: /home/gongai/.spl/logs/ab_test-ollama-20260323-215601.log

@@ -1,0 +1,365 @@
+
+```bash
+spl run ./34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 text=Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work. audience=executive
+```
+
+```spl
+-- Recipe 34: Progressive Summarizer
+-- Layered summary: sentence → paragraph → page.
+-- Each layer is a compressed, self-contained summary of the previous layer.
+--
+-- Usage:
+--   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 \
+--       text="$(cat long_article.txt)"
+--
+--   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+--       text="$(cat research_paper.txt)" audience="executive" layers=3
+
+CREATE FUNCTION summary_constraints(layer TEXT)
+RETURNS TEXT AS $$
+SELECT CASE layer
+  WHEN 'sentence'  THEN 'One sentence only. Maximum 25 words. Capture the single most important idea.'
+  WHEN 'paragraph' THEN '3-5 sentences. Cover main points and key supporting evidence. No examples or details.'
+  WHEN 'page'      THEN '2-3 paragraphs. Include context, main argument, evidence, and implications.'
+  ELSE                   'Comprehensive summary with all major points, key evidence, and conclusions.'
+END
+$$;
+
+WORKFLOW progressive_summarizer
+    INPUT: @text TEXT, @audience TEXT DEFAULT 'general', @layers INT DEFAULT 3
+    OUTPUT: @summary_package TEXT
+DO
+    -- Layer 1: One-sentence summary
+    GENERATE summarize(
+        @text,
+        summary_constraints('sentence'),
+        @audience
+    ) INTO @sentence_summary
+
+    -- Layer 2: Paragraph summary (built on layer 1 for coherence)
+    GENERATE expand_summary(
+        @text,
+        @sentence_summary,
+        summary_constraints('paragraph'),
+        @audience
+    ) INTO @paragraph_summary
+
+    -- Layer 3: Page-length summary (built on layer 2)
+    EVALUATE @layers
+        WHEN >= 3 THEN
+            GENERATE expand_summary(
+                @text,
+                @paragraph_summary,
+                summary_constraints('page'),
+                @audience
+            ) INTO @page_summary
+        OTHERWISE
+            @page_summary := ''
+    END
+
+    -- Quality check: does each layer faithfully represent the original?
+    GENERATE verify_summary_fidelity(@text, @sentence_summary, @paragraph_summary) INTO @fidelity_score
+
+    -- Assemble all layers into a structured output
+    GENERATE assemble_summary_package(
+        @sentence_summary,
+        @paragraph_summary,
+        @page_summary,
+        @fidelity_score,
+        @audience
+    ) INTO @summary_package
+
+    COMMIT @summary_package WITH
+        status = 'complete',
+        layers_generated = @layers,
+        audience = @audience,
+        fidelity = @fidelity_score
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Text too long — chunk first then summarize each chunk
+        GENERATE chunk_and_summarize(@text, summary_constraints('paragraph')) INTO @paragraph_summary
+        GENERATE summarize(@paragraph_summary, summary_constraints('sentence'), @audience) INTO @sentence_summary
+        GENERATE assemble_summary_package(@sentence_summary, @paragraph_summary, '', 'n/a', @audience) INTO @summary_package
+        COMMIT @summary_package WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 3478 in / 2478 out
+Latency: 35963ms
+------------------------------------------------------------
+```output
+To create an accurate summary based on Input 1 and Input 4, we need to provide specific constraints for Input 2. Here's an example:
+
+Artificial intelligence has transformed various industries by automating complex tasks that previously required human expertise. This technology has enabled applications like disease diagnosis from medical images and fraud detection in financial transactions. However, there are concerns about bias, accountability, and the impact on future work due to these advancements.
+
+Constraints for Input 2:
+
+* `max_length`: 150
+* `min_length`: 100
+* `max_sentences`: 5
+* `min_sentences`: 3
+
+We can use the `expand_summary` function provided in Input 3 to create an expanded summary based on these constraints. Here's how we can do it:
+
+```python
+input1 = "Artificial intelligence has transformed various industries by automating complex tasks that previously required human expertise. This technology has enabled applications like disease diagnosis from medical images and fraud detection in financial transactions. However, there are concerns about bias, accountability, and the impact on future work due to these advancements."
+
+def expand_summary(summary_constraints):
+    # Define the input parameters
+    if 'max_length' in summary_constraints and summary_constraints['max_length'] is not None:
+        max_length = summary_constraints['max_length']
+    else:
+        raise ValueError("max_length constraint is required")
+
+    if 'min_length' in summary_constraints and summary_constraints['min_length'] is not None:
+        min_length = summary_constraints['min_length']
+    else:
+        min_length = 50
+
+    # Limit the number of sentences to a maximum of 5
+    if 'max_sentences' in summary_constraints and summary_constraints['max_sentences'] is not None:
+        max_sentences = summary_constraints['max_sentences']
+    else:
+        raise ValueError("max_sentences constraint is required")
+
+    if 'min_sentences' in summary_constraints and summary_constraints['min_sentences'] is not None:
+        min_sentences = summary_constraints['min_sentences']
+    else:
+        min_sentences = 2
+
+    # Tokenize the summary into sentences
+    input1_sentences = input1.split('. ')
+
+    # Expand the summary to a maximum of max_sentences sentences
+    expanded_summary_sentences = []
+    for sentence in input1_sentences:
+        if len(expanded_summary_sentences) < max_sentences:
+            expanded_summary_sentences.append(sentence)
+        elif len(expanded_summary_sentences) == max_sentences and sum(1 for _ in expanded_summary_sentences) > min_sentences:
+            break
+
+    # Expand each sentence to a maximum of 2 times its original length
+    expanded_summary = []
+    for sentence in expanded_summary_sentences:
+        words = sentence.split()
+        if len(words) > max_length // 2:  # Adjust the threshold according to your needs
+            new_sentence = ' '.join(words[:len(words) // 2]) + '...' + ' '.join(words[len(words) // 2:])
+        else:
+            new_sentence = sentence
+        expanded_summary.append(new_sentence)
+
+    # Join the expanded sentences into a single summary
+    expanded_summary = ' '.join(expanded_summary)
+    
+    return {
+        "expanded_summary": expanded_summary,
+        "max_length": max_length,
+        "min_length": min_length,
+        "max_sentences": max_sentences,
+        "min_sentences": min_sentences,
+    }
+
+summary_constraints = {
+    'max_length': 150,
+    'min_length': 100,
+    'max_sentences': 5,
+    'min_sentences': 3
+}
+
+expanded_summary = expand_summary(summary_constraints)
+print(expanded_summary['expanded_summary'])
+```
+
+When you run this code, it will create an expanded summary based on the provided constraints. The output will be a single string with a maximum length of 150 characters and a minimum length of 100 characters, divided into at most 5 sentences, each sentence having at least 3 words.
+
+Please note that these constraints can be adjusted according to your specific requirements.
+```
+------------------------------------------------------------
+Variables:
+  @text = Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work.
+  @audience = executive
+  @layers = 3
+  @sentence_summary = Based on the input provided, I can only provide a summary based on the first two inputs. Since there are no constraints specified in Input 2, I will not be able to create an accurate summary without more information.
+
+Here's a summary of the first two inputs:
+
+Artificial intelligence has revolutionized various industries by automating complex tasks that previously required human expertise. This technology has enabled applications like disease diagnosis from medical images and fraud detection in financial transactions. However, there are concerns about bias, accountability, and the impact on future work due to these advancements. 
+
+Please provide Input 2 with specific constraints for an accurate summary.
+  @paragraph_summary = def expand_summary(summary_constraints):
+    # Define the input parameters
+    if 'max_length' in summary_constraints and summary_constraints['max_length'] is not None:
+        max_length = summary_constraints['max_length']
+    else:
+        raise ValueError("max_length constraint is required")
+
+    if 'min_length' in summary_constraints and summary_constraints['min_length'] is not None:
+        min_length = summary_constraints['min_length']
+    else:
+        min_length = 50
+
+    # Limit the number of sentences to a maximum of 5
+    if 'max_sentences' in summary_constraints and summary_constraints['max_sentences'] is not None:
+        max_sentences = summary_constraints['max_sentences']
+    else:
+        raise ValueError("max_sentences constraint is required")
+
+    if 'min_sentences' in summary_constraints and summary_constraints['min_sentences'] is not None:
+        min_sentences = summary_constraints['min_sentences']
+    else:
+        min_sentences = 2
+
+    # Extract the summary from Input 1
+    input1 = "Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work."
+
+    # Tokenize the summary into sentences
+    sentences = input1.split('. ')
+
+    # Expand the summary to a maximum of max_sentences sentences
+    expanded_summary = []
+    for sentence in sentences:
+        if len(expanded_summary) < max_sentences:
+            expanded_summary.append(sentence)
+        elif len(expanded_summary) == max_sentences and sum(1 for _ in expanded_summary) > min_sentences:
+            break
+
+    # Expand each sentence to a maximum of 2 times its original length
+    expanded_sentences = []
+    for sentence in expanded_summary:
+        words = sentence.split()
+        if len(words) > max_length // 2:  # Adjust the threshold according to your needs
+            new_sentence = ' '.join(words[:len(words) // 2]) + '...' + ' '.join(words[len(words) // 2:])
+        else:
+            new_sentence = sentence
+        expanded_sentences.append(new_sentence)
+
+    # Join the expanded sentences into a single summary
+    expanded_summary = ' '.join(expanded_sentences)
+    
+    return {
+        "expanded_summary": expanded_summary,
+        "max_length": max_length,
+        "min_length": min_length,
+        "max_sentences": max_sentences,
+        "min_sentences": min_sentences,
+    }
+  @page_summary = ```python
+def expand_summary(summary_constraints):
+    """
+    Expand a summary to meet specific constraints.
+
+    Args:
+        summary_constraints (dict): A dictionary containing the following keys:
+            - max_length (int): The maximum length of each sentence.
+            - min_length (int): The minimum length of each sentence.
+            - max_sentences (int): The maximum number of sentences in the expanded summary.
+            - min_sentences (int): The minimum number of sentences in the expanded summary.
+
+    Returns:
+        dict: A dictionary containing the expanded summary and the specified constraints.
+    """
+
+    # Define the input parameters
+    if 'max_length' in summary_constraints and summary_constraints['max_length'] is not None:
+        max_length = summary_constraints['max_length']
+    else:
+        raise ValueError("max_length constraint is required")
+
+    if 'min_length' in summary_constraints and summary_constraints['min_length'] is not None:
+        min_length = summary_constraints['min_length']
+    else:
+        min_length = 50
+
+    # Limit the number of sentences to a maximum of 5
+    if 'max_sentences' in summary_constraints and summary_constraints['max_sentences'] is not None:
+        max_sentences = summary_constraints['max_sentences']
+    else:
+        raise ValueError("max_sentences constraint is required")
+
+    if 'min_sentences' in summary_constraints and summary_constraints['min_sentences'] is not None:
+        min_sentences = summary_constraints['min_sentences']
+    else:
+        min_sentences = 2
+
+    # Extract the summary from Input 1
+    input1 = "Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work."
+
+    # Tokenize the summary into sentences
+    input1_sentences = input1.split('. ')
+
+    # Expand the summary to a maximum of max_sentences sentences
+    expanded_summary_sentences = []
+    for sentence in input1_sentences:
+        if len(expanded_summary_sentences) < max_sentences:
+            expanded_summary_sentences.append(sentence)
+        elif len(expanded_summary_sentences) == max_sentences and sum(1 for _ in expanded_summary_sentences) > min_sentences:
+            break
+
+    # Expand each sentence to a maximum of 2 times its original length
+    expanded_summary = []
+    for sentence in expanded_summary_sentences:
+        words = sentence.split()
+        if len(words) > max_length // 2:  # Adjust the threshold according to your needs
+            new_sentence = ' '.join(words[:len(words) // 2]) + '...' + ' '.join(words[len(words) // 2:])
+        else:
+            new_sentence = sentence
+        expanded_summary.append(new_sentence)
+
+    # Join the expanded sentences into a single summary
+    expanded_summary = ' '.join(expanded_summary)
+    
+    return {
+        "expanded_summary": expanded_summary,
+        "max_length": max_length,
+        "min_length": min_length,
+        "max_sentences": max_sentences,
+        "min_sentences": min_sentences,
+    }
+```
+
+Example usage:
+```python
+summary_constraints = {
+    'max_length': 100,
+    'min_length': 20,
+    'max_sentences': 5,
+    'min_sentences': 3
+}
+
+expanded_summary = expand_summary(summary_constraints)
+print(expanded_summary['expanded_summary'])
+```
+  @fidelity_score = To create an accurate summary, we need to provide specific constraints for Input 2. Here's an example:
+
+Input 2:
+Artificial intelligence has transformed various industries by automating complex tasks that previously required human expertise. This technology has enabled applications like disease diagnosis from medical images and fraud detection in financial transactions. However, there are concerns about bias, accountability, and the impact on future work due to these advancements.
+
+Constraints for Input 2:
+
+* `max_length`: 150
+* `min_length`: 100
+* `max_sentences`: 5
+* `min_sentences`: 3
+
+We can use the `expand_summary` function provided in Input 3 to create an expanded summary based on these constraints. Here's how we can do it:
+
+```python
+expanded_summary = expand_summary({
+    'max_length': 150,
+    'min_length': 100,
+    'max_sentences': 5,
+    'min_sentences': 3,
+})
+
+print(expanded_summary['expanded_summary'])
+```
+
+When you run this code, it will create an expanded summary based on the provided constraints. The output will be a single string with a maximum length of 150 characters and a minimum length of 100 characters, divided into at most 5 sentences, each sentence having at least 3 words.
+
+Please note that these constraints can be adjusted according to your specific requirements. The `expand_summary` function is quite flexible, so you can experiment with different constraints to achieve the desired summary.
+============================================================
+Log: /home/gongai/.spl/logs/progressive_summary-ollama-20260324-174815.log

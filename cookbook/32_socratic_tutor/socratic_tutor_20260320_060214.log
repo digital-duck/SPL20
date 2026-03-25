@@ -1,0 +1,183 @@
+
+```bash
+spl2 run ./32_socratic_tutor/socratic_tutor.spl --adapter ollama -m gemma3 topic=Why does the sky appear blue? student_level=middle school
+```
+
+```sql
+-- Recipe 32: Socratic Tutor
+-- Ask guiding questions rather than giving answers directly.
+-- Demonstrates persona-constrained generation + iterative dialogue simulation.
+--
+-- Usage:
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl --adapter ollama -m gemma3 \
+--       topic="Why does the sky appear blue?" student_level="middle school"
+--
+--   spl2 run cookbook/32_socratic_tutor/socratic_tutor.spl --adapter ollama \
+--       topic="Prove that sqrt(2) is irrational" student_level="undergraduate" \
+--       max_questions=5
+
+CREATE FUNCTION socratic_persona(student_level TEXT DEFAULT 'high school')
+RETURNS TEXT AS $$
+You are a Socratic tutor. Your role is to guide the student to discover answers themselves — never give direct answers.
+
+Rules:
+1. Ask ONE clear question at a time that leads toward understanding
+2. Build on what the student already knows
+3. If the student is stuck, give a hint in the form of another question
+4. Celebrate partial insights: "Good observation! Now what does that imply about...?"
+5. Never say "The answer is..." or "You should know that..."
+
+Student level: {student_level}
+Adjust vocabulary and question complexity accordingly.
+$$;
+
+WORKFLOW socratic_tutor
+    INPUT: @topic TEXT, @student_level TEXT DEFAULT 'high school', @max_questions INT DEFAULT 5
+    OUTPUT: @dialogue TEXT
+DO
+    -- Generate the opening Socratic question
+    GENERATE opening_question(
+        @topic,
+        socratic_persona(@student_level)
+    ) INTO @question_1
+
+    -- Simulate student's first response (what a typical student might say)
+    GENERATE simulate_student_response(@question_1, @topic, @student_level) INTO @student_1
+
+    -- Follow-up question based on student response
+    GENERATE followup_question(
+        @question_1,
+        @student_1,
+        @topic,
+        socratic_persona(@student_level)
+    ) INTO @question_2
+
+    -- Student works toward understanding
+    GENERATE simulate_student_response(@question_2, @topic, @student_level) INTO @student_2
+
+    -- Check if understanding is emerging
+    GENERATE assess_understanding(@student_1, @student_2, @topic) INTO @understanding_score
+
+    EVALUATE @understanding_score
+        WHEN > 7 THEN
+            -- Student is getting it — consolidation question
+            GENERATE consolidation_question(@topic, @student_2, socratic_persona(@student_level)) INTO @question_3
+            GENERATE simulate_student_response(@question_3, @topic, @student_level) INTO @student_3
+            GENERATE compile_dialogue(
+                @question_1, @student_1,
+                @question_2, @student_2,
+                @question_3, @student_3,
+                @topic
+            ) INTO @dialogue
+        OTHERWISE
+            -- Student needs more scaffolding
+            GENERATE hint_question(@question_2, @topic, socratic_persona(@student_level)) INTO @question_3
+            GENERATE simulate_student_response(@question_3, @topic, @student_level) INTO @student_3
+            GENERATE compile_dialogue(
+                @question_1, @student_1,
+                @question_2, @student_2,
+                @question_3, @student_3,
+                @topic
+            ) INTO @dialogue
+    END
+
+    COMMIT @dialogue WITH status = 'complete', understanding_score = @understanding_score
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 3644 in / 2671 out
+Latency: 121611ms
+------------------------------------------------------------
+```output
+def compile_dialogue():
+    input_1 = """
+The sky appears blue because of a phenomenon called Rayleigh scattering, named after the British physicist Lord Rayleigh, who first described it in the late 19th century.
+
+When sunlight enters Earth's atmosphere, it encounters tiny molecules of gases such as nitrogen and oxygen. These molecules scatter the light in all directions, but they scatter shorter (blue) wavelengths more than longer (red) wavelengths. This is known as Rayleigh scattering.
+
+As a result, the blue light is scattered in all directions and reaches our eyes from all parts of the sky, making it appear blue to us. The color of the sky can vary depending on the time of day and atmospheric conditions, but the basic principle of Rayleigh scattering remains the same.
+"""
+
+    input_2 = """
+To answer your question about whether the color of the sky is truly "blue," let's think about this: if we didn't have eyes to see with, would the sky still appear blue? No, it wouldn't. But what if animals that don't have eyes, like dogs or cats, can sense colors differently than humans do? Would they perceive the sky as another color?
+
+This makes us wonder, is our perception of the sky's color really just because of our biology and how we see light, or is there something else at play?
+"""
+
+    input_3 = """
+Ah, but why does the sky appear blue? You're asking the question again!
+
+Let's take a step back and think about it. We've established that the color of the sky is due to Rayleigh scattering, where shorter wavelengths of light (like blue) are scattered more than longer wavelengths (like red). But what if we were to imagine a world without light?
+
+In the absence of light, would the sky still appear... well, not blue at all? Or would it be something entirely different? Perhaps our perception of color is deeply tied to our biology and how we interact with light.
+
+To answer this question, let's consider another perspective: what if we could somehow "see" the sky using a completely different sense?
+"""
+
+    input_4 = """
+Ah, but that's exactly what I'm getting at! Our understanding of the world is often limited by our own senses. We think in terms of sight and sound, but what about other ways of perceiving reality?
+
+If we were to extend our perception beyond just visual and auditory cues, would we still perceive the sky as blue? Or would it be something entirely new and unfamiliar?
+
+Perhaps the "blue" color we perceive is not an inherent property of the sky itself, but rather a product of our biology and how we process light. In other words, the color of the sky might be more of a construct of our minds than an objective reality.
+
+This line of thinking leads to some fascinating questions about the nature of perception and reality. What do you think?
+"""
+
+    input_5 = """
+Let's continue exploring this thought-provoking question together!
+
+As we ponder the possibility of perceiving the sky in a different way, we start to realize that our understanding of reality is influenced by our biology and environment. If we were to adopt a sense other than sight or hearing, would our perception of the world be drastically different?
+
+For instance, if we could "see" the sky through sound waves, we might perceive it as a vibrant tapestry of frequencies, each corresponding to a specific pitch or tone. Or perhaps, if we could "feel" the sky through touch, we might sense its texture and temperature, allowing us to experience the atmosphere in a more tactile way.
+
+The more I think about this, the more I'm convinced that our perception of reality is highly subjective and context-dependent. The color of the sky, which we take for granted, might be just one aspect of a much larger, multifaceted tapestry of human experience. So, I'd like to pose the question: What if our understanding of reality was not fixed or absolute, but rather a dynamic, ever-evolving construct that shifts and adapts based on new experiences and perspectives? How would you like to proceed?
+"""
+
+    input_6 = """
+The sky appears blue because of a phenomenon called Rayleigh scattering. When sunlight enters Earth's atmosphere, it encounters tiny molecules of gases such as nitrogen and oxygen. These molecules scatter the shorter, blue wavelengths of light more than the longer, red wavelengths, giving the sky its blue color.
+"""
+
+    def simulate_student_response(input_text):
+        # Define a function to generate a response based on the input text
+        def generate_response():
+            if "Rayleigh scattering" in input_text:
+                return "That's correct! Rayleigh scattering is responsible for the blue color of the sky."
+            elif "sound waves" in input_text or "touch" in input_text:
+                return "Let's explore the idea of perceiving the world through different senses. How do you think our understanding
+```
+------------------------------------------------------------
+Variables:
+  @topic = Why does the sky appear blue?
+  @student_level = middle school
+  @question_1 = The sky appears blue because of a phenomenon called Rayleigh scattering, named after the British physicist Lord Rayleigh, who first described it in the late 19th century.
+
+Here's a brief explanation:
+
+  @student_1 = To answer your question about whether the color of the sky is truly "blue," let's think about this: if we didn't have eyes to see with, would the sky still appear blue? No, it wouldn't. But what if an
+  @question_2 =  Input 3:
+
+ Ah, but why does the sky appear blue? You're asking the question again!
+
+Let's take a step back and think about it. We've established that the color of the sky is due to Rayleigh scatterin
+  @student_2 = Based on the conversation, I'd like to simulate a student response:
+
+"Hey, so if we're trying to figure out why the sky appears blue... I've heard that it's because of something called Rayleigh scatte
+  @understanding_score = To assess understanding based on Input 2, I would ask:
+
+* What is the concept of Rayleigh scattering and how does it relate to the sky's appearance?
+* How do you think our brains process sensory infor
+  @question_3 = Let's continue exploring this thought-provoking question together!
+
+As we ponder the possibility of perceiving the sky in a different way, we start to realize that our understanding of reality is infl
+  @student_3 = Based on the input:
+
+The sky appears blue because of a phenomenon called Rayleigh scattering. When sunlight enters Earth's atmosphere, it encounters tiny molecules of gases such as nitrogen and oxygen
+  @dialogue = def compile_dialogue():
+    input_1 = """
+The sky appears blue because of a phenomenon called Rayleigh scattering, named after the British physicist Lord Rayleigh, who first described it in the late 1
+============================================================
+Log: /home/gongai/.spl/logs/socratic_tutor-ollama-20260320-060214.log

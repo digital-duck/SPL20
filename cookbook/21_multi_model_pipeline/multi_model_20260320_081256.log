@@ -1,0 +1,120 @@
+
+```bash
+spl2 run ./21_multi_model_pipeline/multi_model.spl --adapter ollama -m gemma3 topic=climate change
+```
+
+```spl2
+-- Recipe 21: Multi-Model Pipeline
+-- Showcases GENERATE ... USING MODEL per-step model selection
+-- and semantic WHILE loop with variable context.
+--
+-- Each step can target a different model — the right model for each task.
+-- Usage:
+--   spl2 run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
+
+CREATE FUNCTION research(topic TEXT) RETURNS TEXT AS $$
+You are a research specialist.
+Provide key facts, statistics, and recent developments about: {topic}
+Focus on factual accuracy. Be thorough but concise.
+$$;
+
+CREATE FUNCTION analyze(facts TEXT) RETURNS TEXT AS $$
+You are a data analyst.
+Analyze the following research and identify the 3 most significant insights:
+
+{facts}
+
+For each insight, explain why it matters and rate its significance (1-10).
+$$;
+
+CREATE FUNCTION write_summary(analysis TEXT) RETURNS TEXT AS $$
+You are a professional writer.
+Write a clear, engaging 2-paragraph summary based on this analysis:
+
+{analysis}
+
+The first paragraph should present the key findings.
+The second paragraph should discuss implications and outlook.
+$$;
+
+CREATE FUNCTION quality_check(text TEXT) RETURNS TEXT AS $$
+You are a quality reviewer.
+Rate the following text on a scale of 0.0 to 1.0 for:
+- Clarity
+- Accuracy
+- Completeness
+
+Return ONLY a single number (the average score).
+
+Text: {text}
+$$;
+
+WORKFLOW multi_model_pipeline
+  INPUT: @topic TEXT
+  OUTPUT: @final TEXT
+DO
+  -- Step 1: Research with a fast model (good for factual retrieval)
+  GENERATE research(@topic) USING MODEL 'gemma3' INTO @facts;
+
+  -- Step 2: Analysis with a reasoning model
+  GENERATE analyze(@facts) USING MODEL 'gemma3' INTO @analysis;
+
+  -- Step 3: Writing with a creative model
+  GENERATE write_summary(@analysis) USING MODEL 'gemma3' INTO @draft;
+
+  -- Step 4: Quality loop — refine until score > 0.7 (max 3 iterations)
+  @iteration := 0;
+  @quality := 0;
+
+  WHILE @iteration < 3 DO
+    GENERATE quality_check(@draft) INTO @quality;
+
+    EVALUATE @quality
+      WHEN > 0.7 THEN
+        COMMIT @draft WITH status = 'high_quality', score = @quality
+      OTHERWISE
+        GENERATE write_summary(@analysis) INTO @draft
+        @iteration := @iteration + 1
+    END
+  END
+
+  -- Fallback: commit whatever we have
+  COMMIT @draft WITH status = 'max_iterations', score = @quality
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    COMMIT @draft WITH status = 'partial'
+  WHEN ModelOverloaded THEN
+    COMMIT @draft WITH status = 'model_overloaded'
+END;
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 2103 in / 1895 out
+Latency: 33785ms
+------------------------------------------------------------
+```output
+Here’s a two-paragraph summary based on the provided climate change analysis:
+
+Recent research has delivered stark and undeniable evidence of a rapidly changing climate. 2023 was confirmed as the warmest year on record, exceeding pre-industrial temperatures by a staggering 1.48°C (2.6°F), highlighting the accelerating pace of global warming. Simultaneously, scientists have observed a phenomenon known as Arctic amplification, where the Arctic is warming at roughly twice the global average rate, driven by melting ice and altered atmospheric circulation. Finally, advancements in attribution science now allow researchers to confidently link specific extreme weather events – like devastating heatwaves and wildfires – to the influence of climate change, moving the issue from theoretical projections to demonstrable consequences.
+
+These findings collectively paint a troubling picture with significant implications for the future. The confirmed record-breaking warmth underscores the urgent need for immediate and drastic action to mitigate greenhouse gas emissions. The Arctic amplification effect, in particular, presents a cascading threat, impacting global weather patterns, accelerating sea-level rise, and potentially unleashing massive quantities of methane.  Furthermore, the ability to attribute extreme events to climate change strengthens the imperative for adaptation strategies and demands greater accountability.  The situation is no longer a distant concern; it’s a present reality requiring immediate and sustained global effort.
+```
+------------------------------------------------------------
+Variables:
+  @topic = climate change
+  @facts = Okay, here’s a thorough but concise overview of climate change, focusing on factual accuracy and incorporating key data and recent developments as of today, November 2, 2023.
+
+**I. The Science – What’
+  @analysis = Okay, here’s an analysis of the provided climate change research, identifying the 3 most significant insights with explanations and significance ratings (1-10, with 10 being the most significant):
+
+**
+  @draft = Here’s a two-paragraph summary based on the provided climate change analysis:
+
+Recent research has delivered stark and undeniable evidence of a rapidly changing climate. 2023 was confirmed as the warm
+  @iteration = 0
+  @quality = 0.9
+============================================================
+Log: /home/gongai/.spl/logs/multi_model-ollama-20260320-081256.log

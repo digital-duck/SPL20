@@ -1,0 +1,238 @@
+
+```bash
+spl2 run ./31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 items=Great product, love it! | Terrible experience, never again | It was okay I guess domain=product_reviews
+```
+
+```sql
+-- Recipe 31: Sentiment Pipeline
+-- Batch sentiment over a list of inputs, aggregate trend statistics.
+-- Demonstrates iteration over a list with per-item structured output + aggregation.
+--
+-- Usage:
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 \
+--       items="Great product, love it! | Terrible experience, never again | It was okay I guess"
+--
+--   spl2 run cookbook/31_sentiment_pipeline/sentiment.spl --adapter ollama \
+--       items="$(cat reviews.txt)" delimiter="\n" domain="product_reviews"
+
+CREATE FUNCTION sentiment_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "label":      {"type": "string", "enum": ["positive", "negative", "neutral", "mixed"]},
+    "score":      {"type": "number", "minimum": -1, "maximum": 1},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "emotions":   {"type": "array", "items": {"type": "string"}},
+    "key_phrases":{"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["label", "score", "confidence"]
+}
+$$;
+
+WORKFLOW sentiment_pipeline
+    INPUT: @items TEXT, @delimiter TEXT DEFAULT '|', @domain TEXT DEFAULT 'general'
+    OUTPUT: @report TEXT
+DO
+    -- Step 1: Parse and clean the input list
+    GENERATE split_and_clean(@items, @delimiter) INTO @item_list
+
+    -- Step 2: Batch sentiment analysis (one result per item)
+    GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) INTO @sentiment_results
+
+    -- Step 3: Aggregate statistics
+    GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+
+    -- Step 4: Identify notable items
+    GENERATE find_extremes(@sentiment_results) INTO @extremes
+
+    -- Step 5: Generate trend summary
+    GENERATE summarize_sentiment_trends(
+        @stats_json,
+        @extremes,
+        @domain
+    ) INTO @trend_summary
+
+    -- Step 6: Assemble full report
+    GENERATE assemble_sentiment_report(
+        @sentiment_results,
+        @stats_json,
+        @trend_summary,
+        @extremes
+    ) INTO @report
+
+    COMMIT @report WITH status = 'complete', domain = @domain
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Too many items — report stats only
+        GENERATE compute_sentiment_stats(@sentiment_results) INTO @stats_json
+        COMMIT @stats_json WITH status = 'stats_only', reason = 'too_many_items'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 6089 in / 4212 out
+Latency: 194539ms
+------------------------------------------------------------
+```output
+The provided code is well-structured and follows good practices. However, there are several improvements that can be made:
+
+1.  The `clean_text` function can be improved by using more efficient methods for tokenization and stopword removal. For example, you can use NLTK's `word_tokenize` function to tokenize the text and remove stopwords using NLTK's `stopwords` corpus.
+
+2.  The sentiment analysis part of the code can be simplified using NLTK's `vaderSentiment` tool. This tool provides a simple way to analyze sentiment in text data without having to manually calculate compound scores.
+
+3.  The `compute_sentiment_stats` function can be improved by adding more detailed statistics, such as the average and standard deviation of the sentiment scores for each review.
+
+4.  The `summarize_sentiment_trends` function is not fully implemented and does not seem to have a clear purpose in the code.
+
+5.  The `find_extremes` function can be improved by adding more error handling and edge cases.
+
+6.  Consider using type hints for functions and variables to improve code readability and maintainability.
+
+Here's an updated version of your code with these improvements:
+
+```python
+import re
+from nltk.corpus import stopwords
+from collections import Counter
+import nltk
+nltk.download('vader_lexicon')
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+def clean_text(text: str) -> str:
+    """
+    Cleans the input text by removing punctuation, special characters, and stopwords.
+
+    Args:
+        text (str): The input text to be cleaned.
+
+    Returns:
+        str: The cleaned text.
+    """
+
+    # Convert to lowercase
+    text = text.lower()
+
+    # Remove punctuation and special characters
+    text = re.sub(r'[^\w\s]', '', text)
+
+    # Tokenize the text into words
+    tokens = nltk.word_tokenize(text)
+
+    # Remove stopwords
+    stop_words = set(stopwords.words('english'))
+    filtered_tokens = [token for token in tokens if token not in stop_words]
+
+    # Count word frequencies
+    freqs = Counter(filtered_tokens)
+
+    # Select the most common words
+    cleaned_sentence = ' | '.join([f'{word}: {freq}' for word, freq in freqs.most_common(2)])
+
+    return ' | '.join(cleaned_sentences)
+
+
+def batch_sentiment(product_reviews: list) -> list:
+    """
+    Analyzes the sentiment of a list of product reviews.
+
+    Args:
+        product_reviews (list): A list of product reviews to be analyzed.
+
+    Returns:
+        list: A list of dictionaries containing the original review, cleaned review, 
+              sentiment scores, and overall sentiment for each product review.
+    """
+
+    # Create a sentiment analyzer
+    sia = SentimentIntensityAnalyzer()
+
+    # Clean and analyze each review
+    results = []
+    for review in product_reviews:
+        if review == '':
+            continue
+
+        cleaned_review = clean_text(review)
+
+        # Analyze the sentiment of the review
+        sentiment_scores = sia.polarity_scores(cleaned_review)
+
+        # Determine the overall sentiment (positive, negative, or neutral)
+        overall_sentiment = 'Positive' if sentiment_scores['compound'] >= 0.05 else ('Negative' if sentiment_scores['compound'] <= -0.05 else 'Neutral')
+
+        result = {
+            'review': review,
+            'cleaned_review': cleaned_review,
+            'sentiment_scores': sentiment_scores,
+            'overall_sentiment': overall_sentiment
+        }
+
+        results.append(result)
+
+    return results
+
+
+def compute_sentiment_stats(results: list) -> dict:
+    """
+    Computes sentiment statistics from a list of product reviews.
+
+    Args:
+        results (list): A list of dictionaries containing the original review, 
+                        cleaned review, sentiment scores, and overall sentiment for each product review.
+
+    Returns:
+        dict: A dictionary containing sentiment statistics.
+    """
+
+    # Calculate the average and median overall sentiment scores
+    all_overall_sentiments = [result['overall_sentiment'] for result in results]
+    avg_overall_sentiment = sum(all_overall_sentiments) / len(all_overall_sentiments)
+    med_overall_sentiment = sorted([v for v in all_overall_sentiments if v != 'Neutral'])[-1] if len([v for v in all_overall_sentiments if v != 'Neutral']) > 0 else None
+
+    # Calculate the percentage of positive, negative, and neutral reviews
+    total_reviews = len(results)
+    pos_count = sum(1 for s in all_overall_sentiments if s == 'Positive')
+    neg_count = sum(1 for s in all_overall_sentiments if s == 'Negative')
+    neu_count = sum(1 for s in all_overall_sentiments if s == 'Neutral')
+
+    # Calculate the average and
+```
+------------------------------------------------------------
+Variables:
+  @items = Great product, love it! | Terrible experience, never again | It was okay I guess
+  @domain = product_reviews
+  @item_list = import re
+from nltk.corpus import stopwords
+from collections import Counter
+
+def clean_text(text):
+    # Convert to lowercase
+    text = text.lower()
+    
+    # Remove punctuation and special characte
+  @sentiment_results = Here's how you can implement a function called `batch_sentiment` that takes in a list of product reviews, cleans the text, analyzes the sentiment, and returns the results:
+
+```python
+import re
+from nl
+  @stats_json = To compute sentiment statistics from the results of `batch_sentiment`, you can add a function that calculates these statistics. Here's an updated version of your code with a new function called `compu
+  @extremes = To find the extremes in a dataset, we can use the `find_extremes` function which takes in a list of numbers and returns a tuple containing the minimum and maximum values. 
+
+Here's an example implement
+  @trend_summary = Here's the updated code that includes the `summarize_sentiment_trends` function:
+
+```python
+import re
+from nltk.corpus import stopwords
+from collections import Counter
+import nltk
+nltk.download('vader
+  @report = The provided code is well-structured and follows good practices. However, there are several improvements that can be made:
+
+1.  The `clean_text` function can be improved by using more efficient method
+============================================================
+Log: /home/gongai/.spl/logs/sentiment-ollama-20260320-055900.log

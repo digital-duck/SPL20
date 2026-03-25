@@ -44,35 +44,52 @@ Text: {text}
 $$;
 
 WORKFLOW multi_model_pipeline
-  INPUT: @topic TEXT
+  INPUT:
+    @topic TEXT,
+    @log_dir TEXT DEFAULT 'cookbook/21_multi_model_pipeline/logs'
   OUTPUT: @final TEXT
 DO
+  LOGGING f'Multi-model pipeline | topic={@topic}' LEVEL INFO
+
   -- Step 1: Research with a fast model (good for factual retrieval)
-  GENERATE research(@topic) USING MODEL 'gemma3' INTO @facts;
+  GENERATE research(@topic) USING MODEL 'gemma3' INTO @facts
+  LOGGING 'Research complete' LEVEL DEBUG
+  CALL write_file(f'{@log_dir}/research.md', @facts) INTO @_
 
   -- Step 2: Analysis with a reasoning model
-  GENERATE analyze(@facts) USING MODEL 'gemma3' INTO @analysis;
+  GENERATE analyze(@facts) USING MODEL 'gemma3' INTO @analysis
+  LOGGING 'Analysis complete' LEVEL DEBUG
+  CALL write_file(f'{@log_dir}/analysis.md', @analysis) INTO @_
 
   -- Step 3: Writing with a creative model
-  GENERATE write_summary(@analysis) USING MODEL 'gemma3' INTO @draft;
+  GENERATE write_summary(@analysis) USING MODEL 'gemma3' INTO @draft
+  LOGGING 'Initial draft ready' LEVEL INFO
+  CALL write_file(f'{@log_dir}/draft_0.md', @draft) INTO @_
 
   -- Step 4: Quality loop — refine until score > 0.7 (max 3 iterations)
-  @iteration := 0;
-  @quality := 0;
+  @iteration := 0
+  @quality := 0
 
   WHILE @iteration < 3 DO
-    GENERATE quality_check(@draft) INTO @quality;
+    LOGGING f'Quality check | iteration={@iteration}' LEVEL DEBUG
+    GENERATE quality_check(@draft) INTO @quality
+    LOGGING f'Quality score: {@quality}' LEVEL DEBUG
 
     EVALUATE @quality
       WHEN > 0.7 THEN
+        LOGGING f'Quality threshold met | score={@quality}' LEVEL INFO
+        CALL write_file(f'{@log_dir}/final.md', @draft) INTO @_
         COMMIT @draft WITH status = 'high_quality', score = @quality
-      OTHERWISE
+      ELSE
         GENERATE write_summary(@analysis) INTO @draft
         @iteration := @iteration + 1
+        CALL write_file(f'{@log_dir}/draft_{@iteration}.md', @draft) INTO @_
     END
   END
 
   -- Fallback: commit whatever we have
+  LOGGING f'Max iterations reached | final score={@quality}' LEVEL WARN
+  CALL write_file(f'{@log_dir}/final.md', @draft) INTO @_
   COMMIT @draft WITH status = 'max_iterations', score = @quality
 
 EXCEPTION
@@ -80,4 +97,4 @@ EXCEPTION
     COMMIT @draft WITH status = 'partial'
   WHEN ModelOverloaded THEN
     COMMIT @draft WITH status = 'model_overloaded'
-END;
+END

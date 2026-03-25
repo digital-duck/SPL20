@@ -1,0 +1,211 @@
+
+```bash
+spl2 run ./04_model_showdown/showdown.spl --adapter ollama -m gemma3 prompt=Write a poem about Spring season
+```
+
+```prompt
+Write a poem about Spring season
+```
+
+```spl2
+-- Recipe 04: Model Showdown
+-- Same prompt to multiple Ollama models — compare responses side-by-side.
+-- Uses parallel CTEs instead of a bash loop for a pure-SPL implementation.
+--
+-- Usage:
+--   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--       prompt="What is the meaning of life?"
+--   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--       prompt="Explain recursion in 3 sentences" \
+--       model_1=gemma3 model_2=llama3.2 model_3=mistral
+
+CREATE FUNCTION compare_responses(
+    prompt TEXT,
+    model_1 TEXT, answer_1 TEXT,
+    model_2 TEXT, answer_2 TEXT,
+    model_3 TEXT, answer_3 TEXT
+) RETURNS TEXT AS $$
+You are a neutral evaluator comparing responses from three AI models.
+
+Prompt given to all models: "{prompt}"
+
+First, reproduce each model's raw response exactly as given, formatted like this:
+
+=== {model_1} ===
+{answer_1}
+
+=== {model_2} ===
+{answer_2}
+
+=== {model_3} ===
+{answer_3}
+
+Then provide your evaluation. For each model briefly assess:
+- Response quality
+- Key strengths or weaknesses
+
+Conclude with which model gave the most helpful answer and why.
+$$;
+
+WORKFLOW model_showdown
+    INPUT:
+        @prompt  TEXT DEFAULT 'What is the meaning of life?',
+        @model_1 TEXT DEFAULT 'gemma3',
+        @model_2 TEXT DEFAULT 'phi3',
+        @model_3 TEXT DEFAULT 'qwen2.5'
+    OUTPUT: @comparison TEXT
+DO
+    -- Run the same prompt against all three models in parallel CTEs
+    WITH
+        response_1 AS (
+            PROMPT ask_model_1
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_1
+        ),
+        response_2 AS (
+            PROMPT ask_model_2
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_2
+        ),
+        response_3 AS (
+            PROMPT ask_model_3
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_3
+        )
+    SELECT
+        response_1.answer AS answer_1,
+        response_2.answer AS answer_2,
+        response_3.answer AS answer_3
+    INTO @answer_1, @answer_2, @answer_3
+
+    -- Judge all three responses together
+    GENERATE compare_responses(
+        @prompt,
+        @model_1, @answer_1,
+        @model_2, @answer_2,
+        @model_3, @answer_3
+    ) INTO @comparison
+
+    COMMIT @comparison WITH
+        status   = 'complete',
+        model_1  = @model_1,
+        model_2  = @model_2,
+        model_3  = @model_3
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'One or more models failed to respond.' WITH status = 'error'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 675 in / 923 out
+Latency: 18452ms
+------------------------------------------------------------
+```output
+Here are the evaluations for each model:
+
+=== gemma3 ===
+
+Response Quality: 8/10
+Key Strengths: The poem has a clear structure, and the language is simple yet effective. Gemma3 captures the essence of Spring in a concise and relatable way.
+
+Key Weaknesses: Some lines feel slightly generic or cliche ("whispered promise", "rebirth of beauty"), and the imagery could be more vivid.
+
+=== phi3 ===
+
+Response Quality: 9/10
+Key Strengths: Phi3's poem is well-structured, with a clear and cohesive theme. The language is rich and evocative, with phrases like "Spring whispers her arrival" and "a symphony of life in every sight and sound".
+
+Key Weaknesses: Some lines feel a bit wordy or overly poetic ("Greeting us from earth' end to sea"), which can make the poem harder to follow.
+
+=== qwen2.5 ===
+
+Response Quality: 7/10
+Key Strengths: Qwen2.5's poem has a clear and cohesive theme, with a good balance of sensory details (e.g., "Lilacs whisper in hushed tones", "Birds flit through the boughs").
+
+Key Weaknesses: The poem feels a bit disjointed, with some lines feeling like they don't quite fit together. Additionally, some of the language is overly simplistic ("the sun ascends higher, its warmth we feel").
+
+Most Helpful Answer:
+I would say that phi3 gave the most helpful answer. Their poem captures the essence of Spring in a rich and evocative way, with phrases that effectively convey the season's themes and imagery. While it may be slightly more wordy than some other models' responses, phi3's poem is well-structured and easy to follow, making it the most effective at conveying the prompt's message.
+
+Overall, all three models did a good job of capturing the essence of Spring, but phi3's response stood out for its clarity, coherence, and evocative language.
+```
+------------------------------------------------------------
+Variables:
+  @prompt = Write a poem about Spring season
+  @model_1 = gemma3
+  @model_2 = phi3
+  @model_3 = qwen2.5
+  @answer_1 = Okay, here's a poem about Spring:
+
+The world awakens, soft and slow,
+From winter’s hush, a gentle glow.
+The snow melts down in streams below,
+A whispered promise, sweet and low.
+
+Green shoots emerge, a vibrant hue,
+Pushing upwards, fresh and new.
+Blossoms burst in pink and white,
+Drinking sunlight, pure and bright.
+
+Birds return with joyful song,
+Welcoming the warmth, where they belong.
+A fragrant breeze begins to blow,
+Carrying scents of life below.
+
+Spring’s gentle touch, a hopeful sign,
+A rebirth of beauty, so divine. 
+
+---
+
+Would you like me to:
+
+*   Try a different style of poem? (e.g., haiku, limerick)
+*   Focus on a specific aspect of Spring (e.g., flowers, rain)?
+  @answer_2 = In the heart of April, when days grow long and bright,  
+Spring whispers her arrival with delight.   
+Flowers bloom in colors bold and free,    
+Greeting us from earth' end to sea.  
+The cherry blossoms dance on a gentle breeze,          
+While butterflies flutter among the trees;     
+Streams murmur secrets as they flow   
+To where sunlight has not yet shone so.    
+A symphony of life in every sight and sound,  
+Where hope is born anew on verdant ground. 
+  @answer_3 = Sure, here's a poem about the spring season:
+
+Spring Dawn Sings Softly
+
+Beneath the blush of dawn’s first light,
+The world awakens from its winter night.
+The air is crisp with promise, fresh and clean,
+As buds unfurl their tender green.
+
+Lilacs whisper in hushed tones of delight,
+Their delicate blooms a sweetest sight.
+Birds flit through the boughs in joyful flight,
+Singing melodies that pierce the quiet night.
+
+Daffodils stand proud, golden in hue,
+Their faces turned to greet the radiant blue.
+Rivers thaw from their winter’s slumber deep,
+Flowing with life, their waters keep.
+
+In fields and forests, nature springs anew,
+A symphony of growth, a joyous stew.
+The sun ascends higher, its warmth we feel,
+As spring unfurls like an eager child, unfurled.
+============================================================
+Log: /home/gongai/.spl/logs/showdown-ollama-20260320-192014.log

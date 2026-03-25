@@ -14,7 +14,11 @@ Usage:
     python cookbook/run_all.py --catalog --category agentic
     python cookbook/run_all.py --catalog --status new
 
-    python cookbook/run_all.py 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md 
+
+conda activate spl
+cd ~/projects/digital-duck/SPL20
+python cookbook/run_all.py 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md 
+
 """
 
 import argparse
@@ -255,7 +259,7 @@ def main() -> None:
         # Apply adapter/model overrides
         cmd_args = apply_overrides(recipe["args"], args.adapter, args.model)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_path = COOKBOOK_DIR / recipe["dir"] / f"{recipe['log']}_{ts}.log"
+        log_path = COOKBOOK_DIR / recipe["dir"] / f"{recipe['log']}_{ts}.md"
 
         print(f"[{rid}] {recipe['name']}")
         print(f"     cmd : {' '.join(cmd_args)}")

@@ -221,8 +221,8 @@ class Analyzer:
             elif isinstance(stmt, EvaluateStatement):
                 for wc in stmt.when_clauses:
                     self._validate_body(wc.statements, scope.copy(), result)
-                if stmt.otherwise_statements:
-                    self._validate_body(stmt.otherwise_statements, scope.copy(), result)
+                if stmt.else_statements:
+                    self._validate_body(stmt.else_statements, scope.copy(), result)
             elif isinstance(stmt, WhileStatement):
                 self._validate_body(stmt.body, scope.copy(), result)
             elif isinstance(stmt, DoBlock):

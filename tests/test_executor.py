@@ -139,7 +139,7 @@ class TestWorkflowExecution:
                 EVALUATE @score
                     WHEN > 0.8 THEN
                         @label := 'high'
-                    OTHERWISE
+                    ELSE
                         @label := 'low'
                 END
                 COMMIT @label
@@ -157,7 +157,7 @@ class TestWorkflowExecution:
                 EVALUATE @score
                     WHEN > 0.8 THEN
                         @label := 'high'
-                    OTHERWISE
+                    ELSE
                         @label := 'low'
                 END
                 COMMIT @label

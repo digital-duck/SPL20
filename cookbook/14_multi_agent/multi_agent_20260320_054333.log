@@ -1,0 +1,152 @@
+
+```bash
+spl2 run ./14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic=Impact of AI on healthcare
+```
+
+```sql
+-- Recipe 14: Multi-Agent Collaboration
+-- Specialized agents (Researcher, Analyst, Writer) collaborate on a report.
+-- Each agent has a distinct role and passes results to the next.
+-- Demonstrates procedural decomposition, CALL-based delegation, and role specialization.
+--
+-- Usage:
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
+
+-- Agent 1: Researcher — gathers key facts and sources
+PROCEDURE researcher(topic TEXT) RETURNS TEXT
+DO
+    GENERATE research_facts(topic) INTO @facts
+    GENERATE identify_key_themes(@facts) INTO @themes
+    @result := @facts + '\n\nKey Themes:\n' + @themes
+    COMMIT @result
+END
+
+-- Agent 2: Analyst — identifies trends, risks, and opportunities
+PROCEDURE analyst(research TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE analyze_trends(research) INTO @trends
+    GENERATE assess_risks(research, topic) INTO @risks
+    GENERATE find_opportunities(research, topic) INTO @opportunities
+    @result := 'Trends:\n' + @trends + '\n\nRisks:\n' + @risks + '\n\nOpportunities:\n' + @opportunities
+    COMMIT @result
+END
+
+-- Agent 3: Writer — produces polished final report
+PROCEDURE writer(research TEXT, analysis TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE draft_report(topic, research, analysis) INTO @draft
+    GENERATE critique(@draft) INTO @feedback
+    GENERATE revise_report(@draft, @feedback) INTO @final
+    COMMIT @final
+END
+
+-- Orchestrator workflow
+WORKFLOW multi_agent_report
+    INPUT: @topic TEXT
+    OUTPUT: @report TEXT
+DO
+    -- Delegate to specialized agents
+    CALL researcher(@topic) INTO @research
+    CALL analyst(@research, @topic) INTO @analysis
+    CALL writer(@research, @analysis, @topic) INTO @report
+
+    COMMIT @report WITH status = 'complete'
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        COMMIT @research WITH status = 'partial_research_only'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 8200 in / 4639 out
+Latency: 254556ms
+------------------------------------------------------------
+```output
+Based on the input provided, I will revise the report according to the suggestions for improvement.
+
+**Revised Report: The Impact of Artificial Intelligence (AI) on Healthcare**
+
+**Introduction**
+
+Artificial Intelligence (AI) has transformed various industries, including healthcare. However, its adoption in healthcare is a complex and multifaceted issue, raising questions about its impact on patient care, clinical workflows, and the broader healthcare system. This report provides a comprehensive overview of AI in healthcare, highlighting key trends, themes, research initiatives, and areas for opportunity.
+
+**Key Trends**
+
+1. **Increased Adoption of AI in Healthcare**: AI algorithms and systems are being used to analyze large amounts of medical data, providing more accurate diagnoses and personalized treatment plans.
+2. **Improved Accuracy and Efficiency**: AI-powered predictive analytics can help identify high-risk patients who are likely to experience adverse events or require hospitalization.
+3. **Enhanced Patient Safety and Outcomes**: AI can help improve patient safety and outcomes by analyzing large amounts of medical data and identifying patterns that may indicate potential health risks.
+
+**Key Themes**
+
+1. **Improved Diagnosis and Treatment**: AI algorithms can analyze large amounts of medical data to help doctors make more accurate diagnoses and personalize treatment plans for patients.
+2. **Predictive Analytics and Patient Safety**: AI-powered predictive analytics can help identify high-risk patients who are likely to experience adverse events or require hospitalization.
+3. **Enhanced Medical Procedures and Surgery**: AI-powered robots can assist surgeons during procedures, providing real-time feedback and improving precision.
+
+**Limitations and Risks**
+
+1. **Bias and Inaccurate Diagnoses**: AI algorithms can perpetuate biases present in the training data, leading to inaccurate diagnoses or misdiagnosis of certain conditions.
+2. **Data Security and Privacy**: The increased use of AI in healthcare raises concerns about data security and patient privacy, particularly when sensitive medical information is shared with third-party vendors or used for predictive analytics.
+3. **Dependence on Technology**: Over-reliance on AI-powered systems can lead to a decline in human skills and judgment, making it essential to ensure that clinicians remain trained and competent.
+
+**Opportunities**
+
+1. **Developing more accurate diagnostic tools**: With the help of AI algorithms, doctors can analyze large amounts of medical data to make more accurate diagnoses.
+2. **Personalized medicine and targeted treatment**: AI can help personalize treatment plans for patients based on their genetic profiles, medical history, and lifestyle.
+3. **Predictive analytics and early intervention**: AI-powered predictive analytics can help identify high-risk patients who are likely to experience adverse events or require hospitalization.
+
+**Critical Thinking Exercises**
+
+1. Consider the potential consequences of relying heavily on AI-powered systems in healthcare. How might this impact patient care and clinical decision-making?
+2. Evaluate the role of bias in AI algorithms. How can we mitigate these biases to ensure more accurate diagnoses and treatment plans?
+3. Think critically about the implications of data security and privacy concerns in healthcare. What measures can be taken to protect sensitive medical information?
+
+**Context**
+
+AI has been increasingly adopted in healthcare over the past decade, with many hospitals and clinics implementing AI-powered systems to improve patient care and efficiency. However, the adoption of AI in healthcare is not without its challenges and controversies.
+
+**Research Initiatives**
+
+1. **National Institutes of Health (NIH)**: The NIH's "AI for Health" initiative aims to develop evidence-based guidelines for AI adoption in healthcare.
+2. **American Institute for Medical and Biological Engineering (AIMBE)**: AIMBE's focus area on "Artificial Intelligence in Healthcare" seeks to promote collaboration between researchers, clinicians, and industry leaders to advance the field of AI in healthcare.
+
+**Conclusion**
+
+The impact of AI on healthcare is complex and multifaceted, with both opportunities and risks associated with its adoption. By acknowledging these limitations and risks, we can work towards harnessing the benefits of AI while ensuring patient safety and security.
+
+Changes made:
+
+1. Added a section on limitations and risks to provide a balanced view.
+2. Included critical thinking exercises to encourage readers to think critically about the implications of AI adoption in healthcare.
+3. Provided more context on AI and its applications in healthcare, particularly for non-expert readers.
+4. Used clearer language throughout the report, avoiding technical jargon that may be unfamiliar to some readers.
+
+I hope this revised report addresses the suggestions for improvement provided by the critique.
+```
+------------------------------------------------------------
+Variables:
+  @topic = Impact of AI on healthcare
+  @research = Here are some key facts and research findings related to the impact of Artificial Intelligence (AI) on healthcare:
+
+1. **Improved Diagnosis**: AI algorithms can analyze large amounts of medical data, 
+  @analysis = Trends:
+Based on the input text, I have analyzed the trends related to the impact of Artificial Intelligence (AI) on healthcare. Here are my findings:
+
+**Key Trends:**
+
+1. **Increased Adoption of AI i
+  @report = Based on the input provided, I will revise the report according to the suggestions for improvement.
+
+**Revised Report: The Impact of Artificial Intelligence (AI) on Healthcare**
+
+**Introduction**
+
+Art
+============================================================
+Log: /home/gongai/.spl/logs/multi_agent-ollama-20260320-054333.log

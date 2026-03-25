@@ -1,0 +1,165 @@
+
+```bash
+spl2 run ./29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs output_format=markdown
+```
+
+```sql
+-- Recipe 29: Meeting Notes → Action Items
+-- Transcript in, structured TODO list + owners out.
+-- Demonstrates multi-step extraction + structured output from long-form text.
+--
+-- Usage:
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 \
+--       transcript="$(cat meeting.txt)"
+--
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama \
+--       transcript="Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs" \
+--       output_format="markdown"
+
+CREATE FUNCTION action_item_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "meeting_summary": {"type": "string"},
+    "decisions":       {"type": "array", "items": {"type": "string"}},
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task":     {"type": "string"},
+          "owner":    {"type": "string"},
+          "due_date": {"type": "string"},
+          "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+          "context":  {"type": "string"}
+        },
+        "required": ["task", "priority"]
+      }
+    },
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "next_meeting":   {"type": "string"}
+  },
+  "required": ["meeting_summary", "action_items"]
+}
+$$;
+
+WORKFLOW meeting_to_actions
+    INPUT: @transcript TEXT, @output_format TEXT DEFAULT 'json'
+    OUTPUT: @output TEXT
+DO
+    -- Step 1: Identify speakers and normalize transcript
+    GENERATE normalize_transcript(@transcript) INTO @clean_transcript
+
+    -- Step 2: Extract structured action items
+    GENERATE extract_actions(@clean_transcript, action_item_schema()) INTO @structured_json
+
+    -- Step 3: Validate — flag unowned high-priority items
+    GENERATE validate_action_items(@structured_json) INTO @validation_notes
+
+    -- Step 4: Format output
+    EVALUATE @output_format
+        WHEN = 'markdown' THEN
+            GENERATE format_as_markdown(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'markdown'
+        WHEN = 'email' THEN
+            GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'email'
+        OTHERWISE
+            SET @output = @structured_json
+            COMMIT @output WITH status = 'complete', format = 'json'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Long transcript — chunk and summarize first
+        GENERATE summarize_transcript(@transcript) INTO @summary
+        GENERATE extract_actions(@summary, action_item_schema()) INTO @structured_json
+        SET @output = @structured_json
+        COMMIT @output WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 494 in / 743 out
+Latency: 26914ms
+------------------------------------------------------------
+```output
+import re
+
+def extract_actions(input_text):
+    # Convert all names into standard form (all caps)
+    input_text = input_text.upper()
+
+    # Remove punctuation and special characters from the text
+    input_text = re.sub(r'[^\w\s]', '', input_text)
+
+    # Replace multiple spaces with a single space
+    input_text = re.sub(r'\s+', ' ', input_text)
+
+    # Convert all words to lowercase
+    input_text = input_text.lower()
+
+    # Split the text into lines
+    lines = input_text.split('\n')
+
+    # Initialize an empty list to store the actions
+    actions = []
+
+    # Check if each line is an action
+    for i in range(0, len(lines), 2):
+        speaker_name = None
+        action = ''
+
+        # Extract the speaker's name and action from the current line
+        if lines[i].strip():
+            speaker_name = re.search(r'([A-Z]+):', lines[i]).group(1)
+        else:
+            speaker_name = 'Unknown'
+
+        if lines[i+1]:
+            action = lines[i+1]
+
+        # Add the action to the list
+        actions.append((speaker_name, action))
+
+    return actions
+```
+------------------------------------------------------------
+Variables:
+  @transcript = Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs
+  @output_format = markdown
+  @clean_transcript = To normalize a transcript like the one you provided, we can do the following:
+
+1. Convert all names into standard form (all caps)
+2. Remove punctuation and special characters from the text
+3. Replace 
+  @structured_json = import re
+
+def extract_actions(input_text):
+    # Convert all names into standard form (all caps)
+    input_text = input_text.upper()
+
+    # Remove punctuation and special characters from the text
+   
+  @validation_notes = def validate_action_items(input_text):
+    """
+    Validates a list of action items extracted from a text.
+
+    Args:
+        input_text (str): The text containing the action items.
+
+    Returns:
+    
+  @output = import re
+
+def extract_actions(input_text):
+    # Convert all names into standard form (all caps)
+    input_text = input_text.upper()
+
+    # Remove punctuation and special characters from the text
+   
+============================================================
+Log: /home/gongai/.spl/logs/meeting_actions-ollama-20260320-055728.log

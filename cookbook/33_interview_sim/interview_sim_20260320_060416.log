@@ -1,0 +1,237 @@
+
+```bash
+spl2 run ./33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 role=Senior Software Engineer focus=system design
+```
+
+```sql
+-- Recipe 33: Interview Simulator
+-- Two-persona structured Q&A with evaluation.
+-- Interviewer persona asks questions, candidate persona answers, evaluator scores.
+--
+-- Usage:
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 \
+--       role="Senior Software Engineer" focus="system design"
+--
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama \
+--       role="Data Scientist" focus="machine learning" num_questions=4 difficulty="hard"
+
+CREATE FUNCTION interviewer_persona(role TEXT, focus TEXT, difficulty TEXT DEFAULT 'medium')
+RETURNS TEXT AS $$
+You are an experienced technical interviewer at a top tech company.
+You are interviewing for the role of: {role}
+Focus area: {focus}
+Difficulty: {difficulty}
+
+Ask targeted, probing questions. Follow up on weak answers. Be professional but not warm.
+Ask one question at a time. Do not reveal what a good answer looks like before hearing the response.
+$$;
+
+CREATE FUNCTION candidate_persona(role TEXT, experience TEXT DEFAULT '5 years')
+RETURNS TEXT AS $$
+You are a job candidate interviewing for: {role}
+You have {experience} of relevant experience.
+
+Answer honestly — you know a lot but may have gaps. Think out loud. Be specific with examples.
+If unsure, say so and explain your reasoning process.
+$$;
+
+CREATE FUNCTION evaluation_rubric()
+RETURNS TEXT AS $$
+Evaluate each answer on:
+1. Technical accuracy (0-10): Is the answer correct?
+2. Depth (0-10): Does the candidate go beyond surface level?
+3. Communication (0-10): Is the answer clear and well-structured?
+4. Practical experience (0-10): Do they reference real scenarios?
+
+Return JSON per answer: {"accuracy": N, "depth": N, "communication": N, "experience": N, "total": N, "feedback": "..."}
+$$;
+
+WORKFLOW interview_sim
+    INPUT: @role TEXT, @focus TEXT, @difficulty TEXT DEFAULT 'medium', @num_questions INT DEFAULT 3, @experience TEXT DEFAULT '5 years'
+    OUTPUT: @evaluation_report TEXT
+DO
+    -- Generate questions upfront
+    GENERATE generate_question_set(
+        @role, @focus, @difficulty, @num_questions,
+        interviewer_persona(@role, @focus, @difficulty)
+    ) INTO @questions_json
+
+    -- Q1: First question + answer + score
+    GENERATE ask_question(@questions_json, 1) INTO @q1
+    GENERATE answer_question(@q1, @role, candidate_persona(@role, @experience)) INTO @a1
+    GENERATE score_answer(@q1, @a1, evaluation_rubric()) INTO @score1
+
+    -- Q2
+    GENERATE ask_question(@questions_json, 2) INTO @q2
+    GENERATE answer_question(@q2, @role, candidate_persona(@role, @experience)) INTO @a2
+    GENERATE score_answer(@q2, @a2, evaluation_rubric()) INTO @score2
+
+    -- Q3
+    GENERATE ask_question(@questions_json, 3) INTO @q3
+    GENERATE answer_question(@q3, @role, candidate_persona(@role, @experience)) INTO @a3
+    GENERATE score_answer(@q3, @a3, evaluation_rubric()) INTO @score3
+
+    -- Compile interview transcript
+    GENERATE compile_transcript(@q1, @a1, @q2, @a2, @q3, @a3) INTO @transcript
+
+    -- Overall evaluation
+    GENERATE overall_evaluation(
+        @transcript,
+        @score1, @score2, @score3,
+        @role, @focus
+    ) INTO @evaluation_report
+
+    COMMIT @evaluation_report WITH
+        status = 'complete',
+        role = @role,
+        focus = @focus,
+        difficulty = @difficulty
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT @transcript WITH status = 'partial', reason = 'evaluation_failed'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 12
+Tokens: 12855 in / 6963 out
+Latency: 385941ms
+------------------------------------------------------------
+```output
+Based on your inputs, I'm assuming that the task is to implement a scoring system for answering questions related to different positions and topics. Here's an updated implementation:
+
+```python
+import random
+
+# Define a dictionary to store questions and answers
+questions = {
+    "Senior Software Engineer": [
+        {"question": "Can you explain the concept of encapsulation?", "answer": "Encapsulation is a fundamental principle in object-oriented programming that binds data and methods that operate on that data into a single unit."},
+        {"question": "How do you handle errors in your code?", "answer": "I use try-except blocks to catch and handle exceptions."},
+        {"question": "Can you describe the differences between monolithic and microservices architecture?", "answer": "Monolithic architecture is a single, self-contained application, while microservices architecture is a collection of smaller services that communicate with each other."}
+    ],
+    "Junior Software Engineer": [
+        {"question": "Can you explain the concept of variables in programming?", "answer": "Variables are used to store and manipulate data in a program."},
+        {"question": "How would you approach debugging a code issue?", "answer": "I would use print statements and debuggers to identify the source of the error."},
+        {"question": "Can you describe the differences between Python and Java?", "answer": "Python is a high-level language with a focus on simplicity and ease of use, while Java is an object-oriented language with a focus on platform independence."}
+    ],
+    # Add more positions and questions as needed
+}
+
+# Define a function to score answers
+def score_answer(question_set):
+    score = 0
+    for question in question_set:
+        print(f"\nQuestion: {question['question']}")
+        
+        if 'key' in question:
+            if 'approach' in question:
+                print(f"As a {question['key']} with an {question['approach']} approach, you might ask: ")
+                print(question["question"])
+            
+        answer = input("Your Answer: ")
+
+        if answer.lower() == question["answer"].lower():
+            print("Correct!\n")
+            score += 1
+        else:
+            print(f"Incorrect. The correct answer is: \n{question['answer']}\n")
+
+    return score
+
+# Define a function to generate random questions
+def ask_question(position, topic):
+    if position in questions and topic in questions[position]:
+        question_set = questions[position]
+        if 'key' in question_set[0]:
+            if 'approach' in question_set[0]:
+                print(f"As a {question_set[0]['key']} with an {question_set[0]['approach']} approach, you might ask: ")
+                random_question = random.choice(question_set)
+                print(random_question["question"])
+        else:
+            random_question = random.choice(question_set)
+        
+        score = score_answer([random_question])
+        return score
+    else:
+        return "Invalid position or topic"
+
+# Example usage:
+position = "Senior Software Engineer"
+topic = "system design"
+
+score = ask_question(position, topic)
+print(f"\nYour final score is: {score}")
+```
+
+In this implementation:
+
+*   We define a dictionary `questions` to store questions and answers for different positions.
+*   The `score_answer` function takes a list of questions as input and scores the user's answer. It returns the total score based on correct answers.
+*   The `ask_question` function generates random questions from the specified position and topic. It asks the user for their answer and checks if it matches the correct answer, scoring it accordingly.
+*   We use a random question selection to simulate different scenarios for the user.
+
+Note that this implementation uses a simple scoring system where each correct answer is assigned a score of 1. You can modify the scoring system as needed to suit your requirements.
+```
+------------------------------------------------------------
+Variables:
+  @role = Senior Software Engineer
+  @focus = system design
+  @questions_json = Here is a Python function that generates a question set based on the inputs provided:
+
+```python
+def generate_question_set(position, topic, interviewer_persona=None):
+    """
+    Generates a question 
+  @q1 = Can you explain the concept of encapsulation?
+  @a1 = # Encapsulation in Software Engineering
+
+## Introduction
+
+Encapsulation is a fundamental concept in software engineering that aims to hide the internal implementation details of an object or module fr
+  @score1 = def score_answer(answer):
+    # Initialize the score
+    score = 0
+
+    # Check if the answer is a complete response with explanations
+    if len(answer.splitlines()) > 1:
+        # Increase the score
+  @q2 = To complete this task, I will add more question sets for different positions. Here is the updated code:
+
+```python
+def generate_question_set(position, topic, interviewer_persona=None):
+    """
+    Gen
+  @a2 = To answer the question, we need to add more positions and question sets. Here's an updated version of the code:
+
+```python
+def generate_question_set(position, topic, interviewer_persona=None):
+    """
+  @score2 = To add more positions and question sets, we can expand the `if-elif` block to include additional job roles. Here's an updated version of the code:
+
+```python
+def generate_question_set(position, topic,
+  @q3 = To implement the "ask_question" task, we need to create a simple text-based interface that allows users to interact with the generated question set. We will use a loop to continuously prompt the user 
+  @a3 = def ask_question(questions, persona=None):
+    """
+    Asks questions from the provided list and tracks the score.
+
+    Args:
+        questions (list): A list of dictionaries containing questions with
+  @score3 = To implement the `score_answer` task, we need to create a simple text-based interface that allows users to interact with the generated question set. We will use a loop to continuously prompt the user 
+  @transcript = Here's an updated version of the code with the requested changes:
+
+```python
+def ask_question(questions, persona=None):
+    """
+    Asks questions from the provided list and tracks the score.
+
+    Arg
+  @evaluation_report = Based on your inputs, I'm assuming that the task is to implement a scoring system for answering questions related to different positions and topics. Here's an updated implementation:
+
+```python
+import
+============================================================
+Log: /home/gongai/.spl/logs/interview_sim-ollama-20260320-060416.log

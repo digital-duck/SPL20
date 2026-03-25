@@ -1,0 +1,145 @@
+
+```bash
+spl2 run ./14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic=Impact of AI on healthcare
+```
+
+```sql
+-- Recipe 14: Multi-Agent Collaboration
+-- Specialized agents (Researcher, Analyst, Writer) collaborate on a report.
+-- Each agent has a distinct role and passes results to the next.
+-- Demonstrates procedural decomposition, CALL-based delegation, and role specialization.
+--
+-- Usage:
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
+--   spl2 run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
+
+-- Agent 1: Researcher — gathers key facts and sources
+PROCEDURE researcher(topic TEXT) RETURNS TEXT
+DO
+    GENERATE research_facts(topic) INTO @facts
+    GENERATE identify_key_themes(@facts) INTO @themes
+    @result := @facts + '\n\nKey Themes:\n' + @themes
+    COMMIT @result
+END
+
+-- Agent 2: Analyst — identifies trends, risks, and opportunities
+PROCEDURE analyst(research TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE analyze_trends(research) INTO @trends
+    GENERATE assess_risks(research, topic) INTO @risks
+    GENERATE find_opportunities(research, topic) INTO @opportunities
+    @result := 'Trends:\n' + @trends + '\n\nRisks:\n' + @risks + '\n\nOpportunities:\n' + @opportunities
+    COMMIT @result
+END
+
+-- Agent 3: Writer — produces polished final report
+PROCEDURE writer(research TEXT, analysis TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE draft_report(topic, research, analysis) INTO @draft
+    GENERATE critique(@draft) INTO @feedback
+    GENERATE revise_report(@draft, @feedback) INTO @final
+    COMMIT @final
+END
+
+-- Orchestrator workflow
+WORKFLOW multi_agent_report
+    INPUT: @topic TEXT
+    OUTPUT: @report TEXT
+DO
+    -- Delegate to specialized agents
+    CALL researcher(@topic) INTO @research
+    CALL analyst(@research, @topic) INTO @analysis
+    CALL writer(@research, @analysis, @topic) INTO @report
+
+    COMMIT @report WITH status = 'complete'
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        COMMIT @research WITH status = 'partial_research_only'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 8561 in / 5119 out
+Latency: 79335ms
+------------------------------------------------------------
+Committed: Here is a revised version of the draft report:
+
+**Revised Report: Impact of Artificial Intelligence (AI) on Healthcare**
+
+**Executive Summary**
+
+The impact of Artificial Intelligence (AI) on healthcare is a rapidly evolving field with significant implications for diagnosis, treatment, efficiency, productivity, patient engagement, error reduction, and data-driven decision making. This revised report provides an in-depth analysis of the current state of research in these areas, highlighting key trends, opportunities, challenges, and risks associated with AI adoption in healthcare.
+
+**Key Findings**
+
+* **Diagnostic Accuracy**: AI algorithms can analyze medical images more accurately and quickly than human doctors (Esteva et al., 2017). This has significant implications for the early detection and treatment of diseases.
+* **Personalized Medicine**: Personalized medicine using genomic data, medical history, and lifestyle factors is becoming increasingly important (Li et al., 2019). AI-powered systems can help tailor treatment plans to individual patients' needs.
+* **Rare Disease Detection**: Detection of rare diseases through AI-powered algorithms is a promising area of research (Li et al., 2019). This can lead to improved diagnosis and treatment outcomes for patients with rare conditions.
+* **Predictive Analytics**: Predictive analytics can identify high-risk patients and predict disease outcomes (Zhang et al., 2020). This enables healthcare professionals to take proactive measures to prevent complications.
+
+**Efficiency and Productivity**
+
+* **Automation of Administrative Tasks**: Automation of routine administrative tasks can free up healthcare professionals to focus on more complex tasks (Wang et al., 2019). This leads to improved efficiency and reduced administrative burdens.
+* **Hospital Resource Optimization**: Hospital resource optimization using AI can improve efficiency and reduce costs (Wang et al., 2020). This enables hospitals to allocate resources more effectively, leading to better patient outcomes.
+* **Streamlining Clinical Workflows**: Streamlining clinical workflows with AI-powered systems can enhance patient care while reducing administrative burdens (Wang et al., 2019). This leads to improved patient satisfaction and reduced wait times.
+
+**Patient Engagement and Experience**
+
+* **Chatbots and Virtual Assistants**: Chatbots and virtual assistants powered by AI can enhance patient engagement, reduce the burden on healthcare professionals, and improve overall experience (Lee et al., 2020). These systems provide patients with personalized support and guidance.
+* **Personalized Patient Communication**: Personalized patient communication through tailored communication and support is becoming increasingly important (Lee et al., 2020). AI-powered systems can help healthcare professionals tailor their interactions with patients, leading to improved engagement and satisfaction.
+
+**Error Reduction and Safety**
+
+* **AI-Powered Anomaly Detection**: AI-powered anomaly detection can identify potential issues in patient data and alert healthcare professionals (Li et al., 2019). This enables early intervention and improved patient safety.
+* **Medical Error Reduction**: Medical error reduction through AI-driven systems is a critical area of research (Li et al., 2019). By identifying potential errors, AI-powered systems can help prevent adverse events.
+
+**Data-Driven Decision Making**
+
+* **Large-Scale Data Analysis**: Analyzing large amounts of medical data can inform decision-making, predict patient outcomes, and optimize resource allocation (Li et al., 2019). This enables healthcare professionals to make data-driven decisions that improve patient care.
+* **Optimization of Hospital Resources**: Optimization of hospital resources using data-driven insights can improve efficiency and reduce costs (Wang et al., 2020). This leads to better patient outcomes and reduced resource strain.
+
+**Recommendations**
+
+Based on the analysis of trends in AI's impact on healthcare, several recommendations can be made:
+
+1. **Invest in AI Research and Development**: Continue to invest in researching and developing new AI applications in healthcare to improve diagnosis, treatment, and patient care.
+2. **Implement AI-Powered Systems in Clinical Workflows**: Adopt AI-powered systems to automate routine administrative tasks, optimize hospital resource allocation, and streamline clinical workflows.
+3. **Enhance Patient Engagement through Chatbots and Virtual Assistants**: Utilize chatbots and virtual assistants powered by AI to improve patient engagement, reduce the burden on healthcare professionals, and enhance the overall patient experience.
+4. **Prioritize Data-Driven Decision Making**: Leverage large amounts of medical data to inform decision-making, predict patient outcomes, and optimize resource allocation.
+
+**Conclusion**
+
+The impact of Artificial Intelligence (AI) on healthcare is a rapidly evolving field with significant implications for diagnosis, treatment, efficiency, productivity, patient engagement, error reduction, and data-driven decision making. By investing in research and development, implementing AI-powered systems, enhancing patient engagement, prioritizing data-driven decision making, and addressing the challenges and limitations of AI adoption, we can unlock the full potential of AI in healthcare.
+
+**Risks**
+
+While AI has the potential to revolutionize healthcare, it's essential to acknowledge and address the associated risks. Some of the key risks include:
+
+1. **Bias
+------------------------------------------------------------
+Variables:
+  @topic = Impact of AI on healthcare
+  @research = Here are some research facts about the impact of AI on healthcare:
+
+1. **Improved diagnosis accuracy**: Studies have shown that AI algorithms can analyze medical images and diagnose diseases more accu
+  @analysis = Trends:
+# Analysis of Trends in AI's Impact on Healthcare
+
+## Executive Summary
+
+The analysis of trends in AI's impact on healthcare reveals a multifaceted landscape with significant implications for 
+  @report = Here is a revised version of the draft report:
+
+**Revised Report: Impact of Artificial Intelligence (AI) on Healthcare**
+
+**Executive Summary**
+
+The impact of Artificial Intelligence (AI) on healthcar
+============================================================
+Log: /home/gongai/.spl/logs/multi_agent-ollama-20260319-184146.log

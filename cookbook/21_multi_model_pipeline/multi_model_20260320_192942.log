@@ -1,0 +1,188 @@
+
+```bash
+spl2 run ./21_multi_model_pipeline/multi_model.spl --adapter ollama -m gemma3 topic=climate change
+```
+
+```spl2
+-- Recipe 21: Multi-Model Pipeline
+-- Showcases GENERATE ... USING MODEL per-step model selection
+-- and semantic WHILE loop with variable context.
+--
+-- Each step can target a different model — the right model for each task.
+-- Usage:
+--   spl2 run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
+
+CREATE FUNCTION research(topic TEXT) RETURNS TEXT AS $$
+You are a research specialist.
+Provide key facts, statistics, and recent developments about: {topic}
+Focus on factual accuracy. Be thorough but concise.
+$$;
+
+CREATE FUNCTION analyze(facts TEXT) RETURNS TEXT AS $$
+You are a data analyst.
+Analyze the following research and identify the 3 most significant insights:
+
+{facts}
+
+For each insight, explain why it matters and rate its significance (1-10).
+$$;
+
+CREATE FUNCTION write_summary(analysis TEXT) RETURNS TEXT AS $$
+You are a professional writer.
+Write a clear, engaging 2-paragraph summary based on this analysis:
+
+{analysis}
+
+The first paragraph should present the key findings.
+The second paragraph should discuss implications and outlook.
+$$;
+
+CREATE FUNCTION quality_check(text TEXT) RETURNS TEXT AS $$
+You are a quality reviewer.
+Rate the following text on a scale of 0.0 to 1.0 for:
+- Clarity
+- Accuracy
+- Completeness
+
+Return ONLY a single number (the average score).
+
+Text: {text}
+$$;
+
+WORKFLOW multi_model_pipeline
+  INPUT: @topic TEXT
+  OUTPUT: @final TEXT
+DO
+  -- Step 1: Research with a fast model (good for factual retrieval)
+  GENERATE research(@topic) USING MODEL 'gemma3' INTO @facts;
+
+  -- Step 2: Analysis with a reasoning model
+  GENERATE analyze(@facts) USING MODEL 'gemma3' INTO @analysis;
+
+  -- Step 3: Writing with a creative model
+  GENERATE write_summary(@analysis) USING MODEL 'gemma3' INTO @draft;
+
+  -- Step 4: Quality loop — refine until score > 0.7 (max 3 iterations)
+  @iteration := 0;
+  @quality := 0;
+
+  WHILE @iteration < 3 DO
+    GENERATE quality_check(@draft) INTO @quality;
+
+    EVALUATE @quality
+      WHEN > 0.7 THEN
+        COMMIT @draft WITH status = 'high_quality', score = @quality
+      OTHERWISE
+        GENERATE write_summary(@analysis) INTO @draft
+        @iteration := @iteration + 1
+    END
+  END
+
+  -- Fallback: commit whatever we have
+  COMMIT @draft WITH status = 'max_iterations', score = @quality
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    COMMIT @draft WITH status = 'partial'
+  WHEN ModelOverloaded THEN
+    COMMIT @draft WITH status = 'model_overloaded'
+END;
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 3994 in / 2366 out
+Latency: 39790ms
+------------------------------------------------------------
+```output
+Here's a 2-paragraph summary based on the analysis:
+
+In recent years, the planet has witnessed unprecedented levels of extreme heat, with 2023 emerging as the hottest year on record, followed by nine consecutive years that have shattered previous temperature records. This data-driven reality check underscores the alarming pace of global warming, which is no longer a theoretical concern but a pressing issue that demands immediate attention. The consistent trend of record-breaking temperatures serves as a stark warning sign, highlighting the urgent need for collective action to mitigate climate change.
+
+The implications of these findings are far-reaching and have significant consequences for policymakers, the public, and investors alike. As Arctic sea ice declines at an accelerated rate, the planet's thermostat is being disrupted, with devastating effects on ecosystems, indigenous communities, and the global climate system as a whole. Moreover, rising atmospheric methane levels, primarily driven by human activities like agriculture and fossil fuel production, threaten to amplify the warming effect, making targeted action in this sector essential for achieving near-term climate goals. As the scientific consensus grows, it is imperative that we respond with decisive action, leveraging the power of research, policy, and individual responsibility to address the climate crisis before it's too late.
+
+Please let me know if you would like me to elaborate on any aspect or analyze specific areas further, such as the role of climate litigation.
+```
+------------------------------------------------------------
+Variables:
+  @topic = climate change
+  @facts = Okay, here’s a concise and factual overview of climate change, incorporating key facts, statistics, and recent developments. This is based on the most current data and reports from reputable scientific organizations.
+
+**I. The Science – What’s Happening?**
+
+* **The Greenhouse Effect:** The Earth's atmosphere naturally traps some of the sun's heat, keeping the planet warm enough to support life. However, human activities, primarily the burning of fossil fuels (coal, oil, and natural gas), have dramatically increased the concentration of greenhouse gases (GHGs) like carbon dioxide (CO2), methane (CH4), and nitrous oxide (N2O) in the atmosphere.
+* **Rising Temperatures:** Global average surface temperature has risen by approximately 1.1°C (2.0°F) since the pre-industrial era (1850-1900). The vast majority of this warming is attributable to human activities.
+* **Key Statistics (as of late 2023/early 2024):**
+    * **NASA:**  2023 was the warmest year on record.
+    * **World Meteorological Organization (WMO):**  The past nine years (2015-2023) were the warmest on record.
+    * **Global average sea level rise:** Approximately 21-26 centimeters (8-10 inches) since 1880, accelerating in recent decades.
+* **Attribution Science:**  Scientists now have a high degree of confidence that specific extreme weather events (heatwaves, droughts, floods, wildfires) are being made more frequent and intense due to climate change.
+
+**II. Observed Impacts – What We're Seeing**
+
+* **Melting Ice:**
+    * **Arctic Sea Ice:**  Has declined by roughly 13% per decade since 1979. Summer sea ice extent is declining at an even faster rate.
+    * **Greenland and Antarctic Ice Sheets:**  Both are losing mass at an accelerating rate, contributing significantly to sea level rise.
+    * **Glaciers:** Worldwide, glaciers are shrinking, impacting water resources for millions of people.
+* **Sea Level Rise:**  Driven by thermal expansion of water and melting ice.
+* **Extreme Weather Events:**
+    * **Heatwaves:** Becoming more frequent, intense, and longer-lasting.
+    * **Droughts:**  Increasing in severity and duration in many regions.
+    * **Flooding:**  More frequent and intense rainfall events, coupled with rising sea levels, are leading to increased flooding.
+    * **Wildfires:**  Longer fire seasons and larger, more intense wildfires are occurring globally, fueled by hotter, drier conditions.
+* **Ocean Acidification:** The absorption of excess CO2 by the oceans is lowering their pH, threatening marine ecosystems, particularly coral reefs and shellfish.
+
+**III. Recent Developments & Trends (2023-2024)**
+
+* **Record-Breaking Temperatures Continue:** 2023 was the hottest on record, with many countries and regions experiencing unprecedented heat.
+* **Amazon Rainforest Deterioration:** The Amazon rainforest is experiencing increasingly severe droughts and deforestation, approaching a “tipping point” where it could transition from a carbon sink to a carbon source.
+* **Methane Levels:** Atmospheric methane concentrations are at record highs, primarily due to human activities like agriculture and fossil fuel production.
+* **Renewable Energy Growth:** Solar and wind power continue to experience rapid growth globally, driven by falling costs and government policies.  Solar energy capacity increased by 33% in 2023.
+* **Climate Litigation:**  Growing number of legal cases are being filed against governments and fossil fuel companies, seeking accountability for climate change.
+* **Paris Agreement Progress (and Challenges):** While the world is still falling short of its goals under the Paris Agreement (limiting warming to 1.5°C), there's continued, though uneven, progress in countries setting and implementing emissions reduction targets.
+
+
+
+**IV. Key Organizations & Data Sources:**
+
+* **NASA:** [https://climate.nasa.gov/](https://climate.nasa.gov/)
+* **IPCC (Intergovernmental Panel on Climate Change):** [https://www.ipcc.ch/](https://www.ipcc.ch/) – The leading international body for assessing climate change.
+* **NOAA (National Oceanic and Atmospheric Administration):** [https://www.noaa.gov/climate](https://www.noaa.gov/climate)
+* **WMO (World Meteorological Organization):** [https://public.wmo.int/](https://www.wmo.int/)
+
+---
+
+**Disclaimer:** *Climate
+  @analysis = Okay, here’s an analysis of the provided research, identifying the 3 most significant insights and explaining their importance with a significance rating (1-10, with 10 being the most significant).
+
+**1. Insight: 2023 Was the Hottest Year on Record, and the Past Nine Years Have Been the Warmest on Record.**
+
+* **Explanation:** This is arguably the most impactful insight. The sheer statistical weight of this data – the consistent, unbroken trend of record-breaking temperatures – provides undeniable evidence of the magnitude and urgency of the climate crisis. It moves climate change from a theoretical concern to a demonstrable, current reality. The repetition of this trend underscores the accelerating nature of the problem.
+* **Why it Matters:** This data serves as a critical alarm bell, compelling immediate action. It’s a key piece of information for policymakers, the public, and investors. It directly links human activity to the observable changes happening on our planet.
+* **Significance Rating: 10/10**
+
+
+**2. Insight:  The Arctic Sea Ice Has Declined by Roughly 13% Per Decade Since 1979, and Summer Sea Ice Extent is Declining at an Even Faster Rate.**
+
+* **Explanation:** This insight highlights a particularly vulnerable and rapidly changing part of the planet. The dramatic loss of Arctic sea ice has profound consequences, including amplifying global warming (albedo effect), disrupting ecosystems, and impacting indigenous communities.
+* **Why it Matters:** Arctic sea ice is a crucial regulator of global climate. Its decline doesn’t just represent a loss of ice; it’s a destabilization of the entire climate system.  The accelerating rate of summer sea ice loss is particularly concerning.
+* **Significance Rating: 9/10** –  The speed of this change makes it extremely important.
+
+
+
+**3. Insight:  Atmospheric Methane Concentrations Are at Record Highs, Primarily Due to Human Activities Like Agriculture and Fossil Fuel Production.**
+
+* **Explanation:** This insight reveals a critical "feedback loop" that’s exacerbating climate change. Methane is a far more potent greenhouse gas than CO2 over a shorter timeframe. The increase in methane levels, driven largely by human activities, is amplifying the warming effect.
+* **Why it Matters:** Methane’s short-term warming potential is a major concern. Addressing methane emissions is crucial for achieving near-term climate goals and preventing further warming. This insight highlights a specific sector (agriculture and fossil fuels) where targeted action is needed.
+* **Significance Rating: 8/10** –  The potency of methane and the relatively recent surge in its levels make this a high-priority issue.
+
+
+
+---
+
+Do you want me to elaborate on any of these insights, or perhaps analyze a specific aspect of the research (e.g., the role of climate litigation)?
+  @iteration = 2
+  @quality = 0.83
+============================================================
+Log: /home/gongai/.spl/logs/multi_model-ollama-20260320-192942.log

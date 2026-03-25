@@ -142,7 +142,7 @@ def _body_stmt_to_json(stmt) -> dict:
             "type": "Evaluate",
             "expression": _expr_to_json(stmt.expression),
             "when_clauses": [_when_to_json(wc) for wc in stmt.when_clauses],
-            "otherwise": [_body_stmt_to_json(s) for s in stmt.otherwise_statements] if stmt.otherwise_statements else None,
+            "else": [_body_stmt_to_json(s) for s in stmt.else_statements] if stmt.else_statements else None,
         }
     elif isinstance(stmt, WhileStatement):
         return {

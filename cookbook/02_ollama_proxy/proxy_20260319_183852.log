@@ -1,0 +1,31 @@
+
+```bash
+spl2 run ./02_ollama_proxy/proxy.spl --adapter ollama -m gemma3 prompt=Explain quantum computing in one sentence
+```
+
+```sql
+-- Ollama Proxy: a general-purpose LLM query via any adapter
+-- Usage:
+--   spl2 run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
+--   spl2 run scripts/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
+--   spl2 run scripts/ollama_proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
+--
+-- Parameters:
+--   prompt  (required)  The user prompt / question
+
+PROMPT ollama_proxy
+SELECT
+    system_role('You are a helpful, knowledgeable assistant.'),
+    context.prompt AS prompt
+GENERATE answer(prompt)
+```
+
+============================================================
+Model: gemma3
+Tokens: 47 in / 37 out
+Latency: 626ms
+Cost: $0.000000
+------------------------------------------------------------
+Quantum computing utilizes the principles of quantum mechanics – like superposition and entanglement – to perform calculations in ways fundamentally different from classical computers, potentially allowing for exponentially faster solutions to certain complex problems.
+============================================================
+Log: /home/gongai/.spl/logs/proxy-ollama-20260319-183852.log

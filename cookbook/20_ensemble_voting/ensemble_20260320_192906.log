@@ -1,0 +1,218 @@
+
+```bash
+spl2 run ./20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question=What causes inflation?
+```
+
+```spl2
+-- Recipe 20: Ensemble Voting
+-- Generates multiple independent answers, then uses majority voting to pick the best.
+-- Demonstrates ensemble methods, comparative scoring, and consensus-driven output.
+--
+-- Usage:
+--   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question="What causes inflation?"
+--   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="Is Rust faster than C++?"
+--   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="What is the best database for time-series data?"
+
+WORKFLOW ensemble_voting
+    INPUT: @question TEXT
+    OUTPUT: @final_answer TEXT
+DO
+    -- Step 1: Generate 5 independent candidate answers with varying temperatures
+    GENERATE answer_candidate(@question) INTO @candidate_1
+    GENERATE answer_candidate(@question) INTO @candidate_2
+    GENERATE answer_candidate(@question) INTO @candidate_3
+    GENERATE answer_candidate(@question) INTO @candidate_4
+    GENERATE answer_candidate(@question) INTO @candidate_5
+
+    -- Step 2: Score each candidate on accuracy, completeness, and clarity
+    GENERATE score_candidate(@candidate_1, @question) INTO @score_1
+    GENERATE score_candidate(@candidate_2, @question) INTO @score_2
+    GENERATE score_candidate(@candidate_3, @question) INTO @score_3
+    GENERATE score_candidate(@candidate_4, @question) INTO @score_4
+    GENERATE score_candidate(@candidate_5, @question) INTO @score_5
+
+    -- Step 3: Find consensus — identify common themes across candidates
+    GENERATE find_consensus(
+        @candidate_1, @candidate_2, @candidate_3,
+        @candidate_4, @candidate_5
+    ) INTO @consensus
+
+    -- Step 4: Select the best candidate based on scores and consensus alignment
+    GENERATE select_winner(
+        @candidate_1, @score_1,
+        @candidate_2, @score_2,
+        @candidate_3, @score_3,
+        @candidate_4, @score_4,
+        @candidate_5, @score_5,
+        @consensus
+    ) INTO @best_candidate
+
+    -- Step 5: Polish the winning answer, incorporating consensus insights
+    GENERATE polish(@best_candidate, @consensus, @question) INTO @final_answer
+
+    COMMIT @final_answer WITH status = 'complete', candidates = 5
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        -- If budget runs out, use whatever candidates we have
+        GENERATE select_winner(
+            @candidate_1, @score_1,
+            @candidate_2, @score_2,
+            @candidate_3, @score_3
+        ) INTO @final_answer
+        COMMIT @final_answer WITH status = 'partial', candidates = 3
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 13
+Tokens: 5170 in / 2670 out
+Latency: 35716ms
+------------------------------------------------------------
+```output
+Inflation is a complex phenomenon with multiple underlying factors contributing to it. There are several ways that inflation can occur, but most economists agree that there are three main types:
+
+1. **Demand-pull Inflation**: This occurs when aggregate demand exceeds the available supply of goods and services, driving up prices. For example, if people have more money to spend during a boom economy, businesses may raise their prices to take advantage of the increased demand.
+2. **Cost-push Inflation**: This type of inflation occurs when there is an increase in production costs, such as higher wages or raw materials prices. Businesses may pass these cost increases on to consumers through higher prices.
+3. **Built-in Inflation**: Also known as cost-plus inflation, this occurs when there are recurring and embedded price increases due to inefficiencies in supply chains or other inherent factors.
+
+There are also external factors that can contribute to inflation, such as:
+
+* **Natural Disasters**: Events like hurricanes or droughts can disrupt supply chains and drive up prices.
+* **Global Conflicts**: Wars or trade embargoes can lead to shortages and price increases.
+*
+```
+------------------------------------------------------------
+Variables:
+  @question = What causes inflation?
+  @candidate_1 = Inflation is a complex economic phenomenon, but the main cause is an increase in the money supply or demand for goods and services. This can be triggered by various factors such as:
+
+1. Monetary policy: Central banks printing more money to stimulate economic growth.
+2. Demand-pull inflation: An increase in aggregate demand due to rising incomes, low unemployment rates, or government spending.
+3. Cost-push inflation: An increase in production costs, such as higher wages or raw materials prices.
+4. Supply-side shocks: Events like natural disasters, trade wars, or global events that disrupt supply chains and lead to price increases.
+
+It's worth noting that there is no single cause of inflation, and the underlying factors can vary depending on the specific economic context.
+  @candidate_2 = Inflation is a complex economic phenomenon, but some of the most common causes include:
+
+1. Monetary Policy: An increase in the money supply or a decrease in interest rates can lead to inflation, as more money chases a constant quantity of goods and services.
+2. Demand-Pull Inflation: When aggregate demand exceeds the available supply of goods and services, businesses may raise their prices, leading to inflation.
+3. Cost-Push Inflation: An increase in production costs, such as higher wages or raw materials, can lead to price increases and inflation.
+4. Supply Chain Disruptions: Events like natural disasters, wars, or global pandemics can disrupt supply chains, leading to shortages and price increases, which can cause inflation.
+5. Fiscal Policy: Large government spending or taxation can inject money into the economy, increasing aggregate demand and potentially leading to inflation.
+6. Commodities Price Shocks: A sudden increase in the prices of essential commodities like food, oil, or metals can lead to inflation.
+
+It's worth noting that a combination of these factors often contributes to inflation, rather than a single cause.
+  @candidate_3 = Inflation is a complex and multifaceted economic phenomenon. Some of the key causes of inflation include:
+
+1. **Demand-pull inflation**: This occurs when aggregate demand exceeds the available supply of goods and services, leading to upward pressure on prices.
+2. **Cost-push inflation**: This happens when there is an increase in production costs, such as higher wages or raw materials prices, which are passed on to consumers through higher prices.
+3. **Monetary policy**: An increase in the money supply, often caused by central banks printing more money, can lead to inflation if it outpaces economic growth and leads to a surge in demand for goods and services.
+4. **Supply chain disruptions**: Events such as natural disasters, global pandemics, or trade wars can disrupt supply chains, leading to shortages and price increases.
+5. **Fiscal policy**: Expansionary fiscal policies, such as increased government spending or tax cuts, can also drive inflation if they stimulate economic growth too quickly.
+
+It's worth noting that the specific causes of inflation can vary depending on the country, economy, and time period in question. A combination of these factors often contributes to inflation, rather than a single cause.
+  @candidate_4 = Economic factors, government policies, and external events can contribute to inflation. Some of the main causes include:
+
+1. Demand-pull inflation: When aggregate demand exceeds the available supply of goods and services, businesses may raise prices.
+2. Cost-push inflation: Increases in production costs, such as higher wages or raw materials prices, can lead to higher prices.
+3. Monetary policy: An increase in the money supply or a decrease in interest rates can stimulate economic growth, leading to inflation.
+4. Fiscal policy: Government spending and taxation policies can also impact inflation.
+5. External shocks: Events like natural disasters, global conflicts, or changes in oil prices can disrupt supply chains and drive up prices.
+
+These causes can interact with each other in complex ways, making it challenging to identify a single cause of inflation.
+  @candidate_5 = Inflation is caused by an increase in the money supply, demand for goods and services, or a combination of both. Some common factors that contribute to inflation include:
+
+1. Monetary policy: Central banks printing more money can lead to an increase in the money supply, which can cause prices to rise.
+2. Demand-pull inflation: When aggregate demand exceeds the available supply of goods and services, businesses may raise their prices to capture the excess demand.
+3. Cost-push inflation: An increase in production costs, such as higher wages or raw materials prices, can lead to higher prices for goods and services.
+4. Expectations: If people expect prices to rise in the future, they may be more likely to buy now, which can drive up prices.
+
+These factors can interact with each other in complex ways, and inflation can result from a combination of these causes.
+  @score_1 = Based on the input, I would score the candidate as follows:
+
+Score: 8/10
+
+Reasoning:
+
+* The candidate correctly identifies four main causes of inflation: monetary policy, demand-pull inflation, cost-push inflation, and supply-side shocks.
+* They provide a brief explanation for each cause, indicating an understanding of the underlying factors that contribute to inflation.
+* However, the candidate could benefit from more specificity and depth in their explanations. For example, they could elaborate on how specific events or policies trigger each type of inflation.
+
+Overall, the candidate demonstrates a good understanding of the causes of inflation but could improve with more detailed and nuanced explanations.
+  @score_2 = Based on the information provided, I would give a score of 7 out of 10 for the candidate's understanding of the causes of inflation. The candidate has identified six common causes of inflation, including monetary policy, demand-pull inflation, cost-push inflation, supply chain disruptions, fiscal policy, and commodities price shocks.
+
+However, the candidate notes that "a combination of these factors often contributes to inflation, rather than a single cause." This suggests an understanding of the complexity of the issue, but also leaves room for improvement in fully articulating the nuances of causality.
+
+Overall, the candidate demonstrates a good grasp of the topic and is willing to acknowledge the interplay between different factors that contribute to inflation.
+  @score_3 = Based on the input provided, I would define "score_candidate" as follows:
+
+Score_candidate: The candidate who answers that inflation is caused by a combination of factors, including demand-pull inflation, cost-push inflation, monetary policy, supply chain disruptions, and fiscal policy. This answer demonstrates an understanding of the complex causes of inflation and the potential for multiple factors to contribute to its occurrence.
+
+Score: 9/10
+
+Reasoning:
+
+* The candidate acknowledges that inflation is a multifaceted phenomenon with various causes.
+* They recognize that different countries and economies may experience different causes of inflation.
+* However, they do not provide a clear and concise explanation of how these causes interact or combine to produce inflation.
+
+To score higher, the candidate could have provided more detail about how these factors interact, such as:
+
+"Inflation is caused by a combination of demand-pull inflation, cost-push inflation, monetary policy, supply chain disruptions, and fiscal policy. Demand-pull inflation occurs when aggregate demand exceeds available supply, leading to upward pressure on prices. Cost-push inflation happens when production costs increase, passed on to consumers through higher prices. Monetary policy can also drive inflation if the money supply outpaces economic growth. Supply chain disruptions and expansionary fiscal policies can further contribute to inflation by creating shortages and stimulating economic growth too quickly."
+
+This revised answer provides a more comprehensive understanding of the causes of inflation and demonstrates a stronger grasp of the subject matter.
+  @score_4 = Based on the input information, I will score the candidate as follows:
+
+**Candidate Score: 9/10**
+
+The candidate's response is clear and concise, providing a comprehensive list of main causes of inflation. They have accurately identified five key factors that can contribute to inflation, including demand-pull inflation, cost-push inflation, monetary policy, fiscal policy, and external shocks.
+
+However, I would deduct one point because the candidate does not explicitly acknowledge the complexity of these interactions. The input text mentions that "These causes can interact with each other in complex ways," suggesting that a more nuanced understanding is required to accurately identify a single cause of inflation. A stronger response might have elaborated on this idea.
+
+Overall, the candidate has demonstrated a good understanding of the key factors contributing to inflation and has provided a clear and concise answer.
+  @score_5 = Inflation is caused by an increase in the money supply, demand for goods and services, or a combination of both. Some common factors that contribute to inflation include:
+
+1. Monetary policy: Central banks printing more money can lead to an increase in the money supply, which can cause prices to rise.
+2. Demand-pull inflation: When aggregate demand exceeds the available supply of goods and services, businesses may raise their prices to capture the excess demand.
+3. Cost-push inflation: An increase in production costs, such as higher wages or raw materials prices, can lead to higher prices for goods and services.
+4. Expectations: If people expect prices to rise in the future, they may be more likely to buy now, which can drive up prices.
+
+These factors can interact with each other in complex ways, and inflation can result from a combination of these causes.
+  @consensus = To find the consensus among the provided inputs, I will analyze them and identify common themes, causes, and descriptions.
+
+After analyzing all five inputs, here are some key findings:
+
+1. **Multiple Causes**: All inputs agree that there is no single cause of inflation but rather a combination of factors contributing to it.
+2. **Demand-pull Inflation**: This was consistently mentioned as one of the primary causes of inflation across all inputs.
+3. **Monetary Policy**: An increase in the money supply or a decrease in interest rates was identified as a significant contributor to inflation.
+4. **Cost-push Inflation**: Increases in production costs, such as higher wages or raw materials prices, were also mentioned as contributing factors.
+5. **External Factors**: External shocks like natural disasters, global conflicts, and changes in oil prices can disrupt supply chains and drive up prices.
+
+While there are some differences in the specific causes and descriptions across inputs, the overall consensus is that inflation is a complex phenomenon with multiple underlying factors contributing to it.
+
+Some potential next steps could include:
+
+1. Further research on each of the identified causes of inflation.
+2. Analyzing data and trends to understand how these causes interact and impact different economies.
+3. Developing policies and strategies to mitigate or manage inflation in various contexts.
+
+Let me know if you'd like me to elaborate on any of these points or explore further!
+  @best_candidate = Based on the analysis of all 11 inputs, I will provide a consensus score for the candidate's understanding of the causes of inflation.
+
+**Consensus Score: 8.5/10**
+
+The candidate has demonstrated a strong understanding of the causes of inflation, consistently identifying demand-pull inflation, monetary policy, and cost-push inflation as primary contributors. They also acknowledged the importance of external factors like natural disasters and global conflicts in disrupting supply chains and driving up prices.
+
+However, there are some areas where the candidate could improve:
+
+1. **Specificity**: While the candidate has identified multiple causes of inflation, they sometimes lack specificity in their explanations. For example, input 3 mentions "demand-pull inflation" without elaborating on how it works.
+2. **Interactions between factors**: The candidate could benefit from a deeper understanding of how these factors interact with each other. Input 6 notes that a combination of these factors often contributes to inflation, but the candidate does not explicitly acknowledge this in their explanation.
+3. **Contextual understanding**: The candidate's responses sometimes lack contextual understanding. For example, input 4 mentions that "a combination of these factors often contributes to inflation," but the candidate does not provide specific examples or explanations for how these factors interact.
+
+To improve their score, the candidate could focus on providing more detailed and nuanced explanations of each cause of inflation, highlighting how they interact with each other and impact different economies. By doing so, they can demonstrate a deeper understanding of the complex causes of inflation and develop a stronger grasp of the subject matter.
+============================================================
+Log: /home/gongai/.spl/logs/ensemble-ollama-20260320-192906.log

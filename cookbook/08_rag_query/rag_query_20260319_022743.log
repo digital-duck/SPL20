@@ -1,0 +1,9 @@
+============================================================
+Model: gemma3
+Tokens: 55 in / 30 out
+Latency: 2791ms
+Cost: $0.000000
+------------------------------------------------------------
+Please provide me with the context! I need the text you want me to use to answer the question "What language is best for systems programming?".
+============================================================
+Log: /home/gongai/.spl/logs/rag_query-ollama-20260319-022743.log

@@ -1,0 +1,76 @@
+
+```bash
+spl2 run ./06_react_agent/react_agent.spl --adapter ollama -m gemma3 task=What is the population of France?
+```
+
+```sql
+-- SPL 2.0: ReAct Agent Pattern
+-- Reasoning + Acting loop with tool use
+
+WORKFLOW react_agent
+  INPUT: @task text
+  OUTPUT: @answer text
+DO
+  @iteration := 0
+  @history := ''
+  @context := ''
+
+  WHILE @iteration < 10 DO
+
+    -- Reasoning step
+    GENERATE thought(@task, @history, @context) INTO @current_thought
+
+    -- Action decision
+    GENERATE action_decision(@current_thought) INTO @action
+
+    -- Execute action based on classification
+    EVALUATE @action
+      WHEN 'search' THEN
+        CALL search_tool(@action) INTO @observation
+      WHEN 'calculate' THEN
+        CALL calculator(@action) INTO @observation
+      WHEN 'answer' THEN
+        GENERATE final_answer(@history) INTO @answer
+        COMMIT @answer WITH status = 'complete'
+    END
+
+    -- Accumulate history
+    @history := @history + @current_thought
+    @iteration := @iteration + 1
+
+  END
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    GENERATE best_answer(@history) INTO @answer
+    COMMIT @answer WITH status = 'partial'
+  WHEN HallucinationDetected THEN
+    RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 850 in / 260 out
+Latency: 10099ms
+------------------------------------------------------------
+```output
+I'm ready to help. What's the task?
+```
+------------------------------------------------------------
+Variables:
+  @task = What is the population of France?
+  @iteration = 0
+  @history = 
+  @context = 
+  @current_thought = I'll provide information based on my training data.
+
+ Input 1:
+The current estimated population of France as of 2023 is approximately 67.2 million people, according to the French National Institute fo
+  @action = Action decision: Provide additional context on the population data.
+
+Since I don't have any specific requirements or goals related to France's population, I'll provide some general insights. The estim
+  @answer = I'm ready to help. What's the task?
+============================================================
+Log: /home/gongai/.spl/logs/react_agent-ollama-20260320-053030.log

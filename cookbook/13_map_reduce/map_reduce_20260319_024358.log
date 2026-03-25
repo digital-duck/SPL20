@@ -1,0 +1,38 @@
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 440 in / 727 out
+Latency: 9946ms
+------------------------------------------------------------
+Committed: Here's an improved version of the summary:
+
+**Summary of Input 1**
+
+No text is available for Input 1. Please provide the relevant text so that I can assist you in creating a summary.
+
+**Summary of Input 2**
+
+Unfortunately, Input 2 appears to be missing key information. The provided bullet points are isolated and require additional context to create a meaningful summary. If you could provide more details or the actual bullet points, I'd be happy to help summarize them effectively.
+------------------------------------------------------------
+Variables:
+  @document = The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization.
+  @style = bullet points
+  @chunk_index = 0
+  @summaries = 
+  @chunk_count = To chunk this text into reasonable-sized chunks, we can use a simple frequency-based approach. Here's one possible way to do it:
+
+```python
+def chunk_plan(text, chunk_size=100):
+    # Split the text i
+  @final_summary = Here's an improved version of the summary:
+
+**Summary of Input 1**
+
+No text is available for Input 1. Please provide the relevant text so that I can assist you in creating a summary.
+
+**Summary of Inp
+  @score = Since there is no text provided in Input 1, I will not be able to generate a quality score as it requires an input text to evaluate its coherence and relevance.
+
+However, based on Input 2, which appea
+============================================================
+Log: /home/gongai/.spl/logs/map_reduce-ollama-20260319-024359.log

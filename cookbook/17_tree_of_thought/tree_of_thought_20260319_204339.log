@@ -1,0 +1,151 @@
+
+```bash
+spl2 run ./17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem=Should we rewrite the legacy system or incrementally refactor?
+```
+
+```sql
+-- Recipe 17: Tree of Thought
+-- Explores multiple reasoning paths in parallel, evaluates each, and selects the best.
+-- Demonstrates branching exploration, comparative evaluation, and path scoring.
+--
+-- Usage:
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem="How should a startup prioritize between growth and profitability?"
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Design a caching strategy for a high-traffic API"
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Should we rewrite the legacy system or incrementally refactor?"
+
+WORKFLOW tree_of_thought
+    INPUT: @problem TEXT
+    OUTPUT: @best_solution TEXT
+DO
+    -- Step 1: Generate multiple initial approaches
+    GENERATE approach_1(@problem) INTO @path_a
+    GENERATE approach_2(@problem) INTO @path_b
+    GENERATE approach_3(@problem) INTO @path_c
+
+    -- Step 2: Develop each approach one level deeper
+    GENERATE develop(@path_a, @problem) INTO @path_a_developed
+    GENERATE develop(@path_b, @problem) INTO @path_b_developed
+    GENERATE develop(@path_c, @problem) INTO @path_c_developed
+
+    -- Step 3: Score each path on multiple criteria
+    GENERATE evaluate_path(@path_a_developed, @problem) INTO @score_a
+    GENERATE evaluate_path(@path_b_developed, @problem) INTO @score_b
+    GENERATE evaluate_path(@path_c_developed, @problem) INTO @score_c
+
+    -- Step 4: Select the best path
+    GENERATE select_best(
+        @path_a_developed, @score_a,
+        @path_b_developed, @score_b,
+        @path_c_developed, @score_c
+    ) INTO @best_path
+
+    -- Step 5: Refine the winning path into a final solution
+    GENERATE refine_solution(@best_path, @problem) INTO @best_solution
+
+    -- Step 6: Verify the solution holds up
+    GENERATE verify(@best_solution, @problem) INTO @verification
+
+    EVALUATE @verification
+        WHEN 'sound' THEN
+            COMMIT @best_solution WITH status = 'complete', paths_explored = 3
+        OTHERWISE
+            -- If verification fails, combine insights from all paths
+            GENERATE synthesize_all(
+                @path_a_developed, @path_b_developed, @path_c_developed, @problem
+            ) INTO @best_solution
+            COMMIT @best_solution WITH status = 'synthesized', paths_explored = 3
+    END
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        -- Return whatever path was scored highest so far
+        COMMIT @best_path WITH status = 'budget_limit'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 14
+Tokens: 8207 in / 5389 out
+Latency: 75232ms
+------------------------------------------------------------
+Committed: Based on the input provided, I would recommend adopting an **Incremental Refactoring** strategy. This method allows for a more gradual and controlled transformation of the complex legacy system, minimizing disruption to existing functionality and reducing the risk of introducing major changes.
+
+Here are some reasons why incremental refactoring is a good approach:
+
+1. ReducedRisk: By focusing on small, well-defined projects, we reduce the risk of introducing major changes that could negatively impact the overall system.
+2. ImprovedUnderstanding: Incremental refactoring enables us to gain a deeper understanding of the legacy system's architecture and its interactions with other components.
+3. ReducedComplexity: Breaking down the refactoring process into smaller tasks helps manage complexity, making it easier to tackle each component individually.
+
+To achieve this approach, I would suggest the following steps:
+
+1. IdentifyHighPriorityAreas:
+Analyze the system's performance, functionality, and security to determine which areas require immediate attention.
+2. Develop aRefactoringRoadmap:
+Create a high-level plan outlining the scope, timelines, and resources required for each incremental refactoring project.
+3. PrioritizeandFocusonSmallTasks:
+Tackle smaller tasks first, ensuring that each increment builds upon previous work and sets the stage for future improvements.
+4. MonitorProgressandAdapt:
+Regularly review progress, assess the impact of changes, and make adjustments to the roadmap as needed.
+
+Additionally, I recommend:
+
+1. Start by refactoring a single module or component, focusing on improving its maintainability, performance, or security.
+2. Develop a testing framework to ensure that each incremental change does not introduce new issues.
+3. Establish clear communication channels with stakeholders to ensure everyone is informed of progress and any changes to the system.
+
+By adopting an incremental refactoring approach, we can effectively address the complexities of the legacy system while minimizing disruption and ensuring a smoother transition to a more maintainable and efficient solution.
+
+Next Steps:
+
+1. Schedule a meeting with key stakeholders to discuss the proposed incremental refactoring approach and gather feedback.
+2. Develop a detailed project plan outlining the scope, timelines, and resources required for each incremental refactoring project.
+3. Begin identifying high-priority areas and developing a refactoring roadmap.
+
+Please let me know if you would like me to make any changes or additions!
+------------------------------------------------------------
+Variables:
+  @problem = Should we rewrite the legacy system or incrementally refactor?
+  @path_a = **Approach 1: Incremental Refactoring**
+
+Incremental refactoring is a strategic approach that involves breaking down complex changes into smaller, manageable pieces. This approach allows us to focus o
+  @path_b = Approach 2: Incremental Refactoring
+
+**Overview**
+
+Incremental refactoring involves making targeted changes to the existing codebase, rather than rewriting it from scratch. This approach allows us to 
+  @path_c = **Approach 3: Incremental Refactoring**
+
+Considering the complexity of rewriting a legacy system, I recommend adopting an incremental refactoring approach. This method allows us to address specific ar
+  @path_a_developed = **Common Challenges in Incremental Refactoring:**
+
+1.  **Limited Visibility**: It can be challenging to understand the overall impact of individual changes on the system, making it difficult to priori
+  @path_b_developed = Based on the input provided, I would recommend taking an incremental refactoring approach. Here's why:
+
+1. **Less disruption**: Incremental refactoring allows us to make targeted changes that minimize
+  @path_c_developed = Based on the input provided, it seems that the best approach would be to adopt an **Incremental Refactoring** strategy. This method allows for a more gradual and controlled transformation of the compl
+  @score_a = Based on the input provided, it seems that the task is to evaluate whether to rewrite the legacy system or incrementally refactor it.
+
+Incremental refactoring may be a more suitable approach for sever
+  @score_b = Based on the input provided, it seems like there are different opinions on how to proceed with the legacy system. Here's a summary of the pros and cons of each approach:
+
+**Incremental Refactoring:**
+
+  @score_c = Based on the input provided, I suggest that for Input 1, the text is complete and effectively presents an approach to evaluating the path forward. However, I do have some minor suggestions:
+
+* Conside
+  @best_path = Based on your input, I would recommend the following:
+
+**Recommendation**
+
+Consider adopting an incremental refactoring strategy for addressing the performance issues in the legacy system.
+
+**Reasonin
+  @best_solution = Based on the input provided, I would recommend adopting an **Incremental Refactoring** strategy. This method allows for a more gradual and controlled transformation of the complex legacy system, minim
+  @verification = Based on the Input 1 provided, it seems that you are considering adopting an incremental refactoring strategy to address performance issues in the legacy system.
+
+Here's a verification of the key poin
+============================================================
+Log: /home/gongai/.spl/logs/tree_of_thought-ollama-20260319-204339.log

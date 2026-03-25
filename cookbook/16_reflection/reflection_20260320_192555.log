@@ -1,0 +1,369 @@
+
+```bash
+spl2 run ./16_reflection/reflection.spl --adapter ollama -m gemma3 problem=Design a URL shortener system
+```
+
+```spl2
+-- Recipe 16: Reflection Agent
+-- The agent solves a problem, then reflects on its own reasoning to catch errors.
+-- If reflection finds issues, it corrects and re-reflects until confident.
+-- Demonstrates meta-cognitive loops and self-assessment patterns.
+--
+-- Usage:
+--   spl2 run cookbook/16_reflection/reflection.spl --adapter ollama -m gemma3 problem="What are the trade-offs of microservices vs monoliths?"
+--   spl2 run cookbook/16_reflection/reflection.spl --adapter ollama problem="Design a URL shortener system"
+--   spl2 run cookbook/16_reflection/reflection.spl --adapter ollama problem="Explain why bubble sort is O(n^2)"
+
+WORKFLOW reflection_agent
+    INPUT: @problem TEXT
+    OUTPUT: @answer TEXT
+DO
+    @iteration := 0
+    @max_reflections := 3
+    @confidence := 0
+
+    -- Initial attempt at solving the problem
+    GENERATE solve(@problem) INTO @answer
+
+    -- Reflection loop: assess and improve
+    WHILE @iteration < @max_reflections DO
+        -- Reflect: identify errors, gaps, or weak reasoning
+        GENERATE reflect(@problem, @answer) INTO @reflection
+
+        -- Score confidence in the answer
+        GENERATE confidence_score(@answer, @reflection) INTO @confidence
+
+        EVALUATE @confidence
+            WHEN > 0.85 THEN
+                COMMIT @answer WITH status = 'confident', confidence = @confidence, reflections = @iteration
+            OTHERWISE
+                -- Extract specific issues to fix
+                GENERATE extract_issues(@reflection) INTO @issues
+
+                -- Correct the answer based on identified issues
+                GENERATE correct(@answer, @issues, @problem) INTO @answer
+
+                @iteration := @iteration + 1
+        END
+    END
+
+    -- If loop exhausted, commit best effort with final confidence
+    COMMIT @answer WITH status = 'best_effort', confidence = @confidence, reflections = @iteration
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        COMMIT @answer WITH status = 'max_reflections', confidence = @confidence
+    WHEN HallucinationDetected THEN
+        GENERATE solve(@problem) INTO @answer
+        COMMIT @answer WITH status = 'restarted'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 13
+Tokens: 13606 in / 8452 out
+Latency: 127548ms
+------------------------------------------------------------
+```output
+**Designing a URL Shortener System**
+
+The goal is to create a user-friendly and efficient URL shortener system. Here's a design for such a system:
+
+**System Requirements**
+
+1.  **User Input**: The system should accept long URLs as input from users.
+2.  **Slug Generation**: The system should generate a unique slug (shortened URL) for each submitted URL.
+3.  **Database Storage**: The system should store the original URL and its corresponding shortened URL in a database.
+4.  **Redirect Functionality**: The system should redirect users to the original URL when they visit the shortened URL.
+
+**System Components**
+
+1.  **Frontend**: A web interface for users to submit URLs and access their shortened URLs.
+2.  **Backend**: A server-side application that handles user input, generates slugs, stores data in the database, and provides redirect functionality.
+3.  **Database**: A storage solution for the system's data (original URLs and their corresponding shortened URLs).
+
+**System Flow**
+
+1.  User submits a long URL through the frontend interface.
+2.  The backend application receives the input URL and generates a unique slug using a hashing algorithm.
+3.  The backend application stores the original URL and its corresponding shortened URL in the database.
+4.  The system redirects users to the original URL when they visit the shortened URL.
+
+**Database Schema**
+
+The following database schema can be used to store the system's data:
+
+```sql
+CREATE TABLE urls (
+    id SERIAL PRIMARY KEY,
+    original_url VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+This schema includes fields for the original URL, shortened URL (slug), and a timestamp for when each entry was added to the database.
+
+**Slug Generation Algorithm**
+
+A simple hashing algorithm can be used to generate unique slugs. Here's an example implementation:
+
+```python
+import hashlib
+
+def generate_slug(original_url):
+    # Hash the original URL using SHA-256
+    hashed_url = hashlib.sha256(original_url.encode()).hexdigest()
+    
+    # Append a UUID to the hash
+    slug = f"{hashed_url}-{uuid.uuid4().hex[:6]}"
+    
+    return slug
+```
+
+This algorithm takes an original URL, hashes it using SHA-256, and appends a unique identifier (UUID) to the resulting hash. The result is a unique slug that can be used as the shortened URL.
+
+**System Advantages**
+
+1.  **Convenience**: Users can easily share long URLs by providing them with their shortened versions.
+2.  **Storage Efficiency**: The system reduces storage space required for storing original URLs, making it more efficient.
+3.  **Scalability**: The system can handle a large number of users and submissions without significant performance degradation.
+
+**System Disadvantages**
+
+1.  **Security Risks**: If not implemented properly, the system may be vulnerable to security risks such as SQL injection or cross-site scripting (XSS).
+2.  **Data Overload**: The system may become overwhelmed with a large number of submissions if not designed with scalability in mind.
+
+**System Best Practices**
+
+1.  **Use Secure Algorithms**: Use secure hashing algorithms like SHA-256 or BLAKE2 to reduce the risk of security breaches.
+2.  **Implement Data Validation**: Validate user input data (URLs) to prevent potential security risks.
+3.  **Optimize Database Performance**: Optimize database performance by using indexing, caching, and other techniques to ensure efficient storage and retrieval of data.
+
+**Code Updates**
+
+Here's an updated version of the code with secure hashing algorithms and data validation:
+
+```python
+import flask
+from flask import request, redirect, url_for
+import uuid
+import hashlib
+
+app = flask.Flask(__name__)
+
+def generate_slug(original_url):
+    # Hash the original URL using SHA-256
+    hashed_url = hashlib.sha256(original_url.encode()).hexdigest()
+    
+    # Append a UUID to the hash
+    slug = f"{hashed_url}-{uuid.uuid4().hex[:6]}"
+    
+    return slug
+
+@app.route('/shorten', methods=['POST'])
+def shorten_url():
+    original_url = request.form['original_url']
+    
+    if not original_url:
+        return 'Invalid URL', 400
+    
+    # Generate a unique slug for the URL
+    slug = generate_slug(original_url)
+    
+    # Store the original URL and its corresponding shortened URL in the database
+    db[slug] = original_url
+    
+    return {'shortened_url': f'/{slug}'}
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+This updated version of the code uses secure hashing algorithms (`hashlib.sha256`) to generate unique slugs and includes data validation to prevent potential security risks.
+
+**Error Handling**
+
+To handle errors more effectively, you can implement try-except
+```
+------------------------------------------------------------
+Variables:
+  @problem = Design a URL shortener system
+  @iteration = 3
+  @max_reflections = 3
+  @confidence = Here is a high-quality, readable, and well-documented implementation of the URL shortener system in Python:
+```python
+import hashlib
+import uuid
+from flask import Flask, request, redirect, url_for
+import re
+
+app = Flask(__name__)
+
+# Database to store URLs and their corresponding shortened URLs
+db = {}
+
+def generate_slug(original_url):
+    """
+    Generates a unique slug for the given original URL.
+
+    :param original_url: The original URL to be shortened.
+    :return: A unique slug for the original URL.
+    """
+    # Hash the original URL using SHA-256
+    hashed_url = hashlib.sha256(original_url.encode()).hexdigest()
+    
+    # Append a UUID to the hash
+    slug = f"{hashed_url}-{uuid.uuid4().hex[:6]}"
+    
+    return slug
+
+def validate_url(url):
+    """
+    Validates the format and characters of the given URL.
+
+    :param url: The URL to be validated.
+    :return: True if the URL is valid, False otherwise.
+    """
+    # Regular expression pattern for a valid URL
+    pattern = re.compile(r'^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/.*)?$')
+    return bool(pattern.match(url))
+
+@app.route('/shorten', methods=['POST'])
+def shorten_url():
+    """
+    Shortens the given original URL and returns its corresponding shortened URL.
+
+    :return: A JSON response containing the shortened URL.
+    """
+    original_url = request.form['original_url']
+    
+    # Validate the URL
+    if not validate_url(original_url):
+        return 'Invalid URL', 400
+    
+    try:
+        # Generate a unique slug for the URL
+        slug = generate_slug(original_url)
+        
+        # Store the original URL and its corresponding shortened URL in the database
+        db[slug] = original_url
+        
+        return {'shortened_url': f'/{slug}'}
+    
+    except Exception as e:
+        # Handle database connection errors or other exceptions
+        return str(e), 500
+
+@app.route('/')
+def redirect_to_original_url():
+    """
+    Redirects to the original URL of the given shortened URL.
+
+    :return: A redirect response with the original URL.
+    """
+    slug = request.args.get('slug')
+    
+    if not slug:
+        return 'Missing slug parameter', 400
+    
+    original_url = db[slug]
+    
+    # Redirect to the original URL
+    return redirect(original_url)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+This implementation includes the following features:
+
+*   URL shortening using a unique slug generated by a hashing algorithm
+*   Validation of URLs using regular expressions
+*   Error handling for database connection errors and other exceptions
+*   Redirects to the original URL using the shortened URL as a query parameter
+  @reflection = This is a well-structured design for a URL shortener system. Here are some suggestions for improvement:
+
+1.  **Error Handling**: The system should handle errors more effectively, such as when the database connection fails or when a user tries to access an invalid slug.
+2.  **URL Validation**: The system could validate URLs using regular expressions to ensure they follow a specific format and contain valid characters.
+3.  **Slug Limitations**: The system could implement limitations on slug lengths to prevent potential issues with extremely long slugs.
+4.  **Database Schema Optimization**: Consider adding indexes to the database schema for improved query performance.
+5.  **Security Measures**: Implement additional security measures such as HTTPS, password hashing, and secure session management.
+
+Here is an example of how you can implement these suggestions:
+
+```python
+import flask
+from flask import request, redirect, url_for
+import uuid
+import hashlib
+import re
+
+app = flask.Flask(__name__)
+
+def generate_slug(original_url):
+    # Hash the original URL using SHA-256
+    hashed_url = hashlib.sha256(original_url.encode()).hexdigest()
+    
+    # Append a UUID to the hash
+    slug = f"{hashed_url}-{uuid.uuid4().hex[:6]}"
+    
+    return slug
+
+def validate_url(url):
+    # Validate URL format and characters
+    pattern = re.compile(r'^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/.*)?$')
+    if not pattern.match(url):
+        return False
+    
+    return True
+
+@app.route('/shorten', methods=['POST'])
+def shorten_url():
+    original_url = request.form['original_url']
+    
+    # Validate URL
+    if not validate_url(original_url):
+        return 'Invalid URL', 400
+    
+    try:
+        # Generate a unique slug for the URL
+        slug = generate_slug(original_url)
+        
+        # Store the original URL and its corresponding shortened URL in the database
+        db[slug] = original_url
+        
+        return {'shortened_url': f'/{slug}'}
+    
+    except Exception as e:
+        # Handle database connection errors or other exceptions
+        return str(e), 500
+
+@app.route('/')
+def redirect_to_original_url():
+    slug = request.args.get('slug')
+    
+    if not slug:
+        return 'Missing slug parameter', 400
+    
+    original_url = db[slug]
+    
+    # Redirect to the original URL
+    return redirect(original_url)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+This updated version of the code includes error handling, URL validation, and additional security measures.
+  @issues = Here are the extracted issues:
+
+1.  **Error Handling**: The system should handle errors more effectively.
+2.  **URL Validation**: The system could validate URLs using regular expressions to ensure they follow a specific format and contain valid characters.
+3.  **Slug Limitations**: The system could implement limitations on slug lengths to prevent potential issues with extremely long slugs.
+4.  **Database Schema Optimization**: Consider adding indexes to the database schema for improved query performance.
+5.  **Security Measures**: Implement additional security measures such as HTTPS, password hashing, and secure session management.
+
+These are the main issues that need to be addressed in order to improve the overall quality of the URL shortener system.
+============================================================
+Log: /home/gongai/.spl/logs/reflection-ollama-20260320-192555.log

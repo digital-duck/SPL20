@@ -110,7 +110,7 @@ class TestWorkflowPlan:
                         @result := 'good'
                     WHEN 'negative' THEN
                         @result := 'bad'
-                    OTHERWISE
+                    ELSE
                         @result := 'neutral'
                 END
                 COMMIT @result

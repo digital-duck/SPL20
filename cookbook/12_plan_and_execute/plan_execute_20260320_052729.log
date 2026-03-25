@@ -1,0 +1,243 @@
+
+```bash
+spl2 run ./12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task=Build a REST API for a todo app
+```
+
+```sql
+-- Recipe 12: Plan and Execute
+-- A planner agent decomposes a complex task into steps, then an executor runs each step.
+-- Demonstrates agentic planning, sequential execution, and progress tracking.
+--
+-- Usage:
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task="Build a REST API for a todo app"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Set up a CI/CD pipeline for a Python project"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Migrate a MySQL database to PostgreSQL"
+
+WORKFLOW plan_and_execute
+    INPUT: @task TEXT
+    OUTPUT: @final_report TEXT
+DO
+    @step_index := 0
+    @results := ''
+
+    -- Phase 1: Planning — decompose task into numbered steps
+    GENERATE plan(@task) INTO @plan
+
+    -- Phase 2: Count steps in plan
+    GENERATE count_steps(@plan) INTO @step_count
+
+    -- Phase 3: Execute each step sequentially
+    WHILE @step_index < @step_count DO
+        -- Extract current step from plan
+        GENERATE extract_step(@plan, @step_index) INTO @current_step
+
+        -- Execute the step with context from prior results
+        GENERATE execute_step(@current_step, @results) INTO @step_result
+
+        -- Validate step output
+        GENERATE validate_step(@current_step, @step_result) INTO @validation
+
+        EVALUATE @validation
+            WHEN 'failed' THEN
+                -- Re-plan remaining steps given the failure
+                GENERATE replan(@task, @plan, @step_index, @step_result) INTO @plan
+                GENERATE count_steps(@plan) INTO @step_count
+                @step_index := 0
+                @results := ''
+            OTHERWISE
+                @results := @results + '\n## Step ' + @step_index + '\n' + @step_result
+                @step_index := @step_index + 1
+        END
+    END
+
+    -- Phase 4: Synthesize final report
+    GENERATE synthesize(@task, @results) INTO @final_report
+
+    COMMIT @final_report WITH status = 'complete', steps_executed = @step_index
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE synthesize(@task, @results) INTO @final_report
+        COMMIT @final_report WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @results WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 718 in / 2162 out
+Latency: 27047ms
+------------------------------------------------------------
+```output
+**Todo App REST API Synthesis**
+
+### Introduction
+
+This synthesis provides a comprehensive overview of building a REST API for a basic Todo app. The API will allow users to create, read, update, and delete (CRUD) tasks.
+
+### API Endpoints
+
+#### 1. Create Task
+
+* **Endpoint:** `POST /tasks`
+* **Request Body:**
+	+ `title` (string): Task title
+	+ `description` (string): Task description
+	+ `due_date` (string, date format: YYYY-MM-DD)
+* **Response:**
+	+ `id` (integer): Unique task ID
+	+ `title` (string): Task title
+	+ `description` (string): Task description
+	+ `due_date` (string): Task due date
+
+Example Request Body:
+```json
+{
+  "title": "Buy milk",
+  "description": "Purchase milk for tomorrow's breakfast",
+  "due_date": "2023-12-15"
+}
+```
+
+#### 2. Get All Tasks
+
+* **Endpoint:** `GET /tasks`
+* **Response:**
+	+ List of tasks:
+		- `id` (integer): Unique task ID
+		- `title` (string): Task title
+		- `description` (string): Task description
+		- `due_date` (string): Task due date
+
+Example Response:
+```json
+[
+  {
+    "id": 1,
+    "title": "Buy milk",
+    "description": "Purchase milk for tomorrow's breakfast",
+    "due_date": "2023-12-15"
+  },
+  {
+    "id": 2,
+    "title": "Finish project report",
+    "description": "Submit the final report to the client",
+    "due_date": "2023-12-20"
+  }
+]
+```
+
+#### 3. Get Task by ID
+
+* **Endpoint:** `GET /tasks/{id}`
+* **Request Parameters:**
+	+ `id` (integer): Unique task ID
+* **Response:**
+	+ Task details:
+		- `id` (integer): Unique task ID
+		- `title` (string): Task title
+		- `description` (string): Task description
+		- `due_date` (string): Task due date
+
+Example Response:
+```json
+{
+  "id": 1,
+  "title": "Buy milk",
+  "description": "Purchase milk for tomorrow's breakfast",
+  "due_date": "2023-12-15"
+}
+```
+
+#### 4. Update Task
+
+* **Endpoint:** `PUT /tasks/{id}`
+* **Request Parameters:**
+	+ `id` (integer): Unique task ID
+* **Update Request Body:**
+	+ `title` (string, optional): Updated task title
+	+ `description` (string, optional): Updated task description
+	+ `due_date` (string, optional): Updated task due date
+* **Response:** Updated task details
+
+Example Update Request Body:
+```json
+{
+  "title": "Buy eggs",
+  "due_date": "2023-12-15"
+}
+```
+
+#### 5. Delete Task
+
+* **Endpoint:** `DELETE /tasks/{id}`
+* **Request Parameters:**
+	+ `id` (integer): Unique task ID
+* **Response:** Success message or error message if deletion fails
+
+Example Response:
+```json
+{
+  "message": "Task deleted successfully"
+}
+```
+
+### API Implementation
+
+The following implementation uses Node.js and Express as the chosen framework.
+
+**tasks.js**
+```javascript
+const express = require('express');
+const app = express();
+
+// In-memory task storage (replace with a database for production)
+let tasks = [
+  { id: 1, title: 'Buy milk', description: 'Purchase milk for tomorrow\'s breakfast', due_date: '2023-12-15' },
+  { id: 2, title: 'Finish project report', description: 'Submit the final report to the client', due_date: '2023-12-20' }
+];
+
+// Create task endpoint
+app.post('/tasks', (req, res) => {
+  const { title, description, due_date } = req.body;
+  const newTask = { id: tasks.length + 1, title, description, due_date };
+  tasks.push(newTask);
+  res.json(newTask);
+});
+
+// Get all tasks endpoint
+app.get('/tasks', (req, res) => {
+  res.json(tasks);
+});
+
+// Get task by ID endpoint
+app.get('/tasks/:id', (req, res) => {
+  const { id } = req.params;
+  const task = tasks.find((task) => task.id === parseInt(id));
+  if (!task)
+```
+------------------------------------------------------------
+Variables:
+  @task = Build a REST API for a todo app
+  @step_index = 0
+  @results = 
+  @plan = **Project Plan: Building a REST API for a Todo App**
+
+**Overview**
+------------
+
+The goal of this project is to build a simple RESTful API for a todo app. The API will allow users to create, read, upd
+  @step_count = Based on the provided project plan, I'll outline a high-level approach for completing the task "count_steps" within the context of the Todo App REST API.
+
+**Task: count_steps**
+
+Since there's no direc
+  @final_report = **Todo App REST API Synthesis**
+
+### Introduction
+
+This synthesis provides a comprehensive overview of building a REST API for a basic Todo app. The API will allow users to create, read, update, and d
+============================================================
+Log: /home/gongai/.spl/logs/plan_execute-ollama-20260320-052729.log

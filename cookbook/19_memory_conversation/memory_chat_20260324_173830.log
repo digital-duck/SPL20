@@ -1,0 +1,84 @@
+
+```bash
+spl run ./19_memory_conversation/memory_chat.spl --adapter ollama -m gemma3 user_input=My name is Alice and I am a data scientist
+```
+
+```spl
+-- Recipe 19: Memory-Augmented Conversation
+-- A conversational agent that remembers facts from prior turns using persistent memory.
+-- Demonstrates memory.get/memory.set, context accumulation, and stateful interactions.
+--
+-- Usage:
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="My name is Alice and I'm a data scientist"
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What's my name?"
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="I prefer Python over R"
+--   spl run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What do you know about me?"
+--
+-- Memory persists across runs via `spl memory` store.
+-- Reset with: spl memory delete chat_user_profile
+
+WORKFLOW memory_conversation
+    INPUT: @user_input TEXT
+    OUTPUT: @response TEXT
+DO
+    -- Load existing user profile from memory
+    SELECT memory.get('chat_user_profile') AS profile INTO @profile
+    SELECT memory.get('chat_history') AS chat_history INTO @chat_history
+
+    -- Extract any new facts the user shared about themselves
+    GENERATE extract_facts(@user_input) INTO @new_facts
+
+    -- Update profile with new facts (if any)
+    EVALUATE @new_facts
+        WHEN 'no_new_facts' THEN
+            -- Nothing to update
+        OTHERWISE
+            GENERATE merge_profile(@profile, @new_facts) INTO @profile
+            -- STORE @profile IN memory.chat_user_profile  -- workflow-level memory write not yet supported
+    END
+
+    -- Generate response with full context: profile + history + current input
+    GENERATE contextual_reply(@user_input, @profile, @chat_history) INTO @response
+
+    -- Update chat history (keep last 10 turns)
+    @chat_history := @chat_history + '\nUser: ' + @user_input + '\nAssistant: ' + @response
+    GENERATE trim_history(@chat_history, 10) INTO @chat_history
+    -- STORE @chat_history IN memory.chat_history  -- workflow-level memory write not yet supported
+
+    COMMIT @response WITH status = 'complete'
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        COMMIT 'I remember you! But I ran out of budget for this response.' WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 379 in / 271 out
+Latency: 3299ms
+------------------------------------------------------------
+```output
+I'd be happy to help you generate a contextual reply.
+
+Since I don't have any input 2 or 3, I'll need to make an assumption. Here's a possible contextual reply:
+
+"Hi Alice, nice to meet you! As a data scientist, I'm sure you're always looking for ways to improve your skills and stay up-to-date with the latest trends in the field. Have you explored any new libraries or tools that have been recently released? Or perhaps you'd like some recommendations on books or courses to expand your knowledge?"
+
+Please let me know if this meets your expectations, or provide more input 2 and 3 for further assistance!
+```
+------------------------------------------------------------
+Variables:
+  @user_input = My name is Alice and I am a data scientist
+  @chat_history = Your possible contextual reply in Input 1 is a good start. It acknowledges Alice's profession as a data scientist and shows interest in her interests.
+
+For Input 2, you've provided a number (10), but it's unclear how this relates to the conversation or what context it would be used in. Could you please provide more information about what you'd like me to do with this input (e.g., generate a response, ask follow-up questions, etc.)?
+  @new_facts = Here's an attempt to extract facts from the input:
+
+* Name: Alice
+* Profession: Data Scientist
+
+Let me know if you'd like me to refine or expand on this extraction!
+============================================================
+Log: /home/gongai/.spl/logs/memory_chat-ollama-20260324-173831.log

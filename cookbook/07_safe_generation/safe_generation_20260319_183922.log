@@ -1,0 +1,77 @@
+
+```bash
+spl2 run ./07_safe_generation/safe_generation.spl --adapter ollama -m gemma3 prompt=Explain how encryption works
+```
+
+```sql
+-- SPL 2.0: Safe Generation with Exception Handling
+-- Demonstrates LLM-specific error handling patterns
+
+WORKFLOW safe_generation
+  INPUT: @prompt text
+  OUTPUT: @result text
+  SECURITY: CLASSIFICATION: internal
+DO
+  GENERATE response(@prompt) INTO @result
+
+  -- Quality check via semantic evaluation (LLM-as-judge)
+  GENERATE quality_assess(@result) INTO @quality
+
+  EVALUATE @quality
+    WHEN 'high_quality' THEN
+      COMMIT @result WITH status = 'high_quality'
+    WHEN 'acceptable' THEN
+      GENERATE improved(@result, @prompt) INTO @result
+      COMMIT @result WITH status = 'refined'
+    OTHERWISE
+      COMMIT @result WITH status = 'best_effort'
+  END
+
+EXCEPTION
+  WHEN HallucinationDetected THEN
+    GENERATE response(@prompt) INTO @result
+    COMMIT @result WITH status = 'conservative'
+
+  WHEN ContextLengthExceeded THEN
+    RETRY WITH temperature = 0.1
+
+  WHEN RefusalToAnswer THEN
+    COMMIT @prompt WITH status = 'refused'
+
+  WHEN BudgetExceeded THEN
+    COMMIT @result WITH status = 'truncated'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 807 in / 686 out
+Latency: 8474ms
+------------------------------------------------------------
+Committed: Encryption is the process of converting plaintext (readable data) into ciphertext (unreadable data) in order to protect it from unauthorized access. Here's a step-by-step explanation of how encryption works:
+
+1. **Key Generation**: A key pair is generated, which consists of a public key and a private key. The public key is used for encryption, while the private key is used for decryption.
+
+2. **Encryption Algorithm**: An encryption algorithm, such as AES (Advanced Encryption Standard) or RSA, is applied to the plaintext data using the public key. This transforms the data into ciphertext.
+
+3. **Ciphertext Generation**: The encrypted data is generated, which can be in the form of a binary string or other digital format.
+
+4. **Encryption Process**: To encrypt the data, the encryption algorithm takes the plaintext and the public key as input, and produces ciphertext as output.
+
+5. **Key Exchange**: In order to decrypt the ciphertext, the private key is needed. Encryption algorithms often use public-key cryptography, which relies on the difficulty of factoring large numbers or computing discrete logarithms.
+
+6. **Decryption Process**: To decrypt the data, the encryption algorithm takes the ciphertext and the private key as input, and produces plaintext as output.
+
+Encryption provides confidentiality by ensuring that only authorized parties can access the encrypted data. It is commonly used in various applications, including secure communication protocols (e.g., HTTPS), data storage (e.g., encrypted hard drives), and digital signatures.
+------------------------------------------------------------
+Variables:
+  @prompt = Explain how encryption works
+  @result = Encryption is the process of converting plaintext (readable data) into ciphertext (unreadable data) in order to protect it from unauthorized access. Here's a step-by-step explanation of how encryption
+  @quality = Here's a quality-assessment report for the provided text on encryption:
+
+**Strengths:**
+
+1. **Clear explanation**: The text provides a clear step-by-step explanation of how encryption works, making it
+============================================================
+Log: /home/gongai/.spl/logs/safe_generation-ollama-20260319-183923.log

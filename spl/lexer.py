@@ -38,6 +38,8 @@ class Lexer:
                 self._read_dollar_dollar()
             elif ch in ('"', "'"):
                 self._read_string(ch)
+            elif (ch == 'f' or ch == 'F') and self._peek(1) in ('"', "'"):
+                self._read_fstring()
             elif ch.isdigit():
                 self._read_number()
             elif ch.isalpha() or ch == '_':
@@ -118,6 +120,14 @@ class Lexer:
                     self._advance()
                 else:
                     self._emit(TokenType.LT, '<')
+                    self._advance()
+            elif ch == '|':
+                if self._peek(1) == '|':
+                    self._emit(TokenType.PIPE_PIPE, '||')
+                    self._advance()
+                    self._advance()
+                else:
+                    self._emit(TokenType.PIPE, '|')
                     self._advance()
             else:
                 raise LexerError(f"Unexpected character {ch!r}", self.line, self.column)
@@ -235,6 +245,41 @@ class Lexer:
         # Check if it's a keyword
         token_type = KEYWORDS.get(lower, TokenType.IDENTIFIER)
         self.tokens.append(Token(token_type, value, start_line, start_col))
+
+    def _read_fstring(self):
+        """Read an f-string literal: f'...' or f"..."
+        Emits a single FSTRING token whose value is the raw template string
+        with {@varname} placeholders preserved for the executor to interpolate.
+        Example: f'Chunk {@chunk_index} of {@chunk_count}' →
+                 Token(FSTRING, 'Chunk {@chunk_index} of {@chunk_count}')
+        """
+        start_line = self.line
+        start_col = self.column
+        self._advance()  # skip 'f' prefix
+        quote = self.source[self.pos]
+        self._advance()  # skip opening quote
+
+        value_chars: list[str] = []
+        while self.pos < len(self.source):
+            ch = self.source[self.pos]
+            if ch == '\\':
+                self._advance()
+                if self.pos < len(self.source):
+                    escaped = self.source[self.pos]
+                    escape_map = {'n': '\n', 't': '\t', '\\': '\\', "'": "'", '"': '"'}
+                    value_chars.append(escape_map.get(escaped, escaped))
+                    self._advance()
+            elif ch == quote:
+                self._advance()  # skip closing quote
+                self.tokens.append(
+                    Token(TokenType.FSTRING, ''.join(value_chars), start_line, start_col)
+                )
+                return
+            else:
+                value_chars.append(ch)
+                self._advance()
+
+        raise LexerError("Unterminated f-string literal", start_line, start_col)
 
     def _read_dollar_dollar(self):
         """Read $$...$$  — emit opening DOLLAR_DOLLAR, then body as raw STRING."""

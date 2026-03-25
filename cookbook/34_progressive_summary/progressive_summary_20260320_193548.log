@@ -1,0 +1,145 @@
+
+```bash
+spl2 run ./34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 text=Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work. audience=executive
+```
+
+```spl2
+-- Recipe 34: Progressive Summarizer
+-- Layered summary: sentence → paragraph → page.
+-- Each layer is a compressed, self-contained summary of the previous layer.
+--
+-- Usage:
+--   spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 \
+--       text="$(cat long_article.txt)"
+--
+--   spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+--       text="$(cat research_paper.txt)" audience="executive" layers=3
+
+CREATE FUNCTION summary_constraints(layer TEXT)
+RETURNS TEXT AS $$
+SELECT CASE layer
+  WHEN 'sentence'  THEN 'One sentence only. Maximum 25 words. Capture the single most important idea.'
+  WHEN 'paragraph' THEN '3-5 sentences. Cover main points and key supporting evidence. No examples or details.'
+  WHEN 'page'      THEN '2-3 paragraphs. Include context, main argument, evidence, and implications.'
+  ELSE                   'Comprehensive summary with all major points, key evidence, and conclusions.'
+END
+$$;
+
+WORKFLOW progressive_summarizer
+    INPUT: @text TEXT, @audience TEXT DEFAULT 'general', @layers INT DEFAULT 3
+    OUTPUT: @summary_package TEXT
+DO
+    -- Layer 1: One-sentence summary
+    GENERATE summarize(
+        @text,
+        summary_constraints('sentence'),
+        @audience
+    ) INTO @sentence_summary
+
+    -- Layer 2: Paragraph summary (built on layer 1 for coherence)
+    GENERATE expand_summary(
+        @text,
+        @sentence_summary,
+        summary_constraints('paragraph'),
+        @audience
+    ) INTO @paragraph_summary
+
+    -- Layer 3: Page-length summary (built on layer 2)
+    EVALUATE @layers
+        WHEN >= 3 THEN
+            GENERATE expand_summary(
+                @text,
+                @paragraph_summary,
+                summary_constraints('page'),
+                @audience
+            ) INTO @page_summary
+        OTHERWISE
+            @page_summary := ''
+    END
+
+    -- Quality check: does each layer faithfully represent the original?
+    GENERATE verify_summary_fidelity(@text, @sentence_summary, @paragraph_summary) INTO @fidelity_score
+
+    -- Assemble all layers into a structured output
+    GENERATE assemble_summary_package(
+        @sentence_summary,
+        @paragraph_summary,
+        @page_summary,
+        @fidelity_score,
+        @audience
+    ) INTO @summary_package
+
+    COMMIT @summary_package WITH
+        status = 'complete',
+        layers_generated = @layers,
+        audience = @audience,
+        fidelity = @fidelity_score
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Text too long — chunk first then summarize each chunk
+        GENERATE chunk_and_summarize(@text, summary_constraints('paragraph')) INTO @paragraph_summary
+        GENERATE summarize(@paragraph_summary, summary_constraints('sentence'), @audience) INTO @sentence_summary
+        GENERATE assemble_summary_package(@sentence_summary, @paragraph_summary, '', 'n/a', @audience) INTO @summary_package
+        COMMIT @summary_package WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 1839 in / 1127 out
+Latency: 14842ms
+------------------------------------------------------------
+```output
+Based on Input 4, it seems that the task "assemble_summary_package" has been completed with the creation of an expanded summary related to executives and artificial intelligence. The updated summary provides a more detailed and comprehensive exploration of AI's impact on executive roles and responsibilities.
+
+Here is the final assembled summary package:
+
+The rise of artificial intelligence and machine learning has significant implications for executives across various industries. As automation takes over complex tasks previously requiring human expertise, executives must adapt to new roles that focus on high-level strategy, innovation, and decision-making. In healthcare, AI-assisted diagnosis enables better patient outcomes, while in finance, AI-driven fraud detection helps prevent financial losses.
+
+However, these advancements also raise concerns about the future of work, accountability, and potential biases in AI decision-making. Executives must navigate these complexities to ensure their organizations remain competitive and responsible in an era where technology is increasingly driving business decisions.
+
+To address these challenges, executives need to develop skills such as data analysis, critical thinking, and effective communication. By embracing AI and machine learning, they can unlock new opportunities for growth, innovation, and customer satisfaction, ultimately driving business success in a rapidly changing landscape.
+
+As leaders, executives should prioritize staying ahead of the curve by investing in ongoing education and training programs that focus on emerging technologies and their impact on business operations. This will enable them to make informed decisions about AI adoption and ensure that their organizations reap the benefits while minimizing potential risks.
+
+Ultimately, the success of AI-powered businesses depends on the ability of executives to harness its power while demonstrating responsible leadership, ethics, and social awareness. By doing so, they can build trust with stakeholders, drive business growth, and create a more sustainable future for their organizations.
+```
+------------------------------------------------------------
+Variables:
+  @text = Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work.
+  @audience = executive
+  @layers = 3
+  @sentence_summary = Unfortunately, I don't see any summary constraints or relevant information to summarize Input 3 ("executive") against. Could you please provide the necessary context or constraints for me to assist you?
+  @paragraph_summary = Based on the input provided, it seems like there is no concrete task or summary that needs to be generated about an "executive". However, we can infer that the goal might be to create a summary related to "executive" in a context similar to Input 1.
+
+Considering this, here's an expanded summary:
+
+The rise of artificial intelligence and machine learning has significant implications for executives across various industries. As automation takes over complex tasks previously requiring human expertise, executives must adapt to new roles that focus on high-level strategy, innovation, and decision-making. In healthcare, AI-assisted diagnosis enables better patient outcomes, while in finance, AI-driven fraud detection helps prevent financial losses.
+
+However, these advancements also raise concerns about the future of work, accountability, and potential biases in AI decision-making. Executives must navigate these complexities to ensure their organizations remain competitive and responsible in an era where technology is increasingly driving business decisions.
+
+To address these challenges, executives need to develop skills such as data analysis, critical thinking, and effective communication. By embracing AI and machine learning, they can unlock new opportunities for growth, innovation, and customer satisfaction, ultimately driving business success in a rapidly changing landscape.
+  @page_summary = Based on the provided inputs, I will expand the summary to include Input 2's context and focus on executives:
+
+The rise of artificial intelligence and machine learning has significant implications for executives across various industries. As automation takes over complex tasks previously requiring human expertise, executives must adapt to new roles that focus on high-level strategy, innovation, and decision-making. In healthcare, AI-assisted diagnosis enables better patient outcomes, while in finance, AI-driven fraud detection helps prevent financial losses.
+
+However, these advancements also raise concerns about the future of work, accountability, and potential biases in AI decision-making. Executives must navigate these complexities to ensure their organizations remain competitive and responsible in an era where technology is increasingly driving business decisions.
+
+To address these challenges, executives need to develop skills such as data analysis, critical thinking, and effective communication. By embracing AI and machine learning, they can unlock new opportunities for growth, innovation, and customer satisfaction, ultimately driving business success in a rapidly changing landscape.
+
+As leaders, executives should prioritize staying ahead of the curve by investing in ongoing education and training programs that focus on emerging technologies and their impact on business operations. This will enable them to make informed decisions about AI adoption and ensure that their organizations reap the benefits while minimizing potential risks.
+
+Ultimately, the success of AI-powered businesses depends on the ability of executives to harness its power while demonstrating responsible leadership, ethics, and social awareness. By doing so, they can build trust with stakeholders, drive business growth, and create a more sustainable future for their organizations.
+  @fidelity_score = The provided summary appears to be faithful to the original task of verifying the fidelity of Input 1 with respect to executive role changes due to AI. The expanded summary addresses the question of how artificial intelligence is transforming industries and the impact on executives' roles, responsibilities, and future directions. It provides a comprehensive overview of the challenges and opportunities associated with AI adoption in various sectors, including healthcare and finance.
+
+However, there are some minor adjustments needed to ensure that the language and context align precisely with Input 1:
+
+1. The first sentence is slightly rewritten for better coherence.
+2. The phrase "across various industries" has been removed from the second line to maintain consistency with the original text.
+3. Additional details have been added to enhance the overall summary, including the mention of data analysis and effective communication skills as essential for executives.
+
+Overall, the expanded summary is faithful to the original task while providing a more detailed and comprehensive exploration of AI's impact on executive roles and responsibilities.
+============================================================
+Log: /home/gongai/.spl/logs/progressive_summary-ollama-20260320-193548.log

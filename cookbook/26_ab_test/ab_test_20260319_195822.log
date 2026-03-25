@@ -1,0 +1,251 @@
+
+```bash
+spl2 run ./26_ab_test/ab_test.spl --adapter ollama -m gemma3 task=Explain neural networks prompt_a=Explain like I'm 5 prompt_b=Give a technical explanation with analogies
+```
+
+```sql
+-- Recipe 26: Prompt A/B Test
+-- Compare two prompt variants using CTEs + EVALUATE scoring. Pick the winner automatically.
+-- Demonstrates data-driven prompt engineering built into the workflow itself.
+--
+-- Usage:
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--       task="Explain neural networks" \
+--       prompt_a="Explain like I'm 5" \
+--       prompt_b="Give a technical explanation with analogies"
+--
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama \
+--       task="Write a product description for a standing desk" \
+--       prompt_a="Focus on health benefits" \
+--       prompt_b="Focus on productivity and focus"
+
+-- Scoring rubric as a reusable function
+CREATE FUNCTION scoring_rubric()
+RETURNS TEXT AS $$
+Rate the response on a scale of 0–10 for each criterion:
+1. Clarity (0-10): Is it easy to understand?
+2. Completeness (0-10): Does it fully address the task?
+3. Relevance (0-10): Is every sentence on-topic?
+4. Engagement (0-10): Is it interesting to read?
+
+Return JSON: {"clarity": N, "completeness": N, "relevance": N, "engagement": N, "total": N, "rationale": "..."}
+$$;
+
+WORKFLOW ab_test
+    INPUT: @task TEXT, @prompt_a TEXT, @prompt_b TEXT, @winner_threshold FLOAT DEFAULT 1.5
+    OUTPUT: @winner_output TEXT
+DO
+    -- Generate both variants in parallel CTEs (conceptually)
+    WITH
+        variant_a AS (
+            PROMPT run_variant_a
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_a AS instruction
+            GENERATE response(task, instruction)
+        ),
+        variant_b AS (
+            PROMPT run_variant_b
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_b AS instruction
+            GENERATE response(task, instruction)
+        )
+    SELECT
+        variant_a.response AS response_a,
+        variant_b.response AS response_b
+    INTO @response_a, @response_b
+
+    -- Score both variants
+    GENERATE evaluate_response(@response_a, @task, scoring_rubric()) INTO @score_a_json
+    GENERATE evaluate_response(@response_b, @task, scoring_rubric()) INTO @score_b_json
+
+    -- Extract numeric totals
+    GENERATE extract_total(@score_a_json) INTO @score_a
+    GENERATE extract_total(@score_b_json) INTO @score_b
+
+    -- Pick winner or declare tie
+    EVALUATE (@score_a - @score_b)
+        WHEN > @winner_threshold THEN
+            SET @winner_output = @response_a
+            COMMIT @winner_output WITH
+                winner = 'A',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_a - @score_b)
+        WHEN < (0 - @winner_threshold) THEN
+            SET @winner_output = @response_b
+            COMMIT @winner_output WITH
+                winner = 'B',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_b - @score_a)
+        OTHERWISE
+            -- Scores too close — return both with explanation
+            GENERATE compare_outputs(@response_a, @response_b, @score_a_json, @score_b_json) INTO @winner_output
+            COMMIT @winner_output WITH
+                winner = 'tie',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'A/B test failed during generation.' WITH status = 'error'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 2338 in / 3867 out
+Latency: 51212ms
+------------------------------------------------------------
+Committed: Here's an example comparing the output of `evaluate_response`:
+
+```markdown
+### Evaluating Input 1
+*Input 1: An empty string (likely intended for context or metadata)*
+No relevance score assigned.
+
+### Evaluating Input 2
+*Input 2: A natural language question ("Explain neural networks")*
+Content score: 40/50
+
+### Evaluating Input 3
+*Input 3: A scoring rubric (not shown in this snippet, but presumably used to evaluate the response quality)*
+No relevance score assigned.
+
+### Response Evaluation
+*The input provided is a combination of three parts:*
+
+1. Input 1: An empty string (likely intended for context or metadata)
+2. Input 2: A natural language question ("Explain neural networks")
+3. Input 3: A scoring rubric (not shown in this snippet, but presumably used to evaluate the response quality)
+
+*Response Evaluation*
+
+To evaluate the response, we'll assume that Input 1 is not relevant for the evaluation.
+
+*Question Analysis*
+
+Input 2 is a clear question asking to explain neural networks. An effective response should:
+
+* Clearly understand the question context
+* Provide a concise and accurate explanation of neural networks
+
+### Scoring Rubric Evaluation
+
+Without seeing the exact scoring rubric, we can still assess its general quality. A good scoring rubric should:
+
+* Be clear and easy to understand
+* Provide specific, measurable criteria for evaluation
+* Ensure fairness and consistency in evaluating responses
+
+### Assessment Criteria
+
+Based on a hypothetical scoring rubric, here are some assessment criteria that could be used to evaluate the response:
+
+* **Relevance**: How well does the explanation relate to the question?
+* **Accuracy**: How accurate is the information provided about neural networks?
+* **Clarity**: How clear and concise is the explanation?
+* **Depth**: Does the explanation provide sufficient detail about neural networks?
+
+### Example Response
+
+Here's an example response that could score well based on these criteria:
+
+"Neural networks are a type of machine learning model inspired by the human brain. They consist of layers of interconnected nodes (neurons) that process and transmit information. Neural networks can learn from data, make predictions, and even perform tasks such as image recognition and natural language processing.
+
+One key characteristic of neural networks is their ability to recognize patterns in data. By adjusting weights and biases between neurons, the network can adapt to changing patterns and improve its performance over time.
+
+Neural networks have many applications, including self-driving cars, speech recognition systems, and medical diagnosis tools."
+
+### Conclusion
+
+The response demonstrates a good understanding of neural networks and provides a clear, concise explanation. However, the actual score would depend on the specific scoring rubric used to evaluate it. A thorough evaluation of the response would require careful consideration of the criteria outlined in the scoring rubric.
+
+### Evaluating Input 4
+```python
+def evaluate_response(input_1, input_2, input_3):
+    """
+    Evaluates the response based on the provided scoring rubric.
+
+    Args:
+        input_1 (str): The first part of the response.
+        input_2 (str): The second part of the response that is supposed to be an explanation of a topic.
+        input_3 (dict): A dictionary containing the scoring rubric.
+
+    Returns:
+        dict: An object containing the user's score for each criterion and the overall score.
+    """
+
+    # Initialize variables
+    criteria = input_3['criteria']
+    scores = {'content': 0, 'structure': 0, 'style': 0}
+
+    # Check for content
+    if input_2 is not None:
+        if len(input_2.split('.')) == 1:  # Simple paragraph
+            score = 10
+        elif len(input_2.split('.')) <= 3:  # Brief explanation with one or two supporting sentences
+            score = 20
+        elif len(input_2.split('.')) <= 5:  # Medium-length explanation with three to five supporting sentences
+            score = 30
+        else:
+            score = 40
+
+    scores['content'] = score / 100 * 50  # Normalize the content score (out of a possible 50 points)
+
+    # Check for structure
+    if input_1 is not None and input_2 is not None:
+        if input_1.endswith('Introduction') and input_2.startswith('Explain neural networks'):
+            score = 10
+        elif input_1.endswith('Body') and input_2.startswith('Neural networks are a type of machine learning algorithm'):
+            score = 20
+        else:
+            score = 0
+
+    scores['structure'] = score / 100 * 30  # Normalize the structure score (out of a possible 30 points)
+
+    # Check for style
+    if input_1
+------------------------------------------------------------
+Variables:
+  @task = Explain neural networks
+  @prompt_a = Explain like I'm 5
+  @prompt_b = Give a technical explanation with analogies
+  @response_a = 
+  @response_b = 
+  @score_a_json = **Evaluating the Response**
+
+The input provided is a combination of three parts:
+
+1. Input 1: An empty string (likely intended for context or metadata)
+2. Input 2: A natural language question ("Explai
+  @score_b_json = def evaluate_response(input_1, input_2, input_3):
+    """
+    Evaluates the response based on the provided scoring rubric.
+
+    Args:
+        input_1 (str): The first part of the response.
+        inp
+  @score_a = Based on the provided instructions, I will assume that I need to extract the total value from a given input. However, since there is no explicit input provided, I'll have to make an assumption based o
+  @score_b = Here's an example function that you could use to extract the total score from the evaluate_response function:
+
+```python
+def extract_total(input_1, input_2, input_3):
+    """
+    Extracts the total sc
+  @winner_output = Here's an example comparing the output of `evaluate_response`:
+
+```markdown
+### Evaluating Input 1
+*Input 1: An empty string (likely intended for context or metadata)*
+No relevance score assigned.
+
+##
+============================================================
+Log: /home/gongai/.spl/logs/ab_test-ollama-20260319-195822.log

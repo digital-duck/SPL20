@@ -1,0 +1,103 @@
+
+```bash
+spl2 run ./07_safe_generation/safe_generation.spl --adapter ollama -m gemma3 prompt=Explain how encryption works
+```
+
+```prompt
+Explain how encryption works
+```
+
+```sql
+-- SPL 2.0: Safe Generation with Exception Handling
+-- Demonstrates LLM-specific error handling patterns
+
+WORKFLOW safe_generation
+  INPUT: @prompt text
+  OUTPUT: @result text
+  SECURITY: CLASSIFICATION: internal
+DO
+  GENERATE response(@prompt) INTO @result
+
+  -- Quality check via semantic evaluation (LLM-as-judge)
+  GENERATE quality_assess(@result) INTO @quality
+
+  EVALUATE @quality
+    WHEN 'high_quality' THEN
+      COMMIT @result WITH status = 'high_quality'
+    WHEN 'acceptable' THEN
+      GENERATE improved(@result, @prompt) INTO @result
+      COMMIT @result WITH status = 'refined'
+    OTHERWISE
+      COMMIT @result WITH status = 'best_effort'
+  END
+
+EXCEPTION
+  WHEN HallucinationDetected THEN
+    GENERATE response(@prompt) INTO @result
+    COMMIT @result WITH status = 'conservative'
+
+  WHEN ContextLengthExceeded THEN
+    RETRY WITH temperature = 0.1
+
+  WHEN RefusalToAnswer THEN
+    COMMIT @prompt WITH status = 'refused'
+
+  WHEN BudgetExceeded THEN
+    COMMIT @result WITH status = 'truncated'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 983 in / 862 out
+Latency: 10978ms
+------------------------------------------------------------
+```output
+Encryption is the process of converting plaintext (readable data) into ciphertext (unreadable data) to protect it from unauthorized access. Here's a simplified explanation of how encryption works:
+
+**Key Concepts:**
+
+1. **Plaintext**: The original, readable data that needs to be encrypted.
+2. **Ciphertext**: The encrypted data that can only be read with the decryption key.
+3. **Encryption algorithm**: A mathematical formula used to transform plaintext into ciphertext.
+
+**The Encryption Process:**
+
+1. **Key generation**: An encryption algorithm generates a secret key (K) from a random value or a password. This key is used to encrypt and decrypt data.
+2. **Data preparation**: The plaintext data is prepared for encryption by dividing it into blocks or chunks.
+3. **Encryption operation**: The encryption algorithm applies the encryption formula to each block of plaintext, using the secret key (K). This formula may involve mathematical operations such as substitution, transposition, or permutation.
+4. **Ciphertext generation**: After applying the encryption formula to all blocks of plaintext, the resulting ciphertext is generated.
+
+**Encryption Techniques:**
+
+1. **Symmetric encryption**: The same encryption algorithm and key are used for both encryption and decryption. Examples include AES (Advanced Encryption Standard) and DES (Data Encryption Standard).
+2. **Asymmetric encryption**: A pair of keys is used: a public key for encryption and a private key for decryption. Examples include RSA (Rivest-Shamir-Adleman) and elliptic curve cryptography.
+
+**Decryption:**
+
+1. **Receiving the ciphertext**: The recipient receives the encrypted data (ciphertext).
+2. **Applying the decryption algorithm**: Using the same encryption algorithm and secret key, the decryption formula is applied to each block of ciphertext.
+3. **Plaintext recovery**: After applying the decryption formula to all blocks of ciphertext, the original plaintext data is recovered.
+
+**Security Benefits:**
+
+Encryption provides several security benefits:
+
+1. **Confidentiality**: Ensures that only authorized parties can access the encrypted data.
+2. **Integrity**: Verifies that the data has not been tampered with or altered during transmission.
+3. **Authenticity**: Verifies the identity of the sender and ensures that the data comes from a trusted source.
+
+In summary, encryption works by using an algorithm to transform plaintext into ciphertext, protecting it from unauthorized access. The secret key is used for both encryption and decryption, ensuring confidentiality, integrity, and authenticity of the data.
+```
+------------------------------------------------------------
+Variables:
+  @prompt = Explain how encryption works
+  @result = Encryption is the process of converting plaintext (readable data) into ciphertext (unreadable data) to protect it from unauthorized access. Here's a simplified explanation of how encryption works:
+
+**
+  @quality = The provided text appears to be a comprehensive explanation of the process and techniques involved in encryption, as well as its security benefits. Here's a quality assessment of the input:
+
+**Content
+============================================================
+Log: /home/gongai/.spl/logs/safe_generation-ollama-20260320-052544.log

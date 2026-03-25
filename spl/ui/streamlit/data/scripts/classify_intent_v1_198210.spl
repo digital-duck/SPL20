@@ -30,7 +30,7 @@ DO
             GENERATE acknowledge_feedback(@user_input, @entities) INTO @handler_response
             COMMIT @handler_response WITH handler = 'feedback', intent = @intent
 
-        OTHERWISE
+        ELSE
             GENERATE fallback_response(@user_input, @intent) INTO @handler_response
             COMMIT @handler_response WITH handler = 'fallback', intent = @intent
     END

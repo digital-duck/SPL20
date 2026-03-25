@@ -76,7 +76,7 @@ class TestAstToJson:
                 EVALUATE @text
                     WHEN 'positive' THEN
                         @label := 'good'
-                    OTHERWISE
+                    ELSE
                         @label := 'neutral'
                 END
                 COMMIT @label
@@ -87,7 +87,7 @@ class TestAstToJson:
         eval_stmt = body[0]
         assert eval_stmt["type"] == "Evaluate"
         assert len(eval_stmt["when_clauses"]) == 1
-        assert eval_stmt["otherwise"] is not None
+        assert eval_stmt["else"] is not None
 
     def test_json_roundtrip_valid(self):
         """Verify the JSON output is valid JSON (serializable)."""
@@ -101,7 +101,7 @@ class TestAstToJson:
                 EVALUATE @draft
                     WHEN 'good' THEN
                         COMMIT @draft
-                    OTHERWISE
+                    ELSE
                         @result := 'fallback'
                         COMMIT @result
                 END

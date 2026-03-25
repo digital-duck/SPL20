@@ -71,11 +71,19 @@ class TokenType(Enum):
     PROCEDURE = auto()
     RETRY = auto()
     RAISE = auto()
-    OTHERWISE = auto()
+    ELSE = auto()
     INTO = auto()
     CALL = auto()
     DEFAULT = auto()
     SET = auto()
+    LOGGING = auto()
+    TO = auto()
+    LEVEL = auto()
+    TRUE = auto()
+    FALSE = auto()
+    FSTRING = auto()    # f'...' interpolated string literal
+    PIPE = auto()       # | reserved for future pipe operator
+    PIPE_PIPE = auto()  # || string concatenation (Oracle/PostgreSQL style)
 
     # Security / Accounting / Labels keywords
     SECURITY = auto()
@@ -191,11 +199,17 @@ KEYWORDS: dict[str, TokenType] = {
     "procedure": TokenType.PROCEDURE,
     "retry": TokenType.RETRY,
     "raise": TokenType.RAISE,
-    "otherwise": TokenType.OTHERWISE,
+    "else": TokenType.ELSE,
+    "otherwise": TokenType.ELSE,    # backward-compatibility alias
     "into": TokenType.INTO,
     "call": TokenType.CALL,
     "default": TokenType.DEFAULT,
     "set": TokenType.SET,
+    "logging": TokenType.LOGGING,
+    "to": TokenType.TO,
+    "level": TokenType.LEVEL,
+    "true": TokenType.TRUE,
+    "false": TokenType.FALSE,
     "security": TokenType.SECURITY,
     "accounting": TokenType.ACCOUNTING,
     "classification": TokenType.CLASSIFICATION,

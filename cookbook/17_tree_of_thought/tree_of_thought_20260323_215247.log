@@ -1,0 +1,394 @@
+
+```bash
+spl run ./17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem=Should we rewrite the legacy system or incrementally refactor?
+```
+
+```spl
+-- Recipe 17: Tree of Thought
+-- Explores multiple reasoning paths in parallel, evaluates each, and selects the best.
+-- Demonstrates branching exploration, comparative evaluation, and path scoring.
+--
+-- Usage:
+--   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem="How should a startup prioritize between growth and profitability?"
+--   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Design a caching strategy for a high-traffic API"
+--   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Should we rewrite the legacy system or incrementally refactor?"
+
+WORKFLOW tree_of_thought
+    INPUT: @problem TEXT
+    OUTPUT: @best_solution TEXT
+DO
+    -- Step 1: Generate multiple initial approaches
+    GENERATE approach_1(@problem) INTO @path_a
+    GENERATE approach_2(@problem) INTO @path_b
+    GENERATE approach_3(@problem) INTO @path_c
+
+    -- Step 2: Develop each approach one level deeper
+    GENERATE develop(@path_a, @problem) INTO @path_a_developed
+    GENERATE develop(@path_b, @problem) INTO @path_b_developed
+    GENERATE develop(@path_c, @problem) INTO @path_c_developed
+
+    -- Step 3: Score each path on multiple criteria
+    GENERATE evaluate_path(@path_a_developed, @problem) INTO @score_a
+    GENERATE evaluate_path(@path_b_developed, @problem) INTO @score_b
+    GENERATE evaluate_path(@path_c_developed, @problem) INTO @score_c
+
+    -- Step 4: Select the best path
+    GENERATE select_best(
+        @path_a_developed, @score_a,
+        @path_b_developed, @score_b,
+        @path_c_developed, @score_c
+    ) INTO @best_path
+
+    -- Step 5: Refine the winning path into a final solution
+    GENERATE refine_solution(@best_path, @problem) INTO @best_solution
+
+    -- Step 6: Verify the solution holds up
+    GENERATE verify(@best_solution, @problem) INTO @verification
+
+    EVALUATE @verification
+        WHEN 'sound' THEN
+            COMMIT @best_solution WITH status = 'complete', paths_explored = 3
+        OTHERWISE
+            -- If verification fails, combine insights from all paths
+            GENERATE synthesize_all(
+                @path_a_developed, @path_b_developed, @path_c_developed, @problem
+            ) INTO @best_solution
+            COMMIT @best_solution WITH status = 'synthesized', paths_explored = 3
+    END
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        -- Return whatever path was scored highest so far
+        COMMIT @best_path WITH status = 'budget_limit'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 13
+Tokens: 5744 in / 3999 out
+Latency: 53676ms
+------------------------------------------------------------
+```output
+Based on the input provided earlier, I would recommend incrementally refactoring the legacy system over rewriting it entirely. Incremental refactoring offers several benefits, including:
+
+1. Reduced disruption: Refactoring in smaller increments allows for less impact on the existing system and its users.
+2. Lower risk: Incremental refactoring involves assessing and addressing specific areas of technical debt or legacy code issues, reducing the overall risk associated with rewriting the entire system.
+3. Simplified complexity: Breaking down larger tasks into smaller, manageable changes makes it easier to understand and address complex issues.
+
+To ensure a successful incremental refactoring approach, we should:
+
+1. Conduct a thorough analysis of the current state of the legacy system, including its performance, security, and scalability.
+2. Involve key stakeholders in the decision-making process to ensure alignment with business goals and user needs.
+3. Develop a phased refactoring plan that prioritizes high-priority areas for improvement.
+4. Use agile methodologies and iterative development to refine solutions incrementally.
+
+By following this approach, we can make informed decisions about where to focus our efforts and ensure that the incremental refactoring process meets the needs of both the business and its users.
+```
+------------------------------------------------------------
+Variables:
+  @problem = Should we rewrite the legacy system or incrementally refactor?
+  @path_a = Approach 1: Rewrite vs Refactor
+
+**Rewrite the Legacy System**
+
+Rewriting the legacy system can be a significant undertaking, but it offers several benefits:
+
+Pros:
+
+1. **Total overhaul**: A clean slate allows for a thorough review and modernization of the entire system.
+2. **Improved performance**: Newer technologies and frameworks can provide better scalability, security, and performance.
+3. **Simplified maintenance**: With a fresh start, maintenance and updates become more manageable.
+
+Cons:
+
+1. **High risk**: Rewriting the system can be time-consuming, costly, and may introduce new risks.
+2. **Disruption to users**: The legacy system goes down temporarily during the rewrite process.
+
+**Incremental Refactoring**
+
+Refactoring incrementally allows for a gradual improvement of the existing system without abandoning it entirely:
+
+Pros:
+
+1. **Reduced risk**: Incremental refactoring minimizes the impact on users and reduces the risk of introducing new issues.
+2. **Faster time-to-value**: Refactoring can be done in smaller, manageable chunks, providing quicker benefits.
+
+Cons:
+
+1. **Limited scope**: Incremental refactoring may not address fundamental issues or improve overall performance.
+2. **Maintenance challenges**: As the system grows, refactoring becomes more complex and challenging.
+
+Consider the following factors to help make a decision:
+
+* The complexity of the legacy system
+* The resources available for rewriting vs incremental refactoring
+* The business case for improving the system (e.g., revenue growth, competitiveness)
+* The tolerance for risk and disruption from users
+
+Do you want me to elaborate on either approach or provide additional factors to consider?
+  @path_b = Approach 2: Incremental Refactoring
+
+**Decision Criteria:**
+
+Before making a decision, let's consider the following factors:
+
+1. **Complexity**: How complex is the legacy system? Is it modular and well-structured, or does it have a lot of tightly coupled components?
+2. **Business Impact**: Will rewriting the entire system significantly impact the business, or can we make incremental changes without affecting the customer?
+3. **Resource Availability**: Do we have sufficient resources (time, money, personnel) to devote to rewriting the system entirely?
+
+**Incremental Refactoring Strategy:**
+
+1. Identify critical components of the legacy system that need to be updated or replaced.
+2. Break down the project into smaller, manageable tasks, focusing on high-priority areas first.
+3. Develop a phased approach, where we refactor or update one component at a time, ensuring minimal disruption to the existing functionality.
+4. Use agile methodologies and iterative development to refine our solutions incrementally.
+
+**Benefits of Incremental Refactoring:**
+
+1. **Reduced Risk**: We can mitigate risks associated with rewriting the entire system by focusing on individual components.
+2. **Improved Return on Investment (ROI)**: By refactoring small, high-impact areas first, we can generate quick wins and measure success before investing more resources.
+3. **Increased Agility**: Incremental refactoring allows us to respond quickly to changing business requirements.
+
+**Drawbacks of Incremental Refactoring:**
+
+1. **Prolonged Development Time**: Refactoring one component at a time might lead to longer overall development cycles.
+2. **Increased Complexity**: If we're not careful, incremental refactoring can create new technical debt or introduce complexity into the system.
+
+**When to Consider Rewriting the Legacy System:**
+
+If the legacy system is:
+
+1. **Outdated and Incompatible**: The underlying technology or frameworks are no longer supported or compatible with modern systems.
+2. **Highly Complex**: The system has an unsustainable number of tightly coupled components, making it difficult to maintain.
+3. **Critical to Business Operations**: Rewriting the system becomes essential for business continuity, and incremental refactoring wouldn't be feasible.
+
+By following this approach, we can balance the need for rapid progress with the importance of minimizing risk and ensuring a sustainable development cycle.
+  @path_c = Approach: Incremental Refactoring
+
+The recommended approach is to incrementally refactor the legacy system, rather than rewriting it from scratch. This approach has several advantages:
+
+1. **Less disruption**: Incremental refactoring allows you to make changes gradually, without disrupting existing business processes or user workflows.
+2. **Reduced risk**: By starting with small, incremental changes, you can test and validate new code before scaling up further, reducing the risk of introducing errors or breaking critical functionality.
+3. **Improved maintainability**: Incremental refactoring enables you to focus on specific areas of the system at a time, making it easier to understand and maintain the existing codebase.
+4. **Cost-effective**: Incremental refactoring can be more cost-effective than rewriting the entire system from scratch, especially for large or complex systems.
+
+A possible approach could be:
+
+1. Identify high-priority areas of the legacy system that need improvement.
+2. Create a phased refactoring plan, breaking down larger tasks into smaller, manageable incremental changes.
+3. Implement each phase, testing and validating new code before moving on to the next phase.
+4. Continuously monitor progress and adjust the plan as needed.
+
+By taking an incremental refactoring approach, you can minimize disruption, reduce risk, improve maintainability, and optimize costs while still achieving significant improvements to the legacy system.
+  @path_a_developed = I'd be happy to help you make a decision between rewriting the legacy system (Approach 1: Rewrite vs Refactor) and incrementally refactoring it (Approach 2: Incremental Refactoring).
+
+To elaborate on both approaches:
+
+**Rewriting the Legacy System**
+
+* A thorough review of the entire system is necessary, which can be time-consuming and resource-intensive.
+* Newer technologies and frameworks can provide better scalability, security, and performance, but this may require significant changes to existing infrastructure and processes.
+* The legacy system will need to be replaced with a new one, which can lead to disruption for users.
+
+**Incremental Refactoring**
+
+* This approach allows for gradual improvement of the existing system without abandoning it entirely, reducing the risk of disrupting users.
+* Incremental refactoring is typically done in smaller, manageable chunks, providing quicker benefits and allowing for continuous testing and validation.
+* However, this approach may not address fundamental issues or improve overall performance as much as rewriting the entire system.
+
+Consider adding the following factors to your decision-making process:
+
+1. **System complexity**: If the legacy system is highly complex and interconnected, incremental refactoring might be more challenging and less effective.
+2. **Resource availability**: If resources are limited, incrementally refactoring might be a more feasible option, as it requires fewer personnel and infrastructure changes.
+3. **Business requirements**: Consider the business case for improving the system. If revenue growth or competitiveness is a priority, rewriting the legacy system might be more suitable.
+4. **Risk tolerance**: Assess your organization's risk tolerance and willingness to accept disruption during the refactoring process.
+
+To help make a decision, you could ask yourself:
+
+* Is the legacy system still meeting our business needs, and are there opportunities for incremental improvements?
+* Are we willing and able to invest the necessary resources in rewriting the entire system or incrementally refactoring it?
+* What is the critical path for improving the system, and which approach is more likely to achieve this?
+
+Do you want me to provide any additional insights or guidance on how to make a decision based on your specific situation?
+  @path_b_developed = Based on the input provided, let's analyze the situation to make a decision.
+
+From what we know about the legacy system:
+
+1. **Complexity**: The system is not highly complex, with no mention of an unsustainable number of tightly coupled components.
+2. **Business Impact**: Rewriting the entire system will significantly impact the business, and incremental refactoring without affecting customers might be challenging.
+3. **Resource Availability**: We don't have information about the availability of resources, but it's implicit that we need to make a decision with limited-time constraints.
+
+Considering our decision criteria:
+
+1. **Complexity**: The system is not overly complex, which reduces the risk associated with incremental refactoring.
+2. **Business Impact**: Rewriting the entire system will impact the business significantly, so incremental refactoring might be necessary to minimize disruption.
+3. **Resource Availability**: We need to prioritize making progress within limited resources.
+
+Given these factors:
+
+* Incremental Refactoring is a suitable approach for this legacy system because it allows us to:
+	+ Minimize risks by focusing on individual components
+	+ Generate quick wins and measure success before investing more resources
+	+ Respond quickly to changing business requirements
+* However, incremental refactoring also has drawbacks, such as prolonged development time and increased complexity.
+
+Considering these points, I recommend:
+
+**Incremental Refactoring**
+
+We should start with a phased approach, focusing on critical components of the legacy system that need to be updated or replaced. By doing so, we can:
+
+1. Mitigate risks associated with rewriting the entire system
+2. Generate quick wins and measure success before investing more resources
+3. Respond quickly to changing business requirements
+
+To mitigate potential drawbacks, we should also:
+
+1. Regularly review progress and adjust our approach as needed
+2. Implement agile methodologies and iterative development to refine our solutions incrementally
+3. Monitor the system's complexity and ensure that incremental refactoring doesn't introduce new technical debt or create unnecessary complexity.
+
+By adopting an incremental refactoring strategy, we can balance the need for rapid progress with the importance of minimizing risk and ensuring a sustainable development cycle.
+  @path_c_developed = **Recommendation**
+
+Based on the advantages of incremental refactoring, I recommend taking an incremental refactoring approach over rewriting the entire legacy system. This approach offers several benefits, including:
+
+1. Reduced disruption to existing business processes and user workflows.
+2. Lower risk of introducing errors or breaking critical functionality.
+3. Improved maintainability and understanding of the existing codebase.
+4. Cost-effectiveness compared to rewriting from scratch.
+
+**Next Steps**
+
+To get started with incremental refactoring, I suggest the following:
+
+1. Identify high-priority areas of the legacy system that need improvement using techniques such as:
+	* Business process analysis
+	* User feedback and surveys
+	* Technical debt assessment
+2. Create a phased refactoring plan, breaking down larger tasks into smaller, manageable incremental changes.
+3. Develop a testing strategy to validate new code before moving on to the next phase.
+
+**Key Considerations**
+
+Before proceeding, consider the following:
+
+1. Assess the complexity and scope of the legacy system to determine if incremental refactoring is feasible.
+2. Evaluate the resources required for incremental refactoring, including personnel, time, and budget.
+3. Develop a plan for addressing potential technical debt or legacy code issues that may arise during the refactoring process.
+
+By taking an incremental refactoring approach, we can achieve significant improvements to the legacy system while minimizing disruption, reducing risk, and optimizing costs.
+  @score_a = Based on the input provided, I'll offer some suggestions for evaluating the two approaches.
+
+**Evaluating Approach 1: Rewrite**
+
+* Consider conducting a thorough analysis of the current system's performance, security, and scalability. This will help you determine if rewriting the entire system is necessary.
+* Evaluate the business case for improvement, including revenue growth, competitiveness, and customer satisfaction.
+* Assess the resources required to rewrite the legacy system, including personnel, infrastructure, and budget.
+* Weigh the benefits of rewriting the system against the potential risks, such as disruption to users and increased costs.
+
+**Evaluating Approach 2: Incremental Refactoring**
+
+* Identify areas of the system that are causing issues or bottlenecks. Prioritize these areas for incremental refactoring.
+* Assess the resources required for incremental refactoring, including personnel, infrastructure, and budget.
+* Evaluate the potential benefits of incremental refactoring, such as quicker improvements and reduced disruption to users.
+* Consider the trade-offs between incremental refactoring and rewriting the entire system.
+
+**Decision-Making Matrix**
+
+To help make a decision, consider using a decision-making matrix that evaluates factors such as:
+
+|  | System Complexity | Resource Availability | Business Requirements | Risk Tolerance |
+| --- | --- | --- | --- | --- |
+| **Rewrite** | High | Low | High | High |
+| **Incremental Refactor** | Medium | Medium | Medium | Medium |
+
+This matrix can help you visualize the trade-offs between the two approaches and make a more informed decision.
+
+**Additional Considerations**
+
+* Consider the expertise and skills of your team. If you have a skilled team with experience in rewriting legacy systems, it may be more suitable.
+* Evaluate the potential impact on users and stakeholders. If the system is critical to business operations or has significant user engagement, rewriting or incremental refactoring might be more suitable.
+* Assess the regulatory requirements and compliance for the industry you operate in. This could affect the feasibility of either approach.
+
+Ultimately, the decision between rewriting the legacy system and incrementally refactoring it should be based on a thorough evaluation of your specific situation, business needs, and risk tolerance.
+
+Do you have any specific questions or would you like me to elaborate on any of these points?
+  @score_b = Based on the input provided, I agree with your recommendation to recommend **Incremental Refactoring**.
+
+The factors you've outlined are well-balanced and take into account both the benefits and drawbacks of incremental refactoring. By adopting this approach, we can:
+
+1. Minimize risks associated with rewriting the entire system
+2. Generate quick wins and measure success before investing more resources
+3. Respond quickly to changing business requirements
+
+Additionally, by regularly reviewing progress, implementing agile methodologies, and monitoring the system's complexity, we can mitigate potential drawbacks and ensure a sustainable development cycle.
+
+Rewriting the legacy system entirely might be too complex and impactful on the business, given the constraints of resource availability. Incremental refactoring offers a more manageable approach that allows us to make steady progress while minimizing disruption.
+
+I concur with your assessment that incremental refactoring is a suitable approach for this legacy system, taking into account its complexity, business impact, and resource limitations.
+
+Would you like me to elaborate on any aspect of the recommendation or provide further suggestions for implementing an effective incremental refactoring strategy?
+  @score_c = Based on the input provided, it seems that the recommended approach is to incrementally refactor the legacy system rather than rewriting it from scratch. The advantages of this approach include:
+
+* Reduced disruption to existing business processes and user workflows
+* Lower risk of introducing errors or breaking critical functionality
+* Improved maintainability and understanding of the existing codebase
+* Cost-effectiveness compared to rewriting from scratch
+
+The key considerations for incremental refactoring include:
+
+* Assessing the complexity and scope of the legacy system to determine feasibility
+* Evaluating resources required, including personnel, time, and budget
+* Developing a plan for addressing technical debt or legacy code issues that may arise during the process
+
+This approach appears to be aligned with best practices in software development, such as iterative improvement and continuous delivery. By incrementally refactoring the legacy system, you can achieve improvements while minimizing disruption and reducing risk.
+
+However, without more information about the specific legacy system, it's difficult to provide a definitive recommendation. I would need to know more about the system's current state, the scope of the project, and the resources available before making a final decision.
+
+It might be helpful to consider the following questions:
+
+* What are the primary goals for refactoring the legacy system?
+* What is the estimated timeline and budget for the project?
+* Are there any critical dependencies or integrations that need to be considered during the refactoring process?
+
+By answering these questions, you can gather more information about the legacy system and make a more informed decision about whether incremental refactoring or rewriting from scratch is the best approach.
+  @best_path = Based on the inputs provided, here's a summary of the key points:
+
+1. Incremental refactoring is recommended over rewriting the entire legacy system due to its benefits in reducing disruption, risk, and complexity.
+2. Key considerations for incremental refactoring include assessing the system's complexity and scope, evaluating resources required, and developing a plan for addressing technical debt or legacy code issues.
+3. The approach should involve identifying high-priority areas of the system that need improvement using techniques such as business process analysis, user feedback, and technical debt assessment.
+4. A phased refactoring plan should be created to break down larger tasks into smaller, manageable incremental changes.
+5. Testing is essential before moving on to the next phase of the refactoring process.
+
+To further support this recommendation, here are some additional suggestions:
+
+1. Conduct a thorough analysis of the legacy system's current state, including its performance, security, and scalability.
+2. Involve key stakeholders in the decision-making process, such as business leaders, IT teams, and end-users.
+3. Consider using agile methodologies and iterative development to refine solutions incrementally.
+4. Develop a plan for addressing potential technical debt or legacy code issues that may arise during the refactoring process.
+
+By following these recommendations and considering the key points outlined above, you can make an informed decision about whether incremental refactoring is the right approach for your legacy system.
+  @verification = Based on the inputs provided earlier, it seems that the recommended approach is to incrementally refactor the legacy system. This approach offers several benefits, including reduced disruption, lower risk, and simplified complexity.
+
+To verify this approach, let's break down the key points:
+
+1. Incremental refactoring allows for less impact on the existing system and its users.
+2. It involves assessing and addressing specific areas of technical debt or legacy code issues, reducing the overall risk associated with rewriting the entire system.
+3. Breaking down larger tasks into smaller, manageable changes makes it easier to understand and address complex issues.
+
+Considering these points, it seems that incremental refactoring is a suitable approach for this project. However, it's essential to conduct a thorough analysis of the current state of the legacy system, involve key stakeholders in the decision-making process, develop a phased refactoring plan, and use agile methodologies and iterative development to refine solutions incrementally.
+
+To further verify this approach, I would recommend:
+
+1. Conducting a thorough analysis of the legacy system's performance, security, and scalability.
+2. Inviting key stakeholders to provide input on their priorities and concerns.
+3. Developing a detailed phased refactoring plan that addresses high-priority areas for improvement.
+4. Using agile methodologies and iterative development to refine solutions incrementally.
+
+By following this approach, you can ensure that the incremental refactoring process meets the needs of both the business and its users, while minimizing disruption and risk.
+============================================================
+Log: /home/gongai/.spl/logs/tree_of_thought-ollama-20260323-215247.log

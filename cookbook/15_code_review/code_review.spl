@@ -8,25 +8,34 @@
 --   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)" language="Python"
 
 WORKFLOW code_review
-    INPUT: @code TEXT, @language TEXT
+    INPUT:
+        @code     TEXT,
+        @language TEXT
     OUTPUT: @review TEXT
 DO
+    LOGGING f'Code review | language={@language}' LEVEL INFO
+
     -- Pass 1: Security audit
     GENERATE security_audit(@code, @language) INTO @security_findings
+    LOGGING 'Security audit complete' LEVEL DEBUG
 
     -- Pass 2: Performance analysis
     GENERATE performance_review(@code, @language) INTO @perf_findings
+    LOGGING 'Performance review complete' LEVEL DEBUG
 
     -- Pass 3: Code style and best practices
     GENERATE style_review(@code, @language) INTO @style_findings
+    LOGGING 'Style review complete' LEVEL DEBUG
 
     -- Pass 4: Bug detection
     GENERATE bug_detection(@code, @language) INTO @bug_findings
+    LOGGING 'Bug detection complete' LEVEL DEBUG
 
     -- Severity scoring for each category
     GENERATE severity_score(@security_findings) INTO @sec_score
     GENERATE severity_score(@perf_findings) INTO @perf_score
     GENERATE severity_score(@bug_findings) INTO @bug_score
+    LOGGING f'Scores | sec={@sec_score} perf={@perf_score} bug={@bug_score}' LEVEL INFO
 
     -- Synthesize all findings into a structured review
     GENERATE synthesize_review(
@@ -39,10 +48,11 @@ DO
     -- Determine overall verdict
     EVALUATE @sec_score
         WHEN > 8 THEN
+            LOGGING f'Critical security issues | score={@sec_score}' LEVEL WARN
             COMMIT @review WITH status = 'critical_issues', verdict = 'block'
         WHEN > 5 THEN
             COMMIT @review WITH status = 'needs_fixes', verdict = 'request_changes'
-        OTHERWISE
+        ELSE
             COMMIT @review WITH status = 'approved', verdict = 'approve'
     END
 

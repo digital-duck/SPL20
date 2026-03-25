@@ -1,0 +1,422 @@
+
+```bash
+spl run ./14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic=Impact of AI on healthcare
+```
+
+```spl
+-- Recipe 14: Multi-Agent Collaboration
+-- Specialized agents (Researcher, Analyst, Writer) collaborate on a report.
+-- Each agent has a distinct role and passes results to the next.
+-- Demonstrates procedural decomposition, CALL-based delegation, and role specialization.
+--
+-- Usage:
+--   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
+--   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
+--   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
+
+-- Agent 1: Researcher — gathers key facts and sources
+PROCEDURE researcher(topic TEXT) RETURNS TEXT
+DO
+    GENERATE research_facts(topic) INTO @facts
+    GENERATE identify_key_themes(@facts) INTO @themes
+    @result := @facts + '\n\nKey Themes:\n' + @themes
+    COMMIT @result
+END
+
+-- Agent 2: Analyst — identifies trends, risks, and opportunities
+PROCEDURE analyst(research TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE analyze_trends(research) INTO @trends
+    GENERATE assess_risks(research, topic) INTO @risks
+    GENERATE find_opportunities(research, topic) INTO @opportunities
+    @result := 'Trends:\n' + @trends + '\n\nRisks:\n' + @risks + '\n\nOpportunities:\n' + @opportunities
+    COMMIT @result
+END
+
+-- Agent 3: Writer — produces polished final report
+PROCEDURE writer(research TEXT, analysis TEXT, topic TEXT) RETURNS TEXT
+DO
+    GENERATE draft_report(topic, research, analysis) INTO @draft
+    GENERATE critique(@draft) INTO @feedback
+    GENERATE revise_report(@draft, @feedback) INTO @final
+    COMMIT @final
+END
+
+-- Orchestrator workflow
+WORKFLOW multi_agent_report
+    INPUT: @topic TEXT
+    OUTPUT: @report TEXT
+DO
+    -- Delegate to specialized agents
+    CALL researcher(@topic) INTO @research
+    CALL analyst(@research, @topic) INTO @analysis
+    CALL writer(@research, @analysis, @topic) INTO @report
+
+    COMMIT @report WITH status = 'complete'
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        COMMIT @research WITH status = 'partial_research_only'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 8283 in / 5516 out
+Latency: 88433ms
+------------------------------------------------------------
+```output
+Here is the revised version of your class incorporating these suggestions:
+
+```python
+import re
+
+class ThemeExtractor:
+    def __init__(self, data):
+        self.data = data
+        self.themes = {
+            "Improved Patient Care": [],
+            "Streamlining Clinical Workflows": [],
+            "Enhancing Patient Experience": [],
+            "Reducing Medical Errors": [],
+            "Population Health Management": [],
+            "Increasing Efficiency": []
+        }
+        self.additional_themes = {
+            "Advancements in Medical Imaging": ["X-rays", "MRIs"],
+            "Personalized Medicine": ["genetic profiles", "medical history", "lifestyle factors"],
+            "The Potential of AI in Cancer Treatment": ["IBM Watson for Oncology"]
+        }
+
+    def extract_themes(self):
+        """
+        Extracts themes from the input data.
+
+        Returns:
+            None
+        """
+        sentences = [sentence.strip() for sentence in self.data.split('. ')]
+
+        for theme, keywords in self.themes.items():
+            for sentence in sentences:
+                if re.search(r'\b' + '|'.join(keywords) + r'\b', sentence.lower()):
+                    self.themes[theme].append(sentence)
+
+        for theme, keywords in self.additional_themes.items():
+            for sentence in sentences:
+                match = any(keyword in sentence.lower() for keyword in keywords)
+                if match:
+                    print(f"{theme}:")
+                    print(sentence)
+                    print()
+
+    def identify_theme_areas(self):
+        """
+        Identifies theme areas from the input data.
+
+        Returns:
+            list: A list of dictionaries containing theme and description.
+        """
+        opportunities = []
+
+        patterns = [
+            r"Improved Diagnosis",
+            r"Personalized Medicine",
+            r"Predictive Analytics",
+            r"Streamlined Clinical Workflows",
+            r"Enhanced Patient Engagement",
+            r"Reducing Medical Errors",
+            r"Improved Population Health Management",
+            r"Increased Efficiency"
+        ]
+
+        for i, fact in enumerate(self.data.split('. ')):
+            # Regular expression pattern to extract theme areas
+            for pattern in patterns:
+                if re.search(pattern, fact.lower()):
+                    opportunities.append({
+                        theme: "Improving Patient Care",
+                        description: fact,
+                    })
+
+            # Additional themes
+            additional_patterns = [
+                r"Advancements in Medical Imaging",
+                r"Personalized Medicine",
+                r"The Potential of AI in Cancer Treatment"
+            ]
+
+            for pattern in additional_patterns:
+                if re.search(pattern, fact.lower()):
+                    opportunities.append({
+                        theme: "Medical Breakthroughs",
+                        description: fact,
+                    })
+
+        return opportunities
+
+class DraftReport:
+    def __init__(self, data):
+        self.data = data
+        self.theme_extractor = ThemeExtractor(data)
+
+    def generate_report(self):
+        """
+        Generates a report by analyzing trends and finding opportunities.
+
+        Returns:
+            None
+        """
+        print("Trends:")
+        self.theme_extractor.extract_themes()
+        print("\nTheme Areas:")
+        theme_areas = self.theme_extractor.identify_theme_areas()
+        for area in theme_areas:
+            print(f"{area['theme']}: {area['description']}")
+
+# Example usage
+data = """
+Here are some key facts about the impact of Artificial Intelligence (AI) on healthcare:
+
+1. **Improved Diagnosis**: AI algorithms can analyze medical images, such as X-rays and MRIs, to help doctors diagnose diseases more accurately and quickly.
+2. **Personalized Medicine**: AI can help tailor treatment plans to individual patients based on their genetic profiles, medical history, and lifestyle factors.
+3. **Predictive Analytics**: AI-powered predictive models can identify high-risk patients and predict outcomes for specific treatments, enabling early interventions and improved patient care.
+4. **Streamlined Clinical workflows**: AI can automate routine administrative tasks, allowing healthcare professionals to focus on more complex and high-value tasks.
+5. **Enhanced Patient Engagement**: AI-powered chatbots and virtual assistants can help patients manage their health, provide medication reminders, and answer medical questions.
+6.
+
+Some notable examples of AI applications in healthcare include:
+
+1. **IBM Watson for Oncology**: An AI platform that uses natural language processing and machine learning to analyze large amounts of cancer data and provide personalized treatment recommendations.
+2.  Google's DeepMind Health: An AI-powered platform that analyzes medical images and provides insights on diagnosis and treatment options.
+3.  Microsoft's Health Bot: A chatbot that helps patients manage their health, answer medical questions, and access healthcare services.
+
+Overall, AI has the potential to transform the healthcare industry by improving patient outcomes, reducing costs, and enhancing the overall quality of care.
+"""
+
+report = DraftReport(data)
+report.generate_report()
+```
+
+I have made several changes to your code:
+
+*   Created a new class `ThemeExtractor` with methods for extracting themes from input data and identifying theme areas.
+*   Modified the `DraftReport` class to
+```
+------------------------------------------------------------
+Variables:
+  @topic = Impact of AI on healthcare
+  @research = Here are some key facts about the impact of Artificial Intelligence (AI) on healthcare:
+
+1. **Improved Diagnosis**: AI algorithms can analyze medical images, such as X-rays and MRIs, to help doctors diagnose diseases more accurately and quickly.
+2. **Personalized Medicine**: AI can help tailor treatment plans to individual patients based on their genetic profiles, medical history, and lifestyle factors.
+3. **Predictive Analytics**: AI-powered predictive models can identify high-risk patients and predict outcomes for specific treatments, enabling early interventions and improved patient care.
+4. **Streamlined Clinical workflows**: AI can automate routine administrative tasks, allowing healthcare professionals to focus on more complex and high-value tasks.
+5. **Enhanced Patient Engagement**: AI-powered chatbots and virtual assistants can help patients manage their health, provide medication reminders, and answer medical questions.
+6. **Reducing Medical Errors**: AI can analyze large amounts of data to identify potential errors in medical procedures and suggest improvements to reduce complications.
+7. **Improved Population Health Management**: AI can analyze population-level data to identify trends and patterns, enabling healthcare systems to target interventions and improve health outcomes for specific populations.
+8. **Increased Efficiency**: AI-powered robotics and automation can help reduce the workload of healthcare professionals, allowing them to focus on more complex tasks.
+
+Some notable examples of AI applications in healthcare include:
+
+1. **IBM Watson for Oncology**: An AI platform that uses natural language processing and machine learning to analyze large amounts of cancer data and provide personalized treatment recommendations.
+2. **Google's DeepMind Health**: An AI-powered platform that analyzes medical images and provides insights on diagnosis and treatment options.
+3. **Microsoft's Health Bot**: A chatbot that helps patients manage their health, answer medical questions, and access healthcare services.
+
+Overall, AI has the potential to transform the healthcare industry by improving patient outcomes, reducing costs, and enhancing the overall quality of care.
+
+Key Themes:
+Based on the input text, I've identified the following key themes:
+
+1. **Improving Patient Care**: This theme encompasses several aspects of AI's impact on healthcare, including improved diagnosis, personalized medicine, predictive analytics, and enhanced patient engagement.
+2. ** streamlining Clinical Workflows**: AI's automation of routine tasks allows healthcare professionals to focus on more complex and high-value tasks, improving efficiency and productivity.
+3. **Enhancing Patient Experience**: This theme includes the use of AI-powered chatbots and virtual assistants to engage patients in their care, provide education, and access services.
+4. **Reducing Medical Errors**: AI's ability to analyze large amounts of data helps identify potential errors and suggests improvements to reduce complications.
+5. **Population Health Management**: AI's analysis of population-level data enables healthcare systems to target interventions and improve health outcomes for specific populations.
+6. **Increasing Efficiency**: AI-powered robotics, automation, and other technologies help reduce the workload of healthcare professionals, allowing them to focus on more complex tasks.
+
+Additional themes that can be inferred from the text include:
+
+1. **Advancements in Medical Imaging**: AI's role in analyzing medical images, such as X-rays and MRIs, to improve diagnosis.
+2. **Personalized Medicine**: AI's ability to tailor treatment plans to individual patients based on their genetic profiles, medical history, and lifestyle factors.
+3. **The Potential of AI in Cancer Treatment**: The example of IBM Watson for Oncology highlights the potential of AI in cancer diagnosis and treatment.
+
+These themes can serve as a starting point for further analysis and exploration of the impact of AI on healthcare.
+  @analysis = Trends:
+Based on your analysis, I will implement the `analyze_trends` function using Python. Here's an implementation:
+
+```python
+def analyze_trends(input_data):
+    # Preprocessing: split input into sentences
+    sentences = [sentence.strip() for sentence in input_data.split('. ')]
+
+    # Identify key themes and sub-themes based on sentiment analysis
+    themes = {
+        'Improved Patient Care': [],
+        'Streamlining Clinical Workflows': [],
+        'Enhancing Patient Experience': [],
+        'Reducing Medical Errors': [],
+        'Population Health Management': [],
+        'Increasing Efficiency': []
+    }
+
+    for sentence in sentences:
+        # Identify key phrases and keywords
+        if "AI" in sentence.lower():
+            for theme, keywords in themes.items():
+                match = any(keyword in sentence.lower() for keyword in keywords)
+                if match:
+                    themes[theme].append(sentence)
+
+    # Extract additional themes from the text
+    themes.update({
+        'Advancements in Medical Imaging': ["X-rays", "MRIs"],
+        'Personalized Medicine': ["genetic profiles", "medical history", "lifestyle factors"],
+        'The Potential of AI in Cancer Treatment': ["IBM Watson for Oncology"]
+    })
+
+    # Print out the identified themes and their corresponding keywords
+    print("Themes:")
+    for theme, sentences in themes.items():
+        print(f"{theme}:")
+        for sentence in sentences:
+            print(sentence)
+        print()
+
+# Test the function with the provided input data
+input_data = """
+Here are some key facts about the impact of Artificial Intelligence (AI) on healthcare:
+
+1. **Improved Diagnosis**: AI algorithms can analyze medical images, such as X-rays and MRIs, to help doctors diagnose diseases more accurately and quickly.
+2. **Personalized Medicine**: AI can help tailor treatment plans to individual patients based on their genetic profiles, medical history, and lifestyle factors.
+3. **Predictive Analytics**: AI-powered predictive models can identify high-risk patients and predict outcomes for specific treatments, enabling early interventions and improved patient care.
+4. **Streamlined Clinical workflows**: AI can automate routine administrative tasks, allowing healthcare professionals to focus on more complex and high-value tasks.
+5. **Enhanced Patient Engagement**: AI-powered chatbots and virtual assistants can help patients manage their health, provide medication reminders, and answer medical questions.
+6. **Reducing Medical Errors**: AI can analyze large amounts of data to identify potential errors in medical procedures and suggest improvements to reduce complications.
+7. **Improved Population Health Management**: AI can analyze population-level data to identify trends and patterns, enabling healthcare systems to target interventions and improve health outcomes for specific populations.
+8. **Increased Efficiency**: AI-powered robotics and automation can help reduce the workload of healthcare professionals, allowing them to focus on more complex tasks.
+
+Some notable examples of AI applications in healthcare include:
+
+1. **IBM Watson for Oncology**: An AI platform that uses natural language processing and machine learning to analyze large amounts of cancer data and provide personalized treatment recommendations.
+2. **Google's DeepMind Health**: An AI-powered platform that analyzes medical images and provides insights on diagnosis and treatment options.
+3. **Microsoft's Health Bot**: A chatbot that helps patients manage their health, answer medical questions, and access healthcare services.
+
+Overall, AI has the potential to transform the healthcare industry by improving patient outcomes, reducing costs, and enhancing the overall quality of care.
+"""
+
+analyze_trends(input_data)
+```
+
+This code splits the input text into sentences and then identifies key themes and sub-themes based on sentiment analysis. The `themes` dictionary stores the identified keywords for each theme. The function also extracts additional themes from the text and prints out the identified themes along with their corresponding keywords.
+
+Please note that this is a basic implementation, and you may need to adjust it according to your specific requirements.
+
+Risks:
+# Assessing Risks: A Review of AI's Impact on Healthcare
+
+## Introduction
+
+Artificial Intelligence (AI) has revolutionized various aspects of healthcare, transforming patient care, clinical workflows, and population health management. While AI offers numerous benefits, there are also potential risks and challenges that must be addressed. This report aims to assess the risks associated with AI in healthcare.
+
+## Risks Identified
+
+1. **Data Security**: The increasing reliance on AI-powered systems for healthcare data storage, analysis, and transmission raises concerns about data security. Unauthorized access or breaches could compromise patient confidentiality.
+2. **Bias in Decision-Making**: AI algorithms can perpetuate biases present in the training data, leading to uneven treatment outcomes and potentially discriminatory decisions.
+3. **Job Displacement**: Automation of routine administrative tasks may displace healthcare professionals, particularly those with high levels of automation-dependent jobs.
+4. **Dependence on Technology**: Over-reliance on AI-powered systems could lead to decreased critical thinking skills among healthcare professionals and reduced ability to perform complex procedures without technology support.
+5. **Lack of Transparency**: Complex AI decision-making processes can be difficult for non-experts to understand, making it challenging for patients to ask questions or seek clarification.
+6. **Cybersecurity Threats**: As AI systems become more interconnected, they may become vulnerable to cyber threats, which could compromise patient care and safety.
+7. **Regulatory Challenges**: The rapidly evolving landscape of AI in healthcare creates regulatory challenges, including ensuring that AI systems meet existing standards and guidelines.
+
+## Mitigation Strategies
+
+To address these risks, the following mitigation strategies can be employed:
+
+1.  **Implement robust data security measures**, such as encryption, access controls, and regular security audits.
+2.  **Regularly audit and update training data** to prevent biases from becoming entrenched in AI decision-making processes.
+3.  **Invest in retraining programs** for healthcare professionals displaced by automation.
+4.  **Develop AI literacy and education programs** to enhance critical thinking skills and ensure transparency around AI decision-making.
+5.  **Enhance cybersecurity measures**, including regular software updates, patching, and incident response plans.
+6.  **Establish clear regulatory frameworks** to oversee the development and deployment of AI systems in healthcare.
+
+## Recommendations
+
+To further assess the risks associated with AI in healthcare, we recommend:
+
+1.  **Conducting thorough risk assessments** for specific AI applications in healthcare.
+2.  **Developing guidelines and standards** for AI adoption in healthcare, including data security, transparency, and clinical validation.
+3.  **Investing in research and development** to improve the understanding of AI's impact on patient care and population health management.
+
+By acknowledging these risks and implementing effective mitigation strategies, we can harness the benefits of AI while minimizing its negative consequences in the healthcare industry.
+
+## Conclusion
+
+The integration of AI into healthcare presents numerous opportunities for improvement. However, it also raises concerns about data security, bias in decision-making, job displacement, dependence on technology, lack of transparency, cybersecurity threats, and regulatory challenges. By understanding these risks and implementing targeted mitigation strategies, we can ensure the safe and effective adoption of AI in healthcare.
+
+Opportunities:
+class FindOpportunities {
+    constructor(data) {
+        this.data = data;
+    }
+
+    findOpportunities() {
+        let opportunities = [];
+
+        // Loop through each key fact about the impact of Artificial Intelligence (AI) on healthcare
+        for (let i = 0; i < this.data.length; i++) {
+            let fact = this.data[i];
+
+            // Check if the key fact includes any of the identified themes
+            if (
+                fact.includes("Improved Diagnosis") ||
+                fact.includes("Personalized Medicine") ||
+                fact.includes("Predictive Analytics") ||
+                fact.includes("Streamlined Clinical workflows") ||
+                fact.includes("Enhanced Patient Engagement") ||
+                fact.includes("Reducing Medical Errors") ||
+                fact.includes("Improved Population Health Management") ||
+                fact.includes("Increased Efficiency")
+            ) {
+                opportunities.push({
+                    theme: "Improving Patient Care",
+                    description: fact,
+                });
+            }
+
+            // Check if the key fact includes any of the additional themes
+            else if (
+                fact.includes("Advancements in Medical Imaging") ||
+                fact.includes("Personalized Medicine") ||
+                fact.includes("The Potential of AI in Cancer Treatment")
+            ) {
+                opportunities.push({
+                    theme: "Medical Breakthroughs",
+                    description: fact,
+                });
+            }
+        }
+
+        return opportunities;
+    }
+}
+
+// Example usage:
+let data = [
+    `AI algorithms can analyze medical images, such as X-rays and MRIs, to help doctors diagnose diseases more accurately and quickly. This is an example of ${"Advancements in Medical Imaging"}.`,
+    "AI can help tailor treatment plans to individual patients based on their genetic profiles, medical history, and lifestyle factors.",
+    `IBM Watson for Oncology: An AI platform that uses natural language processing and machine learning to analyze large amounts of cancer data and provide personalized treatment recommendations. This is an example of ${"The Potential of AI in Cancer Treatment"}.`,
+];
+
+let findOpportunities = new FindOpportunities(data);
+let opportunities = findOpportunities.findOpportunities();
+
+for (let opportunity of opportunities) {
+    console.log(`Theme: ${opportunity.theme}`);
+    console.log(`Description: ${opportunity.description}`);
+}
+============================================================
+Log: /home/gongai/.spl/logs/multi_agent-ollama-20260323-214818.log

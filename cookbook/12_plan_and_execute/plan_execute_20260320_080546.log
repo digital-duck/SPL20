@@ -1,0 +1,212 @@
+
+```bash
+spl2 run ./12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task=Build a REST API for a todo app
+```
+
+```spl2
+-- Recipe 12: Plan and Execute
+-- A planner agent decomposes a complex task into steps, then an executor runs each step.
+-- Demonstrates agentic planning, sequential execution, and progress tracking.
+--
+-- Usage:
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task="Build a REST API for a todo app"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Set up a CI/CD pipeline for a Python project"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Migrate a MySQL database to PostgreSQL"
+
+WORKFLOW plan_and_execute
+    INPUT: @task TEXT
+    OUTPUT: @final_report TEXT
+DO
+    @step_index := 0
+    @results := ''
+
+    -- Phase 1: Planning — decompose task into numbered steps
+    GENERATE plan(@task) INTO @plan
+
+    -- Phase 2: Count steps in plan
+    GENERATE count_steps(@plan) INTO @step_count
+
+    -- Phase 3: Execute each step sequentially
+    WHILE @step_index < @step_count DO
+        -- Extract current step from plan
+        GENERATE extract_step(@plan, @step_index) INTO @current_step
+
+        -- Execute the step with context from prior results
+        GENERATE execute_step(@current_step, @results) INTO @step_result
+
+        -- Validate step output
+        GENERATE validate_step(@current_step, @step_result) INTO @validation
+
+        EVALUATE @validation
+            WHEN 'failed' THEN
+                -- Re-plan remaining steps given the failure
+                GENERATE replan(@task, @plan, @step_index, @step_result) INTO @plan
+                GENERATE count_steps(@plan) INTO @step_count
+                @step_index := 0
+                @results := ''
+            OTHERWISE
+                @results := @results + '\n## Step ' + @step_index + '\n' + @step_result
+                @step_index := @step_index + 1
+        END
+    END
+
+    -- Phase 4: Synthesize final report
+    GENERATE synthesize(@task, @results) INTO @final_report
+
+    COMMIT @final_report WITH status = 'complete', steps_executed = @step_index
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE synthesize(@task, @results) INTO @final_report
+        COMMIT @final_report WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @results WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 933 in / 2039 out
+Latency: 26118ms
+------------------------------------------------------------
+```output
+## Synthesizing Task Information
+
+### Input 1: Build a REST API for a Todo App
+
+Based on the input, we will build a simple REST API for a todo app using Python and Flask. The API will have three main endpoints:
+
+*   **GET /todos**: Retrieves all todo items
+*   **POST /todos**: Creates a new todo item
+*   **PUT /todos/:id**: Updates an existing todo item
+*   **DELETE /todos/:id**: Deletes a todo item
+
+### Implementation
+
+```python
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///todo.db"
+db = SQLAlchemy(app)
+
+class Todo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+
+@app.route("/todos", methods=["GET"])
+def get_all_todos():
+    todos = Todo.query.all()
+    return jsonify([{"id": todo.id, "title": todo.title, "completed": todo.completed} for todo in todos])
+
+@app.route("/todos", methods=["POST"])
+def create_todo():
+    title = request.json["title"]
+    completed = False
+    new_todo = Todo(title=title, completed=completed)
+    db.session.add(new_todo)
+    db.session.commit()
+    return jsonify({"id": new_todo.id, "title": new_todo.title, "completed": new_todo.completed})
+
+@app.route("/todos/<int:todo_id>", methods=["PUT"])
+def update_todo(todo_id):
+    todo = Todo.query.get(todo_id)
+    if todo is None:
+        return jsonify({"error": "Todo not found"}), 404
+    title = request.json["title"]
+    completed = request.json["completed"] if "completed" in request.json else False
+    todo.title = title
+    todo.completed = completed
+    db.session.commit()
+    return jsonify({"id": todo.id, "title": todo.title, "completed": todo.completed})
+
+@app.route("/todos/<int:todo_id>", methods=["DELETE"])
+def delete_todo(todo_id):
+    todo = Todo.query.get(todo_id)
+    if todo is None:
+        return jsonify({"error": "Todo not found"}), 404
+    db.session.delete(todo)
+    db.session.commit()
+    return jsonify({"message": "Todo deleted"})
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+### Example Use Cases
+
+1.  **Retrieve all todo items**
+    ```
+GET http://localhost:5000/todos HTTP/1.1
+Host: localhost:5000
+Accept: application/json
+
+Response:
+[
+    {"id": 1, "title": "Buy milk", "completed": false},
+    {"id": 2, "title": "Walk the dog", "completed": true}
+]
+```
+
+2.  **Create a new todo item**
+    ```
+POST http://localhost:5000/todos HTTP/1.1
+Host: localhost:5000
+Content-Type: application/json
+
+{
+    "title": "Buy eggs"
+}
+
+Response:
+{"id": 3, "title": "Buy eggs", "completed": false}
+```
+
+3.  **Update an existing todo item**
+    ```
+PUT http://localhost:5000/todos/1 HTTP/1.1
+Host: localhost:5000
+Content-Type: application/json
+
+{
+    "title": "Buy milk and eggs"
+}
+
+Response:
+{"id": 1, "title": "Buy milk and eggs", "completed": false}
+```
+
+4.  **Delete a todo item**
+    ```
+DELETE http://localhost:5000/todos/2 HTTP/1.1
+Host: localhost:5000
+
+Response:
+{"message": "Todo deleted"}
+```
+```
+------------------------------------------------------------
+Variables:
+  @task = Build a REST API for a todo app
+  @step_index = 0
+  @results = 
+  @plan = **Todo App REST API Plan**
+==========================
+
+**Overview**
+------------
+
+This plan outlines the design and implementation of a RESTful web service for a todo app. The API will provide endpoin
+  @step_count = To count the number of steps taken, we'll need to use a wearable device or an application that tracks physical activity. 
+
+Below is an example of a simple Python script using the pedometer library (py
+  @final_report = ## Synthesizing Task Information
+
+### Input 1: Build a REST API for a Todo App
+
+Based on the input, we will build a simple REST API for a todo app using Python and Flask. The API will have three main 
+============================================================
+Log: /home/gongai/.spl/logs/plan_execute-ollama-20260320-080546.log

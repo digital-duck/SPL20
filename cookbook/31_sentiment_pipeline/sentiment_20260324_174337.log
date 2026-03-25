@@ -1,0 +1,670 @@
+
+```bash
+spl run ./31_sentiment_pipeline/sentiment.spl --adapter ollama -m gemma3 items=Great product, love it! | Terrible experience, never again | It was okay I guess domain=product_reviews
+```
+
+```spl
+-- Recipe 31: Sentiment Pipeline
+-- Batch sentiment over a list of inputs, aggregate trend statistics.
+-- Demonstrates iteration over a list with per-item structured output + aggregation,
+-- with deterministic tool calls for loading, splitting, stats, and extreme detection.
+--
+-- Usage (load from file):
+--   spl run cookbook/31_sentiment_pipeline/sentiment.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/31_sentiment_pipeline/tools.py \
+--       filename=product_reviews.txt \
+--       domain=product_reviews
+--
+-- Usage (inline pipe-delimited):
+--   spl run cookbook/31_sentiment_pipeline/sentiment.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/31_sentiment_pipeline/tools.py \
+--       items="Great product, love it! | Terrible experience, never again | It was okay I guess" \
+--       delimiter="|" \
+--       domain=product_reviews
+--
+-- Sample files in reviews/:
+--   product_reviews.txt   15 product reviews (positive, negative, mixed)
+--   support_tickets.txt   12 customer support messages
+--   social_media.txt      15 social media posts
+
+-- ── Schema (zero LLM cost — injected as grounding context) ─────────────────
+
+CREATE FUNCTION sentiment_schema()
+RETURNS JSON AS $$
+{
+  "type": "array",
+  "description": "One entry per input item, in the same order as the input list.",
+  "items": {
+    "type": "object",
+    "properties": {
+      "item":       {"type": "string", "description": "The original text that was analysed"},
+      "label":      {"type": "string", "enum": ["positive", "negative", "neutral", "mixed"]},
+      "score":      {"type": "number", "minimum": -1, "maximum": 1,
+                     "description": "Sentiment score: -1 most negative, +1 most positive"},
+      "confidence": {"type": "number", "minimum": 0, "maximum": 1,
+                     "description": "Model confidence in the label"},
+      "emotions":   {"type": "array", "items": {"type": "string"},
+                     "description": "Detected emotions e.g. joy, anger, frustration, surprise"},
+      "key_phrases":{"type": "array", "items": {"type": "string"},
+                     "description": "Most sentiment-bearing phrases from the text"}
+    },
+    "required": ["item", "label", "score", "confidence"]
+  }
+}
+$$;
+
+-- ── Main workflow ───────────────────────────────────────────────────────────
+
+WORKFLOW sentiment_pipeline
+    INPUT:  @filename  TEXT DEFAULT '',
+            @items     TEXT DEFAULT '',
+            @delimiter TEXT DEFAULT '\n',
+            @domain    TEXT DEFAULT 'general'
+    OUTPUT: @report TEXT
+DO
+    -- Step 1: Load items from file if filename provided (deterministic — no LLM)
+    CALL load_items(@filename) INTO @file_content
+
+    -- Step 2: Split into a clean JSON array (deterministic — no LLM)
+    CALL split_items(@file_content, @items, @delimiter) INTO @item_list
+
+    -- Step 3: Batch sentiment — one structured result per item (LLM)
+    GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) INTO @sentiment_results
+
+    -- Step 4: Compute aggregate statistics (deterministic — no LLM)
+    CALL compute_stats(@sentiment_results) INTO @stats_json
+
+    -- Step 5: Identify extreme and notable items (deterministic — no LLM)
+    CALL find_extremes(@sentiment_results) INTO @extremes
+
+    -- Step 6: Generate trend narrative from stats and extremes (LLM)
+    GENERATE summarize_sentiment_trends(
+        @stats_json,
+        @extremes,
+        @domain
+    ) INTO @trend_summary
+
+    -- Step 7: Assemble the full report (LLM)
+    GENERATE assemble_sentiment_report(
+        @sentiment_results,
+        @stats_json,
+        @trend_summary,
+        @extremes,
+        @domain
+    ) INTO @report
+
+    COMMIT @report WITH status = 'complete', domain = @domain
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Too many items — skip per-item detail, return stats + trend only
+        CALL compute_stats(@sentiment_results) INTO @stats_json
+        CALL find_extremes(@sentiment_results) INTO @extremes
+        GENERATE summarize_sentiment_trends(@stats_json, @extremes, @domain) INTO @trend_summary
+        SET @report = @trend_summary
+        COMMIT @report WITH status = 'stats_only', reason = 'context_length_exceeded'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 6476 in / 4262 out
+Latency: 64466ms
+------------------------------------------------------------
+```output
+Here is an updated version of the code:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+# Import necessary libraries and load datasets
+nltk.download('vader_lexicon')
+spacy.cli.download("en_core_web_sm")
+
+product_reviews = pd.read_csv("product_reviews.csv")
+sentiment_schema = pd.read_csv("sentiment_schema.csv")
+
+def compute_stats():
+    # Initialize VADER sentiment analyzer
+    sia = SentimentIntensityAnalyzer()
+
+    # Preprocess text data by converting to lowercase and removing punctuation
+    def preprocess_text(text):
+        return text.lower().replace('[^\w\s]', '')
+
+    product_reviews["text"] = product_reviews["review"].apply(preprocess_text)
+
+    # Vectorize text data
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+
+    # Fit and transform text data into vectors
+    X = vectorizer.fit_transform(product_reviews["text"])
+    y = sentiment_schema["sentiment"]
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train logistic regression classifier (if using machine learning)
+    clf = LogisticRegression(max_iter=1000)
+    clf.fit(X_train, y_train)
+
+    # Evaluate model performance
+    y_pred = clf.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Model Accuracy: {accuracy:.3f}")
+    print("Classification Report:")
+    print(classification_report(y_test, y_pred))
+
+    # Function to analyze new text data using the trained model (if using machine learning)
+    def analyze_sentiment(text):
+        preprocessed_text = preprocess_text(text)
+        vector = vectorizer.transform([preprocessed_text])
+        predicted_sentiment = clf.predict(vector)[0]
+        return(predicted_sentiment)
+
+    # Example usage:
+    new_review = "This product is amazing!"
+    print(analyze_sentiment(new_review))
+
+def summarize_sentiment_trends(texts, sentiments):
+    """
+    This function takes in a list of texts and their corresponding sentiment labels.
+    It returns the summary and visualization of sentiment trends over time.
+
+    Args:
+        texts (list): A list of text strings.
+        sentiments (list): A list of sentiment labels corresponding to each text.
+
+    Returns:
+        dict: A dictionary containing the summary and visualization of sentiment trends over time.
+    """
+    # Calculate sentiment scores for each text
+    sentiment_scores = [sia.polarity_scores(text)['compound'] for text in texts]
+
+    # Find the index of the most positive and negative sentiment scores
+    max_index = sentiment_scores.index(max(sentiment_scores))
+    min_index = sentiment_scores.index(min(sentiment_scores))
+
+    # Get the corresponding texts with highest and lowest sentiment scores
+    most_positive_text, most_negative_text = product_reviews['text'].iloc[max_index], product_reviews['text'].iloc[min_index]
+
+    # Plot a bar chart to visualize sentiment trends over time
+    plt.bar(range(len(sentiments)), sentiments)
+    plt.xlabel('Time Index')
+    plt.ylabel('Sentiment Score')
+    plt.title('Sentiment Trends Over Time')
+    plt.show()
+
+    # Print the summary of sentiment trends over time
+    print(f"Text with highest sentiment score: {most_positive_text}")
+    print(f"Text with lowest sentiment score: {most_negative_text}")
+
+# Execute the function
+compute_stats()
+
+sentiments = product_reviews['sentiment']
+summarize_sentiment_trends(product_reviews["text"], sentiments)
+```
+```
+------------------------------------------------------------
+Variables:
+  @items = Great product, love it! | Terrible experience, never again | It was okay I guess
+  @domain = product_reviews
+  @delimiter = 
+
+  @file_content = I can't execute procedures directly. However, I can guide you through the general steps to troubleshoot and resolve issues related to executing a stored procedure named `load_items()`.
+
+
+### Steps to Troubleshoot `load_items()` Procedure
+
+1. **Check database connection**: Ensure that your database connection is established correctly before attempting to execute the `load_items()` procedure.
+2. **Verify procedure syntax**: Double-check the syntax of the `load_items()` procedure in the database schema to ensure it's correct and complete.
+3. **Review error messages**: If an error occurs during execution, review the error message for details on what went wrong. Common issues might include:
+   - Missing or mismatched data types
+   - Unhandled null values
+   - Insufficient permissions to execute the procedure
+4. **Test individual components**: Decompose the `load_items()` procedure into smaller parts and test each component separately to isolate any issues.
+5. **Check database schema**: Verify that the table(s) referenced in the `load_items()` procedure exist, have the correct data types, and are properly indexed.
+
+### Example SQL Execution
+
+Assuming you're using MySQL/MariaDB or PostgreSQL:
+
+
+```sql
+-- For MySQL
+CALL load_items();
+
+-- For PostgreSQL
+SELECT call_procedure('load_items');
+```
+
+### Code Snippet (Example)
+
+Here's an example of a simple stored procedure named `load_items()` in Python using the `mysql-connector-python` library:
+```python
+import mysql.connector
+
+# Establish database connection
+cnx = mysql.connector.connect(
+    user='username',
+    password='password',
+    host='127.0.0.1',
+    database='database_name'
+)
+
+def load_items():
+    try:
+        # Create cursor object
+        cursor = cnx.cursor()
+
+        # Execute the procedure
+        cursor.execute("CALL load_items();")
+
+        # Commit changes
+        cnx.commit()
+
+        print("Items loaded successfully.")
+
+    except mysql.connector.Error as err:
+        print("Error: {}".format(err))
+
+    finally:
+        if 'cursor' in locals() and cursor is not None:
+            cursor.close()
+        cnx.close()
+
+
+# Call the procedure
+load_items()
+```
+
+If you need more specific help or have further questions, please provide additional context or details about your database schema, stored procedure implementation, and any error messages you're encountering.
+  @item_list = It seems like there's a misunderstanding. The text you provided appears to be a general guide on troubleshooting and executing a stored procedure named `load_items()`. However, the original prompt asked for execution of a specific program or code.
+
+To better assist you, could you please provide more context about what you're trying to execute?
+  @sentiment_results = # Batch Sentiment Analysis
+
+## Overview
+
+This task aims to perform batch sentiment analysis on a collection of product reviews. We'll be using the provided `sentiment_schema` and `product_reviews` datasets.
+
+## Requirements
+
+* Python 3.x
+* NLTK library for text processing
+* spaCy library for entity recognition
+* scikit-learn library for machine learning
+
+## Execution
+
+### Step 1: Load Libraries and Datasets
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+
+nltk.download('vader_lexicon')
+spacy.cli.download("en_core_web_sm")
+
+# Load datasets
+product_reviews = pd.read_csv("product_reviews.csv")
+sentiment_schema = pd.read_csv("sentiment_schema.csv")
+```
+
+### Step 2: Preprocess Text Data
+
+```python
+# Initialize VADER sentiment analyzer
+sia = SentimentIntensityAnalyzer()
+
+# Preprocess text data by converting to lowercase and removing punctuation
+def preprocess_text(text):
+    return text.lower().replace('[^\w\s]', '')
+
+product_reviews["text"] = product_reviews["review"].apply(preprocess_text)
+```
+
+### Step 3: Vectorize Text Data
+
+```python
+# Initialize TF-IDF vectorizer
+vectorizer = TfidfVectorizer()
+
+# Fit and transform text data into vectors
+X = vectorizer.fit_transform(product_reviews["text"])
+y = sentiment_schema["sentiment"]
+```
+
+### Step 4: Split Data into Training and Testing Sets
+
+```python
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+```
+
+### Step 5: Train Sentiment Analysis Model (Optional)
+
+If you want to train a machine learning model for sentiment analysis, skip this step.
+
+```python
+from sklearn.linear_model import LogisticRegression
+
+# Initialize logistic regression classifier
+clf = LogisticRegression()
+
+# Train the classifier using the training data
+clf.fit(X_train, y_train)
+```
+
+### Step 6: Evaluate Model (Optional)
+
+If you trained a machine learning model, evaluate its performance on the testing data.
+
+```python
+from sklearn.metrics import accuracy_score
+
+# Predict sentiment labels for the testing data
+y_pred = clf.predict(X_test)
+
+# Calculate accuracy of the classifier
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Model Accuracy: {accuracy:.3f}")
+```
+
+### Step 7: Use the Trained Model to Analyze New Data (Optional)
+
+If you trained a machine learning model, use it to analyze new text data.
+
+```python
+def analyze_sentiment(text):
+    # Preprocess input text
+    preprocessed_text = preprocess_text(text)
+    
+    # Transform preprocessed text into a vector using TF-IDF
+    vector = vectorizer.transform([preprocessed_text])
+    
+    # Use the trained classifier to predict sentiment labels
+    predicted_sentiment = clf.predict(vector)[0]
+    
+    return(predicted_sentiment)
+
+# Example usage:
+new_review = "This product is amazing!"
+print(analyze_sentiment(new_review))
+```
+
+Note: This example provides a basic structure for performing batch sentiment analysis. Depending on your specific requirements, you may need to adjust the preprocessing steps, vectorization, or machine learning model used.
+  @stats_json = Here's an updated version of the code with some improvements and additional functionality:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+# Import necessary libraries and load datasets
+nltk.download('vader_lexicon')
+spacy.cli.download("en_core_web_sm")
+import pandas as pd
+
+product_reviews = pd.read_csv("product_reviews.csv")
+sentiment_schema = pd.read_csv("sentiment_schema.csv")
+
+def compute_stats():
+    # Initialize VADER sentiment analyzer
+    sia = SentimentIntensityAnalyzer()
+
+    # Preprocess text data by converting to lowercase and removing punctuation
+    def preprocess_text(text):
+        return text.lower().replace('[^\w\s]', '')
+
+    product_reviews["text"] = product_reviews["review"].apply(preprocess_text)
+
+    # Initialize TF-IDF vectorizer
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+
+    # Fit and transform text data into vectors
+    X = vectorizer.fit_transform(product_reviews["text"])
+    y = sentiment_schema["sentiment"]
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train logistic regression classifier (if using machine learning)
+    clf = LogisticRegression(max_iter=1000)
+    clf.fit(X_train, y_train)
+
+    # Evaluate model performance
+    y_pred = clf.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Model Accuracy: {accuracy:.3f}")
+    print("Classification Report:")
+    print(classification_report(y_test, y_pred))
+
+    # Function to analyze new text data using the trained model (if using machine learning)
+    def analyze_sentiment(text):
+        preprocessed_text = preprocess_text(text)
+        vector = vectorizer.transform([preprocessed_text])
+        predicted_sentiment = clf.predict(vector)[0]
+        return(predicted_sentiment)
+
+    # Example usage:
+    new_review = "This product is amazing!"
+    print(analyze_sentiment(new_review))
+
+# Execute the function
+compute_stats()
+```
+
+In this updated version, I've made several improvements:
+
+1.  Added more descriptive variable names and docstrings to explain what each section of code does.
+2.  Used `ngram_range=(1, 2)` when creating the TF-IDF vectorizer to consider both word-level and phrase-level features for sentiment analysis.
+3.  Implemented a classification report using `classification_report` from scikit-learn to evaluate the model's performance more comprehensively.
+4.  Provided an example usage of the `analyze_sentiment` function with a new review text.
+
+Feel free to modify or extend this code according to your specific requirements and needs!
+  @extremes = Here's an updated version of the code that takes into account the `find_extremes` procedure:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+
+nltk.download('vader_lexicon')
+spacy.cli.download("en_core_web_sm")
+
+# Load datasets
+product_reviews = pd.read_csv("product_reviews.csv")
+sentiment_schema = pd.read_csv("sentiment_schema.csv")
+
+# Initialize VADER sentiment analyzer
+sia = SentimentIntensityAnalyzer()
+
+# Preprocess text data by converting to lowercase and removing punctuation
+def preprocess_text(text):
+    return text.lower().replace('[^\w\s]', '')
+
+product_reviews["text"] = product_reviews["review"].apply(preprocess_text)
+
+# Define the find_extremes procedure
+def find_extremes(texts, sentiment_schema):
+    """
+    This function takes in a list of texts and their corresponding sentiment labels.
+    It returns the text with the most positive sentiment and the text with the most negative sentiment.
+
+    Args:
+        texts (list): A list of text strings.
+        sentiment_schema (pandas.DataFrame): A pandas DataFrame containing the sentiment labels.
+
+    Returns:
+        tuple: A tuple containing the text with the most positive sentiment and the text with the most negative sentiment.
+    """
+    # Calculate sentiment scores for each text
+    sentiment_scores = [sia.polarity_scores(text)['compound'] for text in texts]
+
+    # Find the index of the text with the highest and lowest sentiment scores
+    max_index = sentiment_scores.index(max(sentiment_scores))
+    min_index = sentiment_scores.index(min(sentiment_scores))
+
+    # Return the text with the most positive sentiment and the text with the most negative sentiment
+    return product_reviews['text'].iloc[max_index], product_reviews['text'].iloc[min_index]
+
+# Vectorize text data
+vectorizer = TfidfVectorizer()
+X = vectorizer.fit_transform(product_reviews["text"])
+y = sentiment_schema["sentiment"]
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Find the text with the most positive and negative sentiments
+most_positive_text, most_negative_text = find_extremes(product_reviews["text"], sentiment_schema)
+
+# Print the results
+print(f"Text with highest sentiment score: {most_positive_text}")
+print(f"Text with lowest sentiment score: {most_negative_text}")
+
+if X_train.shape[0] > 1:
+    # Train a logistic regression classifier on the training data
+    from sklearn.linear_model import LogisticRegression
+
+    clf = LogisticRegression()
+
+    # Fit the classifier using the training data
+    clf.fit(X_train, y_train)
+
+    # Evaluate the model's performance on the testing data
+    y_pred = clf.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Model Accuracy: {accuracy:.3f}")
+```
+
+Note that I've added a `find_extremes` procedure that takes in a list of texts and their corresponding sentiment labels. It calculates the sentiment scores for each text using VADER and returns the text with the highest and lowest sentiment scores.
+  @trend_summary = To address the task "summarize_sentiment_trends," we can analyze the changes in sentiment trends over time by evaluating the text data before and after applying any preprocessing or feature extraction techniques. 
+
+Here's an updated code that incorporates a new function `analyze_sentiment_trends` to summarize and visualize sentiment trends over time:
+
+```python
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Import necessary libraries and load datasets
+nltk.download('vader_lexicon')
+spacy.cli.download("en_core_web_sm")
+
+product_reviews = pd.read_csv("product_reviews.csv")
+sentiment_schema = pd.read_csv("sentiment_schema.csv")
+
+def compute_stats():
+    # Initialize VADER sentiment analyzer
+    sia = SentimentIntensityAnalyzer()
+
+    # Preprocess text data by converting to lowercase and removing punctuation
+    def preprocess_text(text):
+        return text.lower().replace('[^\w\s]', '')
+
+    product_reviews["text"] = product_reviews["review"].apply(preprocess_text)
+
+    # Vectorize text data
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    X = vectorizer.fit_transform(product_reviews["text"])
+    y = sentiment_schema["sentiment"]
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train logistic regression classifier (if using machine learning)
+    clf = LogisticRegression(max_iter=1000)
+    clf.fit(X_train, y_train)
+
+    # Evaluate model performance
+    y_pred = clf.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Model Accuracy: {accuracy:.3f}")
+    print("Classification Report:")
+    print(classification_report(y_test, y_pred))
+
+    # Function to analyze new text data using the trained model (if using machine learning)
+    def analyze_sentiment(text):
+        preprocessed_text = preprocess_text(text)
+        vector = vectorizer.transform([preprocessed_text])
+        predicted_sentiment = clf.predict(vector)[0]
+        return(predicted_sentiment)
+
+    # Example usage:
+    new_review = "This product is amazing!"
+    print(analyze_sentiment(new_review))
+
+# Function to analyze sentiment trends over time
+def summarize_sentiment_trends(texts, sentiments):
+    """
+    This function takes in a list of texts and their corresponding sentiment labels.
+    It returns the summary and visualization of sentiment trends over time.
+
+    Args:
+        texts (list): A list of text strings.
+        sentiments (list): A list of sentiment labels corresponding to each text.
+
+    Returns:
+        dict: A dictionary containing the summary and visualization of sentiment trends over time.
+    """
+    # Calculate sentiment scores for each text
+    sentiment_scores = [sia.polarity_scores(text)['compound'] for text in texts]
+
+    # Find the index of the most positive and negative sentiment scores
+    max_index = sentiment_scores.index(max(sentiment_scores))
+    min_index = sentiment_scores.index(min(sentiment_scores))
+
+    # Get the corresponding texts with highest and lowest sentiment scores
+    most_positive_text, most_negative_text = product_reviews['text'].iloc[max_index], product_reviews['text'].iloc[min_index]
+
+    # Plot a bar chart to visualize sentiment trends over time
+    plt.bar(range(len(sentiments)), sentiments)
+    plt.xlabel('Time Index')
+    plt.ylabel('Sentiment Score')
+    plt.title('Sentiment Trends Over Time')
+    plt.show()
+
+    # Print the summary of sentiment trends over time
+    print(f"Text with highest sentiment score: {most_positive_text}")
+    print(f"Text with lowest sentiment score: {most_negative_text}")
+
+# Execute the function
+compute_stats()
+
+# Example usage:
+sentiments = product_reviews['sentiment']
+summarize_sentiment_trends(product_reviews["text"], sentiments)
+```
+
+In this updated code, we've added a new function `summarize_sentiment_trends` that calculates sentiment scores for each text and finds the index of the most positive and negative sentiment scores. It then plots a bar chart to visualize sentiment trends over time and prints the summary of sentiment trends.
+
+Note that you can adjust the plot as needed based on your specific requirements and preferences.
+============================================================
+Log: /home/gongai/.spl/logs/sentiment-ollama-20260324-174337.log

@@ -17,7 +17,7 @@ DO
     WHEN 'acceptable' THEN
       GENERATE improved(@result, @prompt) INTO @result
       COMMIT @result WITH status = 'refined'
-    OTHERWISE
+    ELSE
       COMMIT @result WITH status = 'best_effort'
   END
 

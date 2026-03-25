@@ -1,0 +1,307 @@
+
+```bash
+spl2 run ./12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task=Build a REST API for a todo app
+```
+
+```sql
+-- Recipe 12: Plan and Execute
+-- A planner agent decomposes a complex task into steps, then an executor runs each step.
+-- Demonstrates agentic planning, sequential execution, and progress tracking.
+--
+-- Usage:
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task="Build a REST API for a todo app"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Set up a CI/CD pipeline for a Python project"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Migrate a MySQL database to PostgreSQL"
+
+WORKFLOW plan_and_execute
+    INPUT: @task TEXT
+    OUTPUT: @final_report TEXT
+DO
+    @step_index := 0
+    @results := ''
+
+    -- Phase 1: Planning — decompose task into numbered steps
+    GENERATE plan(@task) INTO @plan
+
+    -- Phase 2: Count steps in plan
+    GENERATE count_steps(@plan) INTO @step_count
+
+    -- Phase 3: Execute each step sequentially
+    WHILE @step_index < @step_count DO
+        -- Extract current step from plan
+        GENERATE extract_step(@plan, @step_index) INTO @current_step
+
+        -- Execute the step with context from prior results
+        GENERATE execute_step(@current_step, @results) INTO @step_result
+
+        -- Validate step output
+        GENERATE validate_step(@current_step, @step_result) INTO @validation
+
+        EVALUATE @validation
+            WHEN 'failed' THEN
+                -- Re-plan remaining steps given the failure
+                GENERATE replan(@task, @plan, @step_index, @step_result) INTO @plan
+                GENERATE count_steps(@plan) INTO @step_count
+                @step_index := 0
+                @results := ''
+            OTHERWISE
+                @results := @results + '\n## Step ' + @step_index + '\n' + @step_result
+                @step_index := @step_index + 1
+        END
+    END
+
+    -- Phase 4: Synthesize final report
+    GENERATE synthesize(@task, @results) INTO @final_report
+
+    COMMIT @final_report WITH status = 'complete', steps_executed = @step_index
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE synthesize(@task, @results) INTO @final_report
+        COMMIT @final_report WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @results WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 790 in / 2176 out
+Latency: 118482ms
+------------------------------------------------------------
+```output
+**Todo App REST API**
+
+This API will manage tasks, users, and user tasks. The API will have the following endpoints:
+
+### Users Endpoints
+
+#### GET /users
+Returns all users.
+
+```bash
+GET /users
+```
+
+#### POST /users
+Creates a new user.
+
+```bash
+POST /users
+  -name: string
+  -email: string
+```
+
+### Tasks Endpoints
+
+#### GET /tasks
+Returns all tasks for the logged-in user.
+
+```bash
+GET /tasks
+```
+
+#### GET /tasks/{id}
+Returns task details by ID.
+
+```bash
+GET /tasks/{id}
+  -task_id: integer
+```
+
+#### POST /tasks
+Creates a new task for the logged-in user.
+
+```bash
+POST /tasks
+  -title: string
+  -description: string
+```
+
+#### PUT /tasks/{id}
+Updates an existing task by ID.
+
+```bash
+PUT /tasks/{id}
+  -task_id: integer
+  -title: string
+  -description: string
+```
+
+#### DELETE /tasks/{id}
+Deletes a task by ID.
+
+```bash
+DELETE /tasks/{id}
+  -task_id: integer
+```
+
+### Authentication Endpoints
+
+#### Login
+Logs in the user with email and password.
+
+```bash
+POST /login
+  -email: string
+  -password: string
+```
+
+#### Logout
+Logs out the current user.
+
+```bash
+DELETE /logout
+```
+
+### Example Use Cases
+
+1. Creating a new user:
+
+   ```bash
+POST /users
+  -name: John Doe
+  -email: johndoe@example.com
+  -password: password123
+```
+
+2. Creating a new task:
+
+   ```bash
+POST /tasks
+  -title: Buy milk
+  -description: Milk is needed for breakfast.
+```
+
+3. Updating an existing task:
+
+   ```bash
+PUT /tasks/1
+  -task_id: 1
+  -title: Buy eggs
+  -description: Eggs are also needed for breakfast.
+```
+
+4. Deleting a task:
+
+   ```bash
+DELETE /tasks/1
+  -task_id: 1
+```
+
+### Implementation
+
+The API will be implemented using Node.js and Express.js.
+
+```javascript
+const express = require('express');
+const app = express();
+const mongoose = require('mongoose');
+
+// Connect to MongoDB
+mongoose.connect('mongodb://localhost/todo-app', { useNewUrlParser: true, useUnifiedTopology: true });
+
+// Define user model
+const User = mongoose.model('User', {
+  name: String,
+  email: String,
+});
+
+// Define task model
+const Task = mongoose.model('Task', {
+  title: String,
+  description: String,
+});
+
+// Login endpoint
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+  // Check if user exists and password matches
+  User.findOne({ email }, (err, user) => {
+    if (err || !user) return res.status(401).send('Invalid credentials');
+    if (user.password !== password) return res.status(401).send('Invalid password');
+    req.session.user = user;
+    res.send('Logged in successfully');
+  });
+});
+
+// Logout endpoint
+app.delete('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) console.error(err);
+    else res.send('Logged out successfully');
+  });
+});
+
+// Get all tasks for logged-in user
+app.get('/tasks', authenticate, async (req, res) => {
+  const tasks = await Task.find().populate('user');
+  res.json(tasks);
+});
+
+// Create new task for logged-in user
+app.post('/tasks', authenticate, async (req, res) => {
+  const { title, description } = req.body;
+  const task = await Task.create({ title, description, user: req.user._id });
+  res.json(task);
+});
+
+// Update existing task
+app.put('/tasks/:id', authenticate, async (req, res) => {
+  const id = req.params.id;
+  const { title, description } = req.body;
+  const task = await Task.findById(id).populate('user');
+  if (!task) return res.status(404).send('Task not found');
+  task.title = title;
+  task.description = description;
+  await task.save();
+  res.json(task);
+});
+
+// Delete existing task
+app.delete('/tasks/:id', authenticate, async (req, res) => {
+  const id = req.params.id;
+  const task = await Task.findById(id).populate('user');
+  if (!task) return res.status(404).send('Task not found');
+  await task.remove();
+  res.send('Task deleted successfully');
+});
+
+// Authentication middleware
+const authenticate = (
+```
+------------------------------------------------------------
+Variables:
+  @task = Build a REST API for a todo app
+  @step_index = 0
+  @results = 
+  @plan = **Todo App REST API Planning Document**
+=====================================
+
+**Overview**
+------------
+
+This document outlines the planning and design for building a REST API for a Todo App.
+
+**API 
+  @step_count = Based on the provided documentation, here is an example implementation of the `count_steps` function to count the number of todo items created by each user:
+```javascript
+// Import required modules
+co
+  @final_report = **Todo App REST API**
+
+This API will manage tasks, users, and user tasks. The API will have the following endpoints:
+
+### Users Endpoints
+
+#### GET /users
+Returns all users.
+
+```bash
+GET /users
+```
+
+#
+============================================================
+Log: /home/gongai/.spl/logs/plan_execute-ollama-20260320-054026.log

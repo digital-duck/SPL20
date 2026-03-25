@@ -1,0 +1,167 @@
+
+```bash
+spl2 run ./25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 topic=quantum computing audience=high school students
+```
+
+```sql
+-- Recipe 25: Nested Procedures
+-- Demonstrates PROCEDURE calling PROCEDURE — deep composability without external orchestration.
+-- Pattern: a high-level workflow delegates subtasks to reusable PROCEDURE units.
+--
+-- Usage:
+--   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+--       topic="quantum computing" audience="high school students"
+--
+--   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+--       topic="CRISPR gene editing" audience="policy makers" depth="deep"
+
+-- Inner PROCEDURE: generate a single explanation layer
+PROCEDURE explain_layer(content TEXT, audience TEXT, style TEXT DEFAULT 'clear and engaging')
+RETURNS TEXT
+DO
+    GENERATE explain(content, audience, style) INTO @explanation
+    COMMIT @explanation
+END
+
+-- Inner PROCEDURE: generate a concrete example for a concept
+PROCEDURE make_example(concept TEXT, context TEXT, audience TEXT)
+RETURNS TEXT
+DO
+    GENERATE concrete_example(concept, context, audience) INTO @example
+    COMMIT @example
+END
+
+-- Inner PROCEDURE: check comprehension level and simplify if needed
+PROCEDURE calibrate_complexity(text TEXT, audience TEXT, target_grade INT DEFAULT 8)
+RETURNS TEXT
+DO
+    GENERATE assess_reading_level(text) INTO @reading_level
+    EVALUATE @reading_level
+        WHEN > target_grade THEN
+            GENERATE simplify(text, audience) INTO @calibrated
+            COMMIT @calibrated
+        OTHERWISE
+            COMMIT text
+    END
+END
+
+-- Outer WORKFLOW: orchestrates the inner procedures
+WORKFLOW layered_explainer
+    INPUT: @topic TEXT, @audience TEXT, @depth TEXT DEFAULT 'standard'
+    OUTPUT: @article TEXT
+DO
+    -- Step 1: Research the topic
+    GENERATE research_overview(@topic) INTO @overview
+
+    -- Step 2: Delegate explanation to inner procedure
+    CALL explain_layer(
+        content  = @overview,
+        audience = @audience,
+        style    = 'clear, engaging, avoid jargon'
+    ) INTO @base_explanation
+
+    -- Step 3: Generate a concrete example via another inner procedure
+    CALL make_example(
+        concept  = @topic,
+        context  = @base_explanation,
+        audience = @audience
+    ) INTO @example
+
+    -- Step 4: Calibrate complexity (nested call inside a conditional)
+    CALL calibrate_complexity(
+        text         = @base_explanation,
+        audience     = @audience,
+        target_grade = 8
+    ) INTO @calibrated_explanation
+
+    -- Step 5: Assemble the final article
+    GENERATE assemble_article(
+        @topic,
+        @calibrated_explanation,
+        @example,
+        @depth
+    ) INTO @article
+
+    COMMIT @article WITH status = 'complete', audience = @audience
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 3303 in / 3057 out
+Latency: 172351ms
+------------------------------------------------------------
+```output
+Here is the final assembled article:
+
+Unlocking the Secrets of Quantum Computing
+
+Imagine you're trying to crack a secret code to unlock a treasure chest. You have a bunch of clues, but they're all scrambled and hard to understand. That's kind of like what happens when we try to solve complex problems using regular computers. But what if there was a way to use a special kind of computer that could process information in ways that regular computers can't?
+
+Quantum computing is a new way of building computers that uses the weird and wonderful rules of the tiny world to process information. It's like using a special kind of LEGO brick that can be in many places at once, instead of just one.
+
+Think of it like this: regular computers use "bits" to store information, which can only be in two states: 0 or 1. But quantum computers use "qubits," which can exist in many states all at once! It's like having a special kind of coin that can both heads and tails at the same time.
+
+There are three main things that make quantum computing work:
+
+1. **Quantum bits (qubits):** These are the building blocks of quantum computers. They're like regular bits, but they can exist in many states at the same time!
+2. **Superposition:** This means that qubits can be in multiple places or states all at once. It's like being able to be in two classrooms at the same time!
+3. **Entanglement:** This is when two or more qubits become connected, so that what happens to one affects the others. It's like having a secret language with your friends!
+
+Quantum computers can do some pretty amazing things:
+
+1. **Crack codes:** They can break some special kinds of encryption, but they can also be used to create super-secure codes!
+2. **Solve puzzles:** They can solve complex problems way faster than regular computers, which could help us optimize logistics, finance, and energy management.
+3. **Simulate molecules:** They can even simulate the behavior of tiny particles, which could lead to breakthroughs in chemistry and materials science!
+
+So why is quantum computing important? Well, it has lots of potential real-life applications:
+
+1. **Cryptography:** Quantum computers can break some encryption codes, but they can also be used to create new, super-secure codes.
+2. **Optimization:** Quantum computers can solve complex optimization problems, which could help us optimize logistics and energy management.
+3. **Materials Science:** Quantum computers can simulate the behavior of tiny particles, which could lead to breakthroughs in materials science.
+
+But quantum computing is still a young field, and there are some challenges ahead:
+
+1. **Fixing errors:** Quantum computers are prone to mistakes because qubits can be fragile.
+2. **Scaling up:** Most current quantum computers are small, and we need to figure out how to make them bigger and more powerful.
+
+Quantum computing is a new and exciting field that has the potential to revolutionize the way we solve complex problems. By understanding how it works and its real-life applications, you can start exploring the possibilities of quantum computing and maybe even become part of the team that creates the next breakthrough!
+
+Here are some activity ideas to get you started:
+
+1. **Build Your Own Quantum Computer:** Use LEGO bricks or blocks to build a simple quantum computer.
+2. **Code Crackers:** Try cracking some simple encryption codes using a regular computer.
+3. **Simulation Station:** Simulate the behavior of tiny particles using a computer program.
+
+This article provides a clear and concise explanation of quantum computing, its potential applications, and challenges ahead. It also includes activity ideas to engage high school students in exploring this exciting field.
+```
+------------------------------------------------------------
+Variables:
+  @topic = quantum computing
+  @audience = high school students
+  @overview = **Research Overview: Quantum Computing**
+
+**Definition:** Quantum computing is a branch of computer science that uses the principles of quantum mechanics to perform calculations and operations on data
+  @base_explanation = **What is Quantum Computing?**
+
+Imagine a superpowerful computer that can solve problems way faster than any regular computer. That's what quantum computing is all about!
+
+Quantum computing is a new w
+  @example = Based on the input provided, I will generate a concrete example of how quantum computing can be explained to high school students.
+
+**Title:** Unlocking the Secrets of Quantum Computing
+
+**Introductio
+  @calibrated_explanation = **What is Quantum Computing?**
+
+Imagine a superpowerful computer that can solve problems way faster than any regular computer. That's what quantum computing is all about!
+
+Quantum computing is a new w
+  @article = Here is the final assembled article:
+
+Unlocking the Secrets of Quantum Computing
+
+Imagine you're trying to crack a secret code to unlock a treasure chest. You have a bunch of clues, but they're all sc
+============================================================
+Log: /home/gongai/.spl/logs/nested_procs-ollama-20260320-060306.log

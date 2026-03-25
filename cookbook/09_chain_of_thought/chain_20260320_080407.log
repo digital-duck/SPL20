@@ -1,0 +1,62 @@
+
+```bash
+spl2 run ./09_chain_of_thought/chain.spl --adapter ollama -m gemma3 topic=distributed AI inference
+```
+
+```spl2
+-- Recipe 09: Chain of Thought
+-- Multi-step reasoning: Research → Analyze → Summarize
+-- Each GENERATE feeds into the next via workflow variables.
+--
+-- Usage:
+--   spl2 run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m gemma3 topic="distributed AI inference"
+--   spl2 run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m llama3.2 topic="quantum computing"
+
+WORKFLOW chain_of_thought
+    INPUT: @topic TEXT
+    OUTPUT: @summary TEXT
+DO
+    -- Step 1: Research
+    GENERATE research(@topic) INTO @research
+
+    -- Step 2: Analyze
+    GENERATE analyze(@research) INTO @analysis
+
+    -- Step 3: Summarize
+    GENERATE summarize(@analysis) INTO @summary
+
+    COMMIT @summary WITH status = 'complete'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 1380 in / 1490 out
+Latency: 19659ms
+------------------------------------------------------------
+```output
+The document provides an in-depth analysis of distributed AI inference, a process that involves performing machine learning and deep learning tasks on multiple computing devices or nodes. The key findings include:
+
+* Three main types of distributed AI inference: data parallelism, model parallelism, and pipeline parallelism
+* Benefits of distributed AI inference, including scalability, speedup, and resource utilization
+* Challenges facing distributed AI inference, such as communication overhead, data synchronization, and model training
+
+The strengths of distributed AI inference include its ability to process larger datasets, speed up processing time, and efficiently utilize available computing resources. However, weaknesses include the challenges of efficient communication, data synchronization, and model training.
+
+Opportunities for improvement include optimizing communication overhead, scaling up distributed AI inference, and investigating explainability. Threats to the success of distributed AI inference include technical challenges, scalability limitations, and the need to prioritize model interpretability.
+
+The document concludes that distributed AI inference has made significant strides in recent years but still faces challenges that must be addressed through ongoing research and development.
+```
+------------------------------------------------------------
+Variables:
+  @topic = distributed AI inference
+  @research = Distributed AI Inference: Research Overview
+
+Distributed AI inference refers to the process of performing machine learning and deep learning tasks on multiple computing devices or nodes, often in a pa
+  @analysis = **Analysis of Distributed AI Inference: Research Overview**
+
+The document provides an in-depth analysis of distributed AI inference, a process that involves performing machine learning and deep learni
+  @summary = The document provides an in-depth analysis of distributed AI inference, a process that involves performing machine learning and deep learning tasks on multiple computing devices or nodes. The key find
+============================================================
+Log: /home/gongai/.spl/logs/chain-ollama-20260320-080407.log

@@ -1,0 +1,181 @@
+
+```bash
+spl2 run ./26_ab_test/ab_test.spl --adapter ollama -m gemma3 task=Explain neural networks prompt_a=Explain like I'm 5 prompt_b=Give a technical explanation with analogies
+```
+
+```sql
+-- Recipe 26: Prompt A/B Test
+-- Compare two prompt variants using CTEs + EVALUATE scoring. Pick the winner automatically.
+-- Demonstrates data-driven prompt engineering built into the workflow itself.
+--
+-- Usage:
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--       task="Explain neural networks" \
+--       prompt_a="Explain like I'm 5" \
+--       prompt_b="Give a technical explanation with analogies"
+--
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama \
+--       task="Write a product description for a standing desk" \
+--       prompt_a="Focus on health benefits" \
+--       prompt_b="Focus on productivity and focus"
+
+-- Scoring rubric as a reusable function
+CREATE FUNCTION scoring_rubric()
+RETURNS TEXT AS $$
+Rate the response on a scale of 0–10 for each criterion:
+1. Clarity (0-10): Is it easy to understand?
+2. Completeness (0-10): Does it fully address the task?
+3. Relevance (0-10): Is every sentence on-topic?
+4. Engagement (0-10): Is it interesting to read?
+
+Return JSON: {"clarity": N, "completeness": N, "relevance": N, "engagement": N, "total": N, "rationale": "..."}
+$$;
+
+WORKFLOW ab_test
+    INPUT: @task TEXT, @prompt_a TEXT, @prompt_b TEXT, @winner_threshold FLOAT DEFAULT 1.5
+    OUTPUT: @winner_output TEXT
+DO
+    -- Generate both variants in parallel CTEs (conceptually)
+    WITH
+        variant_a AS (
+            PROMPT run_variant_a
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_a AS instruction
+            GENERATE response(task, instruction)
+        ),
+        variant_b AS (
+            PROMPT run_variant_b
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_b AS instruction
+            GENERATE response(task, instruction)
+        )
+    SELECT
+        variant_a.response AS response_a,
+        variant_b.response AS response_b
+    INTO @response_a, @response_b
+
+    -- Score both variants
+    GENERATE evaluate_response(@response_a, @task, scoring_rubric()) INTO @score_a_json
+    GENERATE evaluate_response(@response_b, @task, scoring_rubric()) INTO @score_b_json
+
+    -- Extract numeric totals
+    GENERATE extract_total(@score_a_json) INTO @score_a
+    GENERATE extract_total(@score_b_json) INTO @score_b
+
+    -- Pick winner or declare tie
+    EVALUATE (@score_a - @score_b)
+        WHEN > @winner_threshold THEN
+            SET @winner_output = @response_a
+            COMMIT @winner_output WITH
+                winner = 'A',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_a - @score_b)
+        WHEN < (0 - @winner_threshold) THEN
+            SET @winner_output = @response_b
+            COMMIT @winner_output WITH
+                winner = 'B',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_b - @score_a)
+        OTHERWISE
+            -- Scores too close — return both with explanation
+            GENERATE compare_outputs(@response_a, @response_b, @score_a_json, @score_b_json) INTO @winner_output
+            COMMIT @winner_output WITH
+                winner = 'tie',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'A/B test failed during generation.' WITH status = 'error'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 2040 in / 3190 out
+Latency: 138027ms
+------------------------------------------------------------
+```output
+To compare the outputs of the two functions, we can create a test suite that exercises both functions with different inputs and checks their outputs.
+
+Here's an example of how you could do this using Python's built-in `unittest` module:
+
+```python
+import unittest
+from neural_network_response_evaluation import evaluate_response, evalResponse
+
+class TestNeuralNetworkResponseEvaluationFunctions(unittest.TestCase):
+
+    def test_evaluate_response(self):
+        input1 = "Neural networks are a type of machine learning model inspired by the structure and function of the human brain."
+        input2 = "Neural networks are a type of machine learning model that is used for tasks such as image classification, natural language processing, and speech recognition."
+        scoring_rubric = {
+            'content': {'weight': 0.3, 'expected_answer': input2},
+            'coherence': {'weight': 0.2},
+            'clarity': {'weight': 0.5}
+        }
+        self.assertAlmostEqual(evaluate_response(input1, input2, scoring_rubric), 7.4)
+
+    def test_evalResponse(self):
+        input1 = True
+        input2 = "Neural networks are a type of machine learning model inspired by the human brain."
+        input3 = {"coherence": 8, "comprehensiveness": 9}
+        score = evalResponse(input1, input2, input3)
+        self.assertIn(score, ["0/10", "6.0/10", "7.4/10"])
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+In this test suite, we define two tests: `test_evaluate_response` and `test_evalResponse`. The first test exercises the `evaluate_response` function with a specific input and checks that its output is correct. The second test exercises the `evalResponse` function with different inputs and checks that its output falls within certain expected ranges.
+
+Note that in the `test_evalResponse` method, we're checking that the score returned by `evalResponse` falls within certain expected ranges using `assertIn`. This is because the scoring rubric used in this example has a total of 10 points, but the score returned by `evalResponse` may not always be exactly 7.4 (e.g., if the input explanation has some errors).
+```
+------------------------------------------------------------
+Variables:
+  @task = Explain neural networks
+  @prompt_a = Explain like I'm 5
+  @prompt_b = Give a technical explanation with analogies
+  @response_a = 
+  @response_b = 
+  @score_a_json = import random
+from difflib import SequenceMatcher
+
+# Neural Network Response Evaluation Function
+
+def evaluate_response(input1, input2, scoring_rubric):
+    """
+    Evaluates the response to a given q
+  @score_b_json = import re
+
+def evalResponse(input1, input2, input3):
+    # Input 1 is a boolean value
+    assert isinstance(input1, bool), "Input 1 must be a boolean value"
+
+    # Input 2 is a string
+    if not isins
+  @score_a = To extract the total score from the `evaluate_response` function, you can use a simple method to parse the output of the function and extract the relevant information.
+
+Here's an example of how you ca
+  @score_b = def extract_total(rubric):
+    """
+    Extracts the total score from a rubric.
+
+    Args:
+        rubric (dict): A dictionary representing the scoring rubric.
+
+    Returns:
+        float: The total sc
+  @winner_output = To compare the outputs of the two functions, we can create a test suite that exercises both functions with different inputs and checks their outputs.
+
+Here's an example of how you could do this using 
+============================================================
+Log: /home/gongai/.spl/logs/ab_test-ollama-20260320-055441.log

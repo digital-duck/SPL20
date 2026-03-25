@@ -1,0 +1,86 @@
+
+```bash
+spl2 run ./06_react_agent/react_agent.spl --adapter ollama -m gemma3 task=What is the population of France?
+```
+
+```spl2
+-- SPL 2.0: ReAct Agent Pattern
+-- Reasoning + Acting loop with tool use
+
+WORKFLOW react_agent
+  INPUT: @task text
+  OUTPUT: @answer text
+DO
+  @iteration := 0
+  @history := ''
+  @context := ''
+
+  WHILE @iteration < 10 DO
+
+    -- Reasoning step
+    GENERATE thought(@task, @history, @context) INTO @current_thought
+
+    -- Action decision
+    GENERATE action_decision(@current_thought) INTO @action
+
+    -- Execute action based on classification
+    EVALUATE @action
+      WHEN 'search' THEN
+        CALL search_tool(@action) INTO @observation
+      WHEN 'calculate' THEN
+        CALL calculator(@action) INTO @observation
+      WHEN 'answer' THEN
+        GENERATE final_answer(@history) INTO @answer
+        COMMIT @answer WITH status = 'complete'
+    END
+
+    -- Accumulate history
+    @history := @history + @current_thought
+    @iteration := @iteration + 1
+
+  END
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    GENERATE best_answer(@history) INTO @answer
+    COMMIT @answer WITH status = 'partial'
+  WHEN HallucinationDetected THEN
+    RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 11
+Tokens: 1072 in / 309 out
+Latency: 4125ms
+------------------------------------------------------------
+```output
+It seems you provided the information, but then asked if I would like to ask another question or provide more input.
+
+If that's correct, I'd love to continue! Here's a follow-up question:
+
+Is the population of France projected to change significantly in the near future?
+```
+------------------------------------------------------------
+Variables:
+  @task = What is the population of France?
+  @iteration = 1.0
+  @history = I'll provide you with an answer.
+
+ Input 1:
+The population of France is approximately 67.2 million people (based on data from 2020).
+
+Would you like to ask another question or provide more input?
+  @context = 
+  @current_thought = It looks like the conversation started, but no actual questions were asked. Let's continue with a new thought.
+
+What is the world's largest living structure?
+  @action = The world's largest living structure is the Great Barrier Reef in Australia. It's a coral reef system composed of more than 2,900 individual reefs and 900 islands, spanning over 1,400 miles (2,300 km)
+  @answer = It seems you provided the information, but then asked if I would like to ask another question or provide more input.
+
+If that's correct, I'd love to continue! Here's a follow-up question:
+
+Is the popu
+============================================================
+Log: /home/gongai/.spl/logs/react_agent-ollama-20260320-080350.log

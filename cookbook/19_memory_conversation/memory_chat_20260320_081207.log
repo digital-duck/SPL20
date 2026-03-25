@@ -1,0 +1,78 @@
+
+```bash
+spl2 run ./19_memory_conversation/memory_chat.spl --adapter ollama -m gemma3 user_input=My name is Alice and I am a data scientist
+```
+
+```spl2
+-- Recipe 19: Memory-Augmented Conversation
+-- A conversational agent that remembers facts from prior turns using persistent memory.
+-- Demonstrates memory.get/memory.set, context accumulation, and stateful interactions.
+--
+-- Usage:
+--   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="My name is Alice and I'm a data scientist"
+--   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What's my name?"
+--   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="I prefer Python over R"
+--   spl2 run cookbook/19_memory_conversation/memory_chat.spl --adapter ollama user_input="What do you know about me?"
+--
+-- Memory persists across runs via `spl2 memory` store.
+-- Reset with: spl2 memory delete chat_user_profile
+
+WORKFLOW memory_conversation
+    INPUT: @user_input TEXT
+    OUTPUT: @response TEXT
+DO
+    -- Load existing user profile from memory
+    SELECT memory.get('chat_user_profile') AS profile INTO @profile
+    SELECT memory.get('chat_history') AS chat_history INTO @chat_history
+
+    -- Extract any new facts the user shared about themselves
+    GENERATE extract_facts(@user_input) INTO @new_facts
+
+    -- Update profile with new facts (if any)
+    EVALUATE @new_facts
+        WHEN 'no_new_facts' THEN
+            -- Nothing to update
+        OTHERWISE
+            GENERATE merge_profile(@profile, @new_facts) INTO @profile
+            -- STORE @profile IN memory.chat_user_profile  -- workflow-level memory write not yet supported
+    END
+
+    -- Generate response with full context: profile + history + current input
+    GENERATE contextual_reply(@user_input, @profile, @chat_history) INTO @response
+
+    -- Update chat history (keep last 10 turns)
+    @chat_history := @chat_history + '\nUser: ' + @user_input + '\nAssistant: ' + @response
+    GENERATE trim_history(@chat_history, 10) INTO @chat_history
+    -- STORE @chat_history IN memory.chat_history  -- workflow-level memory write not yet supported
+
+    COMMIT @response WITH status = 'complete'
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        COMMIT 'I remember you! But I ran out of budget for this response.' WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 327 in / 540 out
+Latency: 6702ms
+------------------------------------------------------------
+```output
+Hello Alice, nice to meet you! As a data scientist, I'm sure you're always looking for ways to improve your workflow. Have you considered using natural language processing (NLP) techniques to analyze chat data? It could help you identify patterns and trends that might not be apparent otherwise. Would you like to discuss some potential applications or tools you could use for this purpose?
+```
+------------------------------------------------------------
+Variables:
+  @user_input = My name is Alice and I am a data scientist
+  @profile = MemoryGet(key='chat_user_profile')
+  @chat_history = To implement the trim_history function, we'll need to read from the memory of the assistant (in this case, a chat history) and then truncate it by a specified number of messages.
+
+Here's an example im
+  @new_facts = Extracting fact from input:
+
+* Name of person: Alice
+* Profession of person: Data Scientist
+  @response = Hello Alice, nice to meet you! As a data scientist, I'm sure you're always looking for ways to improve your workflow. Have you considered using natural language processing (NLP) techniques to analyze 
+============================================================
+Log: /home/gongai/.spl/logs/memory_chat-ollama-20260320-081207.log

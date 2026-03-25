@@ -1,0 +1,23 @@
+==============================================
+  SPL 2.0 Batch Test
+==============================================
+  Adapter: ollama
+  Models:  gemma3 llama3.2
+  Time:    Wed Mar 18 06:38:37 PM EDT 2026
+==============================================
+
+>>> Model: gemma3
+----------------------------------------------
+  PASS  01_hello_world/hello.spl
+  PASS  02_ollama_proxy/proxy.spl
+  PASS  03_multilingual/multilingual.spl
+
+>>> Model: llama3.2
+----------------------------------------------
+  PASS  01_hello_world/hello.spl
+  PASS  02_ollama_proxy/proxy.spl
+  PASS  03_multilingual/multilingual.spl
+
+==============================================
+  Results: 6/6 passed, 0 failed
+==============================================

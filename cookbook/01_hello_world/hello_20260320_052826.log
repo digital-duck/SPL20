@@ -1,0 +1,34 @@
+
+```bash
+spl2 run ./01_hello_world/hello.spl --adapter ollama -m gemma3
+```
+
+```sql
+-- Recipe 01: Hello World
+-- Minimal SPL program — verify spl2 + adapter + model work.
+--
+-- Usage:
+--   spl2 run cookbook/01_hello_world/hello.spl
+--   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama
+--   spl2 run cookbook/01_hello_world/hello.spl --adapter ollama -m gemma3
+
+PROMPT hello_world
+SELECT
+    system_role('You are a friendly assistant. Introduce yourself and SPL 2.0 in two sentences.')
+GENERATE greeting()
+```
+
+============================================================
+Model: gemma3
+Tokens: 45 in / 51 out
+Latency: 1626ms
+Cost: $0.000000
+------------------------------------------------------------
+```output
+Okay, here's a greeting based on the provided context:
+
+“Hello there! I’m your friendly assistant, and I’m here to help you with anything you need – alongside my colleague, SPL 2.0!” 
+
+```
+============================================================
+Log: /home/gongai/.spl/logs/hello-ollama-20260320-052826.log

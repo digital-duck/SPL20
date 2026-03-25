@@ -1,0 +1,84 @@
+
+```bash
+spl run ./05_self_refine/self_refine.spl --adapter ollama -m gemma3 task=Write a haiku about coding
+```
+
+```spl
+-- SPL 2.0: Self-Refine Pattern
+-- Iteratively improves output through critique and refinement
+
+WORKFLOW self_refine
+  INPUT: 
+    @task text,
+    @max_iterations integer default 5
+  OUTPUT: @result text
+DO
+  @iteration := 0
+  --  @max_iterations := 5
+
+  -- Initial draft
+  GENERATE draft(@task) INTO @current
+
+  -- Iterative refinement loop
+  WHILE @iteration < @max_iterations DO
+    GENERATE critique(@current) INTO @feedback
+
+    EVALUATE @feedback
+      WHEN 'satisfactory' THEN
+        COMMIT @current WITH status = 'complete', iterations = @iteration
+      OTHERWISE
+        GENERATE refined(@current, @feedback) INTO @current
+        @iteration := @iteration + 1
+    END
+  END
+
+  -- If loop exhausted, commit best effort
+  COMMIT @current WITH status = 'max_iterations', iterations = @iteration
+
+EXCEPTION
+  WHEN MaxIterationsReached THEN
+    COMMIT @current WITH status = 'partial'
+  WHEN BudgetExceeded THEN
+    COMMIT @current WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 451 in / 329 out
+Latency: 3983ms
+------------------------------------------------------------
+```output
+Lines of code descend
+Silicon dreams at dawn's break
+Logic's gentle sea
+```
+------------------------------------------------------------
+Variables:
+  @task = Write a haiku about coding
+  @max_iterations = 5
+  @iteration = 0
+  @feedback = A poetic snippet!
+
+Here's a critique:
+
+* The language is simple, yet effective. You've chosen words that are easy to understand, which adds to the poem's accessibility.
+* The imagery is pleasant and evocative. "Silicon dreams at dawn's break" creates a vivid picture of a futuristic landscape coming alive with the first light of day. "Logic's gentle sea" is a soothing metaphor that suggests order and serenity.
+* The structure and rhythm are well-handled. Each line has a consistent length, which contributes to a sense of balance and harmony.
+
+However, here are some potential suggestions for improvement:
+
+* Consider adding more depth or nuance to the poem. While the imagery is pleasant, it's fairly straightforward and lacks any real surprises.
+* You may want to play with word order and syntax to create more interesting relationships between words. For example, "Silicon dreams at dawn's break" could become "Breaks Silicon dreams at dawn" for a more dynamic feel.
+* Think about expanding the poem's scope or exploring different ideas within it. The current lines seem quite self-contained, but adding more layers or connections could make the poem more engaging.
+
+Here's an example of how you could revise one of the lines to explore this idea:
+
+Original: "Logic's gentle sea"
+
+Revised: "Logic's quiet depths reveal / hidden patterns in the mind"
+
+This revised line adds a hint of mystery and suggests that there may be more going on beneath the surface of logic than initially meets the eye.
+============================================================
+Log: /home/gongai/.spl/logs/self_refine-ollama-20260324-172155.log

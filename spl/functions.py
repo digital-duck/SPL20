@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import json
+import os
 from typing import Any, Callable
 from spl.ast_nodes import CreateFunctionStatement, ProcedureStatement
 
@@ -23,12 +24,20 @@ class FunctionRegistry:
         self._builtins["upper"] = self._builtin_upper
         self._builtins["lower"] = self._builtin_lower
         self._builtins["truncate"] = self._builtin_truncate
-        # List operations
+        # List operations (canonical names)
         self._builtins["list"] = FunctionRegistry._builtin_list
         self._builtins["get"] = FunctionRegistry._builtin_get
         self._builtins["append"] = FunctionRegistry._builtin_append
         self._builtins["count"] = FunctionRegistry._builtin_count
         self._builtins["join"] = FunctionRegistry._builtin_join
+        # list_* aliases — preferred in SPL 2.0 for readability
+        self._builtins["list_append"] = FunctionRegistry._builtin_append
+        self._builtins["list_concat"] = FunctionRegistry._builtin_join
+        self._builtins["list_count"] = FunctionRegistry._builtin_count
+        self._builtins["list_get"] = FunctionRegistry._builtin_get
+        # File I/O — deterministic, zero tokens
+        self._builtins["write_file"] = FunctionRegistry._builtin_write_file
+        self._builtins["read_file"] = FunctionRegistry._builtin_read_file
 
     def register(self, func_stmt: CreateFunctionStatement):
         """Register a user-defined function."""
@@ -160,3 +169,27 @@ class FunctionRegistry:
         except (json.JSONDecodeError, ValueError):
             pass
         return str(collection)
+
+    # === File I/O Built-ins ===
+
+    @staticmethod
+    def _builtin_write_file(path: str, content: str) -> str:
+        """write_file(path, content) — write content to a file, creating parent dirs as needed.
+        Returns 'written: <path>' on success.
+        """
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return f"written: {path}"
+
+    @staticmethod
+    def _builtin_read_file(path: str) -> str:
+        """read_file(path) — read a file and return its content as a string.
+        Returns empty string if the file does not exist.
+        """
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+        except FileNotFoundError:
+            return ""
+

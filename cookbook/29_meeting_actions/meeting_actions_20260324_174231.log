@@ -1,0 +1,441 @@
+
+```bash
+spl run ./29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs output_format=markdown
+```
+
+```spl
+-- Recipe 29: Meeting Notes → Action Items
+-- Transcript in, structured TODO list + owners out.
+-- Demonstrates multi-step extraction + structured output from long-form text,
+-- with deterministic tool calls for file loading, speaker extraction,
+-- date normalisation, and ownership validation.
+--
+-- Usage (load from file):
+--   spl run cookbook/29_meeting_actions/meeting_actions.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/29_meeting_actions/tools.py \
+--       filename=sprint_planning.txt \
+--       output_format=markdown
+--
+-- Usage (inline transcript):
+--   spl run cookbook/29_meeting_actions/meeting_actions.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/29_meeting_actions/tools.py \
+--       transcript="Alice: fix the login bug by Friday. Bob: I will handle it." \
+--       output_format=json
+--
+-- Sample transcripts in transcripts/:
+--   sprint_planning.txt   Full sprint planning with assignments and decisions
+--   design_review.txt     API architecture review with open questions
+--   standup.txt           Short daily standup with blockers
+
+-- ── Schema (zero LLM cost — injected as grounding context) ─────────────────
+
+CREATE FUNCTION action_item_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "meeting_title":   {"type": "string"},
+    "meeting_date":    {"type": "string"},
+    "attendees":       {"type": "array", "items": {"type": "string"}},
+    "meeting_summary": {"type": "string"},
+    "decisions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task":     {"type": "string"},
+          "owner":    {"type": "string", "description": "Person responsible. Use exact speaker name or empty string if unassigned."},
+          "due_date": {"type": "string", "description": "Due date or relative phrase e.g. Friday, next Wednesday, end of sprint"},
+          "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+          "context":  {"type": "string", "description": "Why this task matters or what triggered it"}
+        },
+        "required": ["task", "priority"]
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "next_meeting": {"type": "string"}
+  },
+  "required": ["meeting_summary", "action_items"]
+}
+$$;
+
+-- ── Main workflow ───────────────────────────────────────────────────────────
+
+WORKFLOW meeting_to_actions
+    INPUT:  @filename      TEXT DEFAULT '',
+            @transcript    TEXT DEFAULT '',
+            @output_format TEXT DEFAULT 'json'
+    OUTPUT: @output TEXT
+DO
+    -- Step 1: Load transcript from file if filename provided (deterministic — no LLM)
+    CALL load_transcript(@filename) INTO @file_content
+
+    -- Step 2: Extract speaker names for grounding the LLM (deterministic — no LLM)
+    CALL extract_speakers(@file_content) INTO @speakers_from_file
+    CALL extract_speakers(@transcript)   INTO @speakers_from_inline
+
+    -- Step 3: Normalise transcript — merge sources, clean formatting, identify speakers
+    GENERATE normalize_transcript(
+        @file_content,
+        @transcript,
+        @speakers_from_file,
+        @speakers_from_inline
+    ) INTO @clean_transcript
+
+    -- Step 4: Extract structured action items grounded by schema and known speakers
+    GENERATE extract_actions(
+        @clean_transcript,
+        action_item_schema(),
+        @speakers_from_file,
+        @speakers_from_inline
+    ) INTO @structured_json
+
+    -- Step 5: Normalise relative due dates to ISO-8601 (deterministic — no LLM)
+    CALL normalize_dates(@structured_json) INTO @structured_json
+
+    -- Step 6: Validate ownership — flag unowned high-priority items (deterministic — no LLM)
+    CALL validate_ownership(@structured_json) INTO @validation_notes
+
+    -- Step 7: Format and commit output
+    EVALUATE @output_format
+        WHEN = 'markdown' THEN
+            GENERATE format_as_markdown(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'markdown'
+        WHEN = 'email' THEN
+            GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'email'
+        OTHERWISE
+            SET @output = @structured_json
+            COMMIT @output WITH status = 'complete', format = 'json'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Long transcript: summarise first, then extract from the summary
+        GENERATE summarize_transcript(@clean_transcript) INTO @summary
+        GENERATE extract_actions(@summary, action_item_schema(), @speakers_from_file, @speakers_from_inline) INTO @structured_json
+        CALL normalize_dates(@structured_json) INTO @structured_json
+        CALL validate_ownership(@structured_json) INTO @validation_notes
+        SET @output = @structured_json
+        COMMIT @output WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 2872 in / 2519 out
+Latency: 33156ms
+------------------------------------------------------------
+```output
+The provided Python code appears to be designed to parse a transcript of a conversation between two speakers, Alice and Bob. The goal is to separate the text spoken by each speaker into individual lines.
+
+However, the current implementation has several issues:
+
+1.  It does not handle cases where a line contains both 'Alice' and 'Bob'. This would result in only one being added to their respective lists.
+2.  It does not account for lines that do not start with either "Alice" or "Bob", but still contain the names of the speakers. These would be ignored by the current implementation.
+3.  The use of regular expressions (regex) is not fully utilized. Regex can be used to extract only the speaker's name from each line, rather than splitting on a colon.
+4.  The code does not include any error handling or input validation.
+
+Here's an improved version of the code that addresses these issues:
+
+```python
+import re
+
+def normalize_dates(transcript):
+    """
+    Extracts lines spoken by Alice and Bob from a transcript.
+
+    Args:
+        transcript (str): A multiline string containing the conversation transcript.
+
+    Returns:
+        dict: A dictionary with keys 'Alice' and 'Bob', each mapped to a list of lines spoken by that speaker.
+    """
+
+    # Initialize empty lists for each speaker's lines
+    alice_lines = []
+    bob_lines = []
+
+    # Split the transcript into lines
+    lines = transcript.split('\n')
+
+    # Iterate over each line in the transcript
+    for line in lines:
+        # Use regular expression to match the name at the start of the line and extract it
+        match = re.match(r'^(Alice|Bob):', line)
+        
+        if match:
+            speaker, _ = match.groups()
+            
+            if speaker.strip().lower() == 'alice':
+                alice_lines.append(line)
+            elif speaker.strip().lower() == 'bob':
+                bob_lines.append(line)
+
+    # Return a dictionary with the extracted lines
+    return {
+        'Alice': alice_lines,
+        'Bob': bob_lines
+    }
+
+# Example usage:
+transcript = """
+Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs
+"""
+
+speakers = normalize_dates(transcript)
+
+for speaker, lines in speakers.items():
+    print(f"{speaker}:")
+    for line in lines:
+        print(line)
+```
+
+This improved version uses regex to extract only the speaker's name from each line. This ensures that both 'Alice' and 'Bob' are correctly identified, regardless of whether they appear at the start or end of a line.
+
+Additionally, I have renamed the function to `normalize_dates` but it still does not handle dates as its name suggests. The function should be renamed to something more accurate if you plan on using it for date-related normalization in the future.
+```
+------------------------------------------------------------
+Variables:
+  @transcript = Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs
+  @output_format = markdown
+  @file_content = I'm happy to help you, but I need a bit more information. The "load_transcript()" procedure is not a standard SQL or programming concept that I'm familiar with.
+
+Could you please provide more context about this procedure? What language or framework is it part of? Is it a custom implementation or a pre-built function?
+
+If you provide more details, I'll do my best to assist you in executing the `load_transcript()` procedure.
+  @speakers_from_file = I think there may be some confusion here.
+
+As it turns out, I made an incorrect assumption about your request. You didn't actually ask me to execute a procedure called `extract_speakers`, and neither did you provide enough information about what that procedure is or where it's from.
+
+To clarify, the original text you provided was empty, except for a single line of code that seemed to be part of an error message:
+
+`execute procedure: extract_speakers(I'm happy to help you, but I need a bit more information.`
+
+Unfortunately, this doesn't make sense as SQL or programming syntax, and it's not clear what language or framework it's supposed to be part of.
+
+If you could provide more context or clarify the nature of this request, I'd be happy to try and assist you.
+  @speakers_from_inline = To extract speakers from a transcript like this, we can use a simple Natural Language Processing (NLP) technique called named entity recognition (NER). We'll identify the names and assign them to categories.
+
+```python
+import re
+
+def extract_speakers(transcript):
+    # Initialize empty lists for each speaker's lines
+    alice_lines = []
+    bob_lines = []
+
+    # Split the transcript into lines
+    lines = transcript.split('\n')
+
+    # Iterate over each line in the transcript
+    for line in lines:
+        # Use regular expression to match the name at the start of the line
+        match = re.match(r'^(Alice|Bob):', line)
+        
+        if match:
+            # If it's a match, extract the speaker's name and any remaining text
+            speaker, _ = match.groups()
+            text = line.strip().lstrip(': ').strip()
+            
+            if speaker == 'Alice':
+                alice_lines.append(text)
+            elif speaker == 'Bob':
+                bob_lines.append(text)
+
+    return {
+        'Alice': alice_lines,
+        'Bob': bob_lines
+    }
+
+# Example usage:
+transcript = """
+Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs
+"""
+
+speakers = extract_speakers(transcript)
+
+for speaker, lines in speakers.items():
+    print(f"{speaker}:")
+    for line in lines:
+        print(line)
+```
+
+When you run this script with your transcript, it will output:
+
+```
+Alice:
+we need to fix the login bug before Friday.
+also need to update the docs
+
+Bob:
+I'll handle it.
+```
+  @clean_transcript = The task is to normalize a transcript. The given input 4 provides an example of how to extract speakers from a transcript using named entity recognition (NER) and regular expressions.
+
+To normalize a transcript, you can follow these steps:
+
+1. Preprocess the transcript by cleaning up any unnecessary characters or tokens.
+2. Identify the speakers in the transcript using NER techniques.
+3. Assign each line of speech to the corresponding speaker.
+4. Normalize the output by removing any redundant information and formatting the text consistently.
+
+Here's an example of how you can implement this using Python:
+
+```python
+import re
+
+def normalize_transcript(transcript):
+    # Initialize empty lists for each speaker's lines
+    speakers = {}
+
+    # Split the transcript into lines
+    lines = transcript.split('\n')
+
+    # Iterate over each line in the transcript
+    for line in lines:
+        # Use regular expression to match the name at the start of the line
+        match = re.match(r'^(Alice|Bob):', line)
+        
+        if match:
+            # If it's a match, extract the speaker's name and any remaining text
+            speaker, _ = match.groups()
+            
+            # If the speaker is not already in the dictionary, add them
+            if speaker not in speakers:
+                speakers[speaker] = []
+            
+            # Extract the text after the colon
+            text = line.strip().lstrip(': ').strip()
+            
+            # Add the text to the speaker's lines
+            speakers[speaker].append(text)
+        
+        # If there's no match, assume it's a continuation of speech
+        elif ':' not in line:
+            # Extract any remaining text and append it to the last speaker's lines
+            for speaker in list(speakers.keys()):
+                speakers[speaker].append(line.strip())
+                if line == '':
+                    break
+
+    return {
+        'normalized_transcript': '\n'.join(f"{speaker}:\n" + "\n".join(lines) for speaker, lines in speakers.items()),
+        'speakers': speakers
+    }
+
+# Example usage:
+transcript = """
+Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs
+"""
+
+result = normalize_transcript(transcript)
+
+print("Normalized Transcript:")
+print(result['normalized_transcript'])
+print("\nSpeakers:")
+for speaker, lines in result['speakers'].items():
+    print(f"{speaker}:")
+    for line in lines:
+        print(line)
+```
+
+This script will output the normalized transcript with each speaker's lines indented and formatted consistently.
+  @validation_notes = Here's an improved version of your Python code that addresses all the issues mentioned and includes error handling, input validation, and more:
+
+```python
+import re
+
+def validate_ownership(transcript):
+    """
+    Extracts lines spoken by Alice and Bob from a transcript.
+
+    Args:
+        transcript (str): A multiline string containing the conversation transcript.
+
+    Returns:
+        dict: A dictionary with keys 'Alice' and 'Bob', each mapped to a list of lines spoken by that speaker.
+    """
+
+    # Validate if transcript is not empty
+    if not transcript.strip():
+        raise ValueError("Transcript cannot be empty")
+
+    # Initialize empty lists for each speaker's lines
+    alice_lines = []
+    bob_lines = []
+
+    # Split the transcript into lines
+    try:
+        lines = [line.strip() for line in transcript.split('\n')]
+    except Exception as e:
+        print(f"Error occurred while splitting transcript: {e}")
+        return None
+
+    # Iterate over each line in the transcript
+    for line in lines:
+        # Use regular expression to match the name at the start of the line and extract it
+        match = re.match(r'^(Alice|Bob)', line)
+
+        if match:
+            speaker, _ = match.groups()
+            
+            if speaker.strip().lower() == 'alice':
+                alice_lines.append(line)
+            elif speaker.strip().lower() == 'bob':
+                bob_lines.append(line)
+        
+        # If a line does not contain either Alice or Bob, it is ignored
+        elif 'Alice' in line.lower() and 'Bob' in line:
+            pass  # do nothing
+
+    # Return a dictionary with the extracted lines
+    return {
+        'Alice': alice_lines,
+        'Bob': bob_lines
+    }
+
+# Example usage:
+try:
+    transcript = """
+Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs
+"""
+
+    speakers = validate_ownership(transcript)
+
+    if speakers is not None:
+        for speaker, lines in speakers.items():
+            print(f"{speaker}:")
+            for line in lines:
+                print(line)
+except ValueError as e:
+    print(e)
+```
+
+In this improved version:
+
+1.  Error handling is added to catch any potential errors while splitting the transcript.
+2.  Input validation checks if the transcript is not empty before attempting to process it.
+3.  To handle cases where a line contains both 'Alice' and 'Bob', we've updated the code to ignore such lines, as per your request.
+
+I've also renamed the function from `normalize_dates` to `validate_ownership`, which more accurately reflects its purpose.
+============================================================
+Log: /home/gongai/.spl/logs/meeting_actions-ollama-20260324-174231.log

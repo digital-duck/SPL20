@@ -1,0 +1,351 @@
+
+```bash
+spl run ./30_code_gen/code_gen.spl --adapter ollama -m gemma3 spec=A function that validates an email address language=Python
+```
+
+```spl
+-- Recipe 30: Code Generator + Tests
+-- Generate a function, then generate its unit tests — in a single workflow.
+-- Demonstrates sequential generation where output of step N is input to step N+1.
+--
+-- Usage:
+--   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama -m gemma3 \
+--       spec="A function that validates an email address" language="Python"
+--
+--   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama \
+--       spec="Binary search over a sorted list, return index or -1" language="Go" \
+--       test_framework="testing"
+
+CREATE FUNCTION language_conventions(language TEXT)
+RETURNS TEXT AS $$
+SELECT CASE language
+  WHEN 'Python' THEN 'PEP 8 style. Type hints required. Docstring in Google format. No bare except.'
+  WHEN 'Go'     THEN 'Standard Go conventions. Return (value, error). Table-driven tests. No panics in library code.'
+  WHEN 'TypeScript' THEN 'Strict mode. Explicit return types. JSDoc comments. No any type.'
+  WHEN 'Rust'   THEN 'Idiomatic Rust. Result<T, E> for fallible ops. No unwrap() in library code. Doc comments.'
+  ELSE               'Clean, idiomatic code. Clear naming. Minimal dependencies. Well-commented edge cases.'
+END
+$$;
+
+CREATE FUNCTION test_framework_guide(language TEXT, framework TEXT DEFAULT 'default')
+RETURNS TEXT AS $$
+SELECT CASE language || ':' || framework
+  WHEN 'Python:pytest'   THEN 'pytest. Use fixtures. Parametrize for multiple inputs. Assert with descriptive messages.'
+  WHEN 'Python:unittest' THEN 'unittest.TestCase. setUp/tearDown. assertEqual, assertRaises. One assertion per test.'
+  WHEN 'Go:testing'      THEN 'testing package. Table-driven tests with t.Run. t.Errorf not t.Fatalf unless truly fatal.'
+  WHEN 'TypeScript:jest' THEN 'Jest. describe/it blocks. Mocks via jest.fn(). Async tests with async/await.'
+  ELSE                        'Standard test framework for ' || language || '. Cover: happy path, edge cases, error cases.'
+END
+$$;
+
+WORKFLOW code_gen_with_tests
+    INPUT: @spec TEXT, @language TEXT DEFAULT 'Python', @test_framework TEXT DEFAULT 'default'
+    OUTPUT: @final_output TEXT
+DO
+    -- Step 1: Generate the implementation
+    GENERATE implement_function(
+        @spec,
+        @language,
+        language_conventions(@language)
+    ) INTO @implementation
+
+    -- Step 2: Self-review the implementation
+    GENERATE review_implementation(@implementation, @spec, @language) INTO @review_notes
+
+    -- Step 3: Refine if issues found
+    EVALUATE @review_notes
+        WHEN contains('issue') OR contains('error') OR contains('problem') THEN
+            GENERATE fix_implementation(@implementation, @review_notes, @language) INTO @implementation
+        OTHERWISE
+            -- Implementation looks good
+    END
+
+    -- Step 4: Generate unit tests targeting the implementation
+    GENERATE generate_tests(
+        @implementation,
+        @spec,
+        @language,
+        test_framework_guide(@language, @test_framework)
+    ) INTO @tests
+
+    -- Step 5: Verify tests compile/parse (static check)
+    GENERATE verify_test_syntax(@tests, @language) INTO @syntax_ok
+
+    -- Step 6: Assemble final output
+    GENERATE assemble_output(@implementation, @tests, @language) INTO @final_output
+
+    COMMIT @final_output WITH
+        status = 'complete',
+        language = @language,
+        test_framework = @test_framework
+
+EXCEPTION
+    WHEN GenerationError THEN
+        -- Return implementation without tests
+        COMMIT @implementation WITH status = 'implementation_only', reason = 'test_generation_failed'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 3039 in / 2506 out
+Latency: 33127ms
+------------------------------------------------------------
+```output
+To assemble the output for the given input, we can write a Python function that uses the provided `EmailValidator` class to validate email addresses. Here's an example:
+
+```python
+import unittest
+from email_validator import EmailValidator
+
+class AssembleOutput:
+    def __init__(self):
+        self.validator = EmailValidator()
+
+    def assemble_output(self, emails: list[str]) -> dict[str, bool]:
+        """
+        Assembles the output for a given list of email addresses.
+
+        Args:
+            emails (list[str]): A list of email addresses to be validated.
+
+        Returns:
+            dict[str, bool]: A dictionary where keys are the email addresses and values are their corresponding validation results.
+        """
+
+        # Initialize an empty dictionary to store the validation results
+        output = {}
+
+        # Iterate over each email address in the input list
+        for email in emails:
+            try:
+                # Validate the email address using the EmailValidator class
+                output[email] = self.validator.validate_email(email)
+            except Exception as e:
+                print(f"Error occurred while validating email: {e}")
+                output[email] = False
+
+        return output
+
+
+# Example usage:
+assembler = AssembleOutput()
+print(assembler.assemble_output(["example@example.com", "invalid_email", "test@example.co.uk"]))
+```
+
+In this code:
+
+*   We define a class `AssembleOutput` that has an instance variable `validator` of type `EmailValidator`.
+*   The `assemble_output` method takes a list of email addresses, validates each one using the `validate_email` method of the `EmailValidator` object, and stores the results in a dictionary where keys are the email addresses and values are their corresponding validation results.
+*   If any error occurs during validation, it is caught, an error message is printed, and `False` is assigned to the corresponding value in the output dictionary.
+
+This code can be used as a starting point for your project, allowing you to assemble the output for a given list of email addresses.
+```
+------------------------------------------------------------
+Variables:
+  @spec = A function that validates an email address
+  @language = Python
+  @test_framework = default
+  @implementation = class EmailValidator:
+    def __init__(self):
+        # Create a regular expression pattern for basic email validation
+        self.pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+    def validate_email(self, email: str) -> bool:
+        """
+        Validates an email address.
+
+        Args:
+            email (str): The email address to be validated.
+
+        Returns:
+            bool: True if the email is valid, False otherwise.
+        """
+
+        try:
+            # Check if the email matches the pattern
+            if re.match(self.pattern, email):
+                return True
+
+            # If the email does not match the pattern, return False
+            return False
+
+        except re.error as e:
+            print(f"Error occurred while validating email: {e}")
+            return False
+
+
+# Example usage:
+validator = EmailValidator()
+print(validator.validate_email("example@example.com"))  # Expected output: True
+print(validator.validate_email("invalid_email"))  # Expected output: False
+print(validator.validate_email("test@example.co.uk"))  # Expected output: True
+  @review_notes = **Code Review:**
+
+The provided code for the `validate_email` function is well-structured, readable, and follows standard Python language conventions. Here are some observations and suggestions:
+
+```python
+import re
+
+def validate_email(email: str) -> bool:
+    """
+    Validates an email address.
+
+    Args:
+        email (str): The email address to be validated.
+
+    Returns:
+        bool: True if the email is valid, False otherwise.
+    """
+
+    # Regular expression pattern for a basic email validation
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+
+    # Check if the email matches the pattern
+    if re.match(pattern, email):
+        return True
+
+    # If the email does not match the pattern, return False
+    return False
+```
+
+**Strengths:**
+
+*   The function is well-documented with a clear and concise description of its purpose.
+*   It uses type hints for the input parameter `email` and the return value, making it easier to understand the expected types.
+*   The code follows standard Python language conventions.
+
+**Weaknesses:**
+
+*   The regular expression pattern used in this function may not be comprehensive enough to cover all possible valid email formats as defined by the official specification (RFC 5322). It might allow some invalid characters or domain names.
+*   There is no error handling for cases where `re.match()` encounters an exception. While it's unlikely that such a scenario would occur, adding a try-except block can make the code more robust.
+
+**Suggestions:**
+
+1.  **Improve the regular expression pattern:** Consider using a library like `email-validator` which provides a comprehensive set of rules for email validation. Alternatively, you could extend the provided pattern to include additional character classes or flags.
+2.  **Add error handling:** Wrap the `re.match()` call in a try-except block to handle any potential exceptions that might occur.
+
+Here's an updated version of the code incorporating these suggestions:
+
+```python
+import re
+
+def validate_email(email: str) -> bool:
+    """
+    Validates an email address.
+
+    Args:
+        email (str): The email address to be validated.
+
+    Returns:
+        bool: True if the email is valid, False otherwise.
+    """
+
+    try:
+        # Regular expression pattern for a basic email validation
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+        # Check if the email matches the pattern
+        if re.match(pattern, email):
+            return True
+
+        # If the email does not match the pattern, return False
+        return False
+
+    except re.error as e:
+        print(f"Error occurred while validating email: {e}")
+        return False
+```
+
+**Best Practices:**
+
+*   Consider using a library like `email-validator` for more comprehensive email validation.
+*   Always handle potential exceptions when working with external resources or libraries.
+
+Overall, the provided code is well-structured and readable. By addressing the weaknesses and suggestions mentioned above, you can further improve its reliability and robustness.
+  @tests = Here's how you can generate tests for the `EmailValidator` class using Python:
+
+```python
+import unittest
+from email_validator import EmailValidator
+
+class TestEmailValidator(unittest.TestCase):
+
+    def setUp(self):
+        # Create an instance of EmailValidator
+        self.validator = EmailValidator()
+
+    def test_valid_email(self):
+        # Test with a valid email address
+        self.assertTrue(self.validator.validate_email("example@example.com"))
+        # Expected output: True
+
+    def test_invalid_email(self):
+        # Test with an invalid email address
+        self.assertFalse(self.validator.validate_email("invalid_email"))
+        # Expected output: False
+
+    def test_valid_domain_with_2_letters_tld(self):
+        # Test with a valid domain that has only 2 letters in the TLD
+        self.assertTrue(self.validator.validate_email("test@example.co.uk"))
+        # Expected output: True
+
+    def test_empty_string(self):
+        # Test with an empty string
+        self.assertFalse(self.validator.validate_email(""))
+        # Expected output: False
+
+    def test_none_input(self):
+        # Test with None input
+        with self.assertRaises(AttributeError):
+            self.validator.validate_email(None)
+        # Expected output: AttributeError
+
+    def test_non_string_input(self):
+        # Test with non-string input
+        with self.assertRaises(TypeError):
+            self.validator.validate_email(12345)
+        # Expected output: TypeError
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+In this code:
+
+*   We import the `unittest` module and create a test class `TestEmailValidator` that inherits from `TestCase`.
+*   The `setUp` method is used to create an instance of `EmailValidator` before each test.
+*   In each test method, we call the `validate_email` method of the `EmailValidator` object with different inputs and assert whether it returns `True` or `False` as expected.
+  @syntax_ok = The provided code is a test suite for the `EmailValidator` class using Python's built-in `unittest` module. It covers various scenarios, including:
+
+*   Valid email addresses
+*   Invalid email addresses
+*   Domains with only 2 letters in the TLD
+*   Empty strings
+*   None input
+*   Non-string inputs
+
+Each test method is well-structured and clearly labeled, making it easy to understand what each test case is checking.
+
+To verify the syntax of this code:
+
+1.  The imports are correct: `import unittest` and `from email_validator import EmailValidator`.
+2.  The class inheritance is correct: `class TestEmailValidator(unittest.TestCase):`.
+3.  The `setUp` method is used correctly to create an instance of `EmailValidator` before each test.
+4.  Each test method follows the expected structure:
+    *   It starts with a descriptive name (`test_valid_email`, `test_invalid_email`, etc.).
+    *   It uses the `self` parameter to access the test fixture (in this case, the `validator` instance).
+    *   It calls the `validate_email` method of the `validator` instance.
+    *   It asserts whether the result is as expected using methods like `assertTrue()` and `assertFalse()`.
+5.  The code is well-structured, readable, and follows PEP 8 guidelines.
+
+However, there are some potential improvements that can be made:
+
+*   Consider adding more test cases to cover additional scenarios.
+*   You might want to consider using parameterized testing or fixtures to make the tests more efficient and easier to maintain.
+*   In the `test_none_input` method, you could use a try-except block instead of raising an exception explicitly. This would allow you to catch the actual exception raised by the `validate_email` method.
+
+Overall, the code is well-written and effective for its purpose.
+============================================================
+Log: /home/gongai/.spl/logs/code_gen-ollama-20260324-174304.log

@@ -1,0 +1,290 @@
+
+```bash
+spl2 run ./33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 role=Senior Software Engineer focus=system design
+```
+
+```sql
+-- Recipe 33: Interview Simulator
+-- Two-persona structured Q&A with evaluation.
+-- Interviewer persona asks questions, candidate persona answers, evaluator scores.
+--
+-- Usage:
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 \
+--       role="Senior Software Engineer" focus="system design"
+--
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama \
+--       role="Data Scientist" focus="machine learning" num_questions=4 difficulty="hard"
+
+CREATE FUNCTION interviewer_persona(role TEXT, focus TEXT, difficulty TEXT DEFAULT 'medium')
+RETURNS TEXT AS $$
+You are an experienced technical interviewer at a top tech company.
+You are interviewing for the role of: {role}
+Focus area: {focus}
+Difficulty: {difficulty}
+
+Ask targeted, probing questions. Follow up on weak answers. Be professional but not warm.
+Ask one question at a time. Do not reveal what a good answer looks like before hearing the response.
+$$;
+
+CREATE FUNCTION candidate_persona(role TEXT, experience TEXT DEFAULT '5 years')
+RETURNS TEXT AS $$
+You are a job candidate interviewing for: {role}
+You have {experience} of relevant experience.
+
+Answer honestly — you know a lot but may have gaps. Think out loud. Be specific with examples.
+If unsure, say so and explain your reasoning process.
+$$;
+
+CREATE FUNCTION evaluation_rubric()
+RETURNS TEXT AS $$
+Evaluate each answer on:
+1. Technical accuracy (0-10): Is the answer correct?
+2. Depth (0-10): Does the candidate go beyond surface level?
+3. Communication (0-10): Is the answer clear and well-structured?
+4. Practical experience (0-10): Do they reference real scenarios?
+
+Return JSON per answer: {"accuracy": N, "depth": N, "communication": N, "experience": N, "total": N, "feedback": "..."}
+$$;
+
+WORKFLOW interview_sim
+    INPUT: @role TEXT, @focus TEXT, @difficulty TEXT DEFAULT 'medium', @num_questions INT DEFAULT 3, @experience TEXT DEFAULT '5 years'
+    OUTPUT: @evaluation_report TEXT
+DO
+    -- Generate questions upfront
+    GENERATE generate_question_set(
+        @role, @focus, @difficulty, @num_questions,
+        interviewer_persona(@role, @focus, @difficulty)
+    ) INTO @questions_json
+
+    -- Q1: First question + answer + score
+    GENERATE ask_question(@questions_json, 1) INTO @q1
+    GENERATE answer_question(@q1, @role, candidate_persona(@role, @experience)) INTO @a1
+    GENERATE score_answer(@q1, @a1, evaluation_rubric()) INTO @score1
+
+    -- Q2
+    GENERATE ask_question(@questions_json, 2) INTO @q2
+    GENERATE answer_question(@q2, @role, candidate_persona(@role, @experience)) INTO @a2
+    GENERATE score_answer(@q2, @a2, evaluation_rubric()) INTO @score2
+
+    -- Q3
+    GENERATE ask_question(@questions_json, 3) INTO @q3
+    GENERATE answer_question(@q3, @role, candidate_persona(@role, @experience)) INTO @a3
+    GENERATE score_answer(@q3, @a3, evaluation_rubric()) INTO @score3
+
+    -- Compile interview transcript
+    GENERATE compile_transcript(@q1, @a1, @q2, @a2, @q3, @a3) INTO @transcript
+
+    -- Overall evaluation
+    GENERATE overall_evaluation(
+        @transcript,
+        @score1, @score2, @score3,
+        @role, @focus
+    ) INTO @evaluation_report
+
+    COMMIT @evaluation_report WITH
+        status = 'complete',
+        role = @role,
+        focus = @focus,
+        difficulty = @difficulty
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT @transcript WITH status = 'partial', reason = 'evaluation_failed'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 12
+Tokens: 16115 in / 9322 out
+Latency: 154320ms
+------------------------------------------------------------
+Committed: Here is a Python code snippet that refactors all five inputs into a single cohesive function, `overall_evaluation`, which evaluates questions based on the role, topic, and interviewer persona:
+
+```python
+import random
+
+def overall_evaluation(role="Senior Software Engineer", topic="system design", interviewer_persona=None):
+    # Define a base set of questions for each role
+    question_sets = {
+        "Senior Software Engineer": [
+            ["What are some common design patterns used in system design?", 5],
+            ["How do you handle scalability issues in system design?", 4],
+            ["Can you walk us through your experience with [specific technology]?", 3]
+        ],
+        "Junior Developer": [
+            ["Can you go over the basics of Python?", 5],
+            ["How do you approach debugging code?", 4],
+            ["What is your experience with Agile development methodologies?", 3]
+        ]
+    }
+
+    # Define a base set of questions for each topic
+    question_sets.update({
+        "system design": [
+            ["What are the trade-offs between microservices and monolithic architecture?", 5],
+            ["How do you approach system failure and redundancy?", 4],
+            ["Can you explain the concept of load balancing?", 3]
+        ],
+        "machine learning": [
+            ["How do you choose a machine learning algorithm for a project?", 5],
+            ["Can you walk us through your experience with deep learning?", 4],
+            ["What are some common biases in machine learning models?", 3]
+        ]
+    })
+
+    # Define a base set of candidate personas
+    candidate_persona_sets = {
+        "Senior Software Engineer": [
+            {"name": "John Doe", "persona": "aggressive"},
+            {"name": "Jane Smith", "persona": "passive"}
+        ],
+        "Junior Developer": [
+            {"name": "Bob Johnson", "persona": "creative"},
+            {"name": "Alice Brown", "persona": "passive"}
+        ]
+    }
+
+    # Define a base set of candidate scores
+    candidate_scores = {
+        "Senior Software Engineer": {
+            "aggressive": 8,
+            "passive": 6
+        },
+        "Junior Developer": {
+            "creative": 7,
+            "passive": 5
+        }
+    }
+
+    # Ask user for role, topic and interviewer persona
+    if role == "Senior Software Engineer":
+        candidate_persona = {
+            "aggressive": ["What do you think about aggressive behavior in team leadership?", 
+                          "Can you walk us through a project where you had to make tough decisions?"],
+            "passive" : ["What do you think about passive behavior in team leadership?", 
+                         "How do you prioritize tasks when faced with multiple deadlines?"]
+        }
+    elif role == "Junior Developer":
+        candidate_persona = {
+            "creative": ["What inspires your creativity in coding?", 
+                         "Can you walk us through a project where you had to think outside the box?"],
+            "passive" : []
+        }
+
+    # Check if interviewer_persona is a dictionary
+    if isinstance(interviewer_persona, dict):
+        for trait in candidate_persona_sets[role]:
+            question = f"What do you think about {trait['persona']} team leadership?"
+            question_sets.update(candidate_persona[trait['persona']])
+    else:
+        question_sets.update(candidate_persona[interviewer_persona])
+
+    # Get the selected interviewer persona
+    selected_persona = input(f"Select an interviewer persona ({', '.join([p['name'] for p in candidate_persona_sets[role]])}): ")
+    selected_persona = next((p for p in candidate_persona_sets[role] if p['name'] == selected_persona), None)
+    if not selected_persona:
+        print("Sorry, this feature is not available.")
+        return
+
+    # Get the user's answer
+    answers = []
+    for question in question_sets[role]:
+        answer = input(question + " ")
+        answers.append(answer)
+
+    # Calculate the score based on the candidate's answer
+    score = 0
+    for i, answer in enumerate(answers):
+        if role == "Senior Software Engineer":
+            if int(role) > 4:
+                score += (8 - candidate_scores[role][selected_persona]) * len([x for x in answers[i:]] / len(answers))
+            else:
+                score += int(candidate_scores[role][selected_persona])
+        elif role == "Junior Developer":
+            if selected_persona == 'passive':
+                score += int(candidate_scores[role][selected_persona])
+            else:
+                score += 0
+
+    # Print the score
+    print(f"\nYour score is: {score} / {len(answers)}")
+
+overall_evaluation()
+```
+
+This function combines all five inputs into a single cohesive evaluation process, calculating a score for each question based on the user's answer
+------------------------------------------------------------
+Variables:
+  @role = Senior Software Engineer
+  @focus = system design
+  @questions_json = Here's an example of how you can implement the `generate_question_set` function in Python:
+
+```python
+def generate_question_set(role, topic, interviewer_persona):
+    """
+    Generate a set of questio
+  @q1 = import random
+
+def ask_question():
+    # Define a base set of questions for each role
+    question_sets = {
+        "Senior Software Engineer": [
+            "What are some common design patterns used
+  @a1 = Here's how you can update your code based on the provided input:
+
+```python
+import random
+
+def ask_question(role, topic, interviewer_persona):
+    # Define a base set of questions for each role and to
+  @score1 = Based on the provided inputs, here's an updated version of the code:
+
+```python
+import random
+
+def evaluation_rubric():
+    # Define a base set of questions for each role
+    question_sets = {
+       
+  @q2 = # Asking Questions Based on Role, Topic, and Interviewer Persona
+
+You want to design a function that can generate a set of questions based on the role, topic, and interviewer persona. Here's how we ca
+  @a2 = def ask_question(role="Senior Software Engineer", topic=None, interviewer_persona=None):
+    """
+    Generate a question based on the role, topic and interviewer persona.
+
+    Args:
+        role (str)
+  @score2 = Here is the refactored code based on your specifications:
+
+```python
+import random
+
+def get_base_questions():
+    """
+    Get a set of base questions for each role and topic.
+
+    Returns:
+        dic
+  @q3 = def ask_question():
+    # Define a base set of questions for each role
+    question_sets = {
+        "Senior Software Engineer": [
+            "What are some common design patterns used in system desi
+  @a3 = To implement the `answer_question` function, we'll need to define a few more helper functions. We'll also add some example data for candidate personas.
+
+```python
+def ask_question():
+    # Define a ba
+  @score3 = To implement the `score_answer` function, we'll need to define a few more helper functions. We'll also add some example data for candidate scores.
+
+```python
+def score_answer():
+    # Define a base se
+  @transcript = The `answer_question` function would need to be implemented and integrated into the existing codebase. Here's an updated version of the code that includes a basic implementation for the `answer_questi
+  @evaluation_report = Here is a Python code snippet that refactors all five inputs into a single cohesive function, `overall_evaluation`, which evaluates questions based on the role, topic, and interviewer persona:
+
+```pyt
+============================================================
+Log: /home/gongai/.spl/logs/interview_sim-ollama-20260319-205055.log

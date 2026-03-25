@@ -1,0 +1,127 @@
+
+```bash
+spl2 run ./11_debate_arena/debate.spl --adapter ollama -m gemma3 topic=AI should be open-sourced
+```
+
+```spl2
+-- Recipe 11: Debate Arena
+-- Two LLM personas argue opposing sides of a topic, then a judge picks the winner.
+-- Demonstrates multi-perspective reasoning, adversarial generation, and semantic evaluation.
+--
+-- Usage:
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m gemma3 topic="AI should be open-sourced"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
+
+WORKFLOW debate_arena
+    INPUT: @topic TEXT
+    OUTPUT: @verdict TEXT
+DO
+    @round := 0
+    @max_rounds := 3
+    @pro_history := ''
+    @con_history := ''
+
+    -- Opening statements
+    GENERATE pro_argument(@topic, 'opening statement') INTO @pro
+    GENERATE con_argument(@topic, 'opening statement') INTO @con
+
+    @pro_history := @pro
+    @con_history := @con
+
+    -- Rebuttal rounds
+    WHILE @round < @max_rounds DO
+        -- Pro rebuts Con's latest point
+        GENERATE pro_argument(@topic, @con_history) INTO @pro_rebuttal
+        @pro_history := @pro_history + '\n---\n' + @pro_rebuttal
+
+        -- Con rebuts Pro's latest point
+        GENERATE con_argument(@topic, @pro_history) INTO @con_rebuttal
+        @con_history := @con_history + '\n---\n' + @con_rebuttal
+
+        @round := @round + 1
+    END
+
+    -- Judge evaluates both sides
+    GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+
+    COMMIT @verdict WITH status = 'complete', rounds = @round
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+        COMMIT @verdict WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @pro_history WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 9
+Tokens: 12634 in / 4733 out
+Latency: 76080ms
+------------------------------------------------------------
+```output
+The provided text does not contain a clear problem or question that requires a step-by-step solution. Instead, it appears to be a collection of arguments for and against open-sourcing Artificial Intelligence (AI), along with some general recommendations for addressing potential drawbacks.
+
+However, I can provide a summary of the main points:
+
+**Arguments For Open-Sourcing AI:**
+
+* Accelerating innovation through collaboration and knowledge-sharing
+* Promoting transparency and accountability in AI development
+* Reducing dependence on a single entity controlling the development process
+* Empowering global development and democratizing expertise
+
+**Arguments Against Open-Sourcing AI:**
+
+* Security risks due to increased exposure to vulnerabilities
+* Potential loss of control over the technology, leading to unintended consequences
+* Inadequate regulation and standards for open-source AI development and deployment
+
+**Recommendations:**
+
+* Implement robust security measures to protect sensitive information and prevent unauthorized access
+* Establish clear regulations and standards for AI development, deployment, and use
+* Provide adequate support and resources for developers, users, and stakeholders
+* Foster a culture of transparency, accountability, and collaboration within open-source AI communities
+
+If you would like to provide more context or clarify the specific problem or question being addressed, I'd be happy to try and assist you further.
+```
+------------------------------------------------------------
+Variables:
+  @topic = AI should be open-sourced
+  @round = 3.0
+  @max_rounds = 3
+  @pro_history = **Title:** The Case for Open-Source AI: Unlocking Innovation and Collaboration
+
+**Opening Statement:**
+
+As artificial intelligence (AI) continues to revolutionize industries and improve lives, it's es
+  @con_history = **Con Argument: AI Open-Sourcing**
+
+**Introduction**
+
+The debate on whether Artificial Intelligence (AI) should be open-sourced has sparked a heated discussion among experts and enthusiasts alike. In 
+  @pro = **Title:** The Case for Open-Source AI: Unlocking Innovation and Collaboration
+
+**Opening Statement:**
+
+As artificial intelligence (AI) continues to revolutionize industries and improve lives, it's es
+  @con = **Con Argument: AI Open-Sourcing**
+
+**Introduction**
+
+The debate on whether Artificial Intelligence (AI) should be open-sourced has sparked a heated discussion among experts and enthusiasts alike. In 
+  @pro_rebuttal = Here's an analysis of both arguments:
+
+**Pro-Open-Source Argument**
+
+The pro-open-source argument presents several compelling points in favor of making AI an open-source technology. The main benefits 
+  @con_rebuttal = Based on the analysis, I recommend a hybrid approach that balances the benefits of open-sourcing AI with the need to mitigate potential risks. Here's a detailed outline for this approach:
+
+**I. Robust
+  @verdict = The provided text does not contain a clear problem or question that requires a step-by-step solution. Instead, it appears to be a collection of arguments for and against open-sourcing Artificial Intel
+============================================================
+Log: /home/gongai/.spl/logs/debate-ollama-20260320-080430.log

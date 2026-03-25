@@ -1,0 +1,402 @@
+
+```bash
+spl run ./25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 topic=quantum computing audience=high school students
+```
+
+```spl
+-- Recipe 25: Nested Procedures
+-- Demonstrates PROCEDURE calling PROCEDURE — deep composability without external orchestration.
+-- Pattern: a high-level workflow delegates subtasks to reusable PROCEDURE units.
+--
+-- Usage:
+--   spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+--       topic="quantum computing" audience="high school students"
+--
+--   spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+--       topic="CRISPR gene editing" audience="policy makers" depth="deep"
+
+-- Inner PROCEDURE: generate a single explanation layer
+PROCEDURE explain_layer(content TEXT, audience TEXT, style TEXT DEFAULT 'clear and engaging')
+RETURNS TEXT
+DO
+    GENERATE explain(content, audience, style) INTO @explanation
+    COMMIT @explanation
+END
+
+-- Inner PROCEDURE: generate a concrete example for a concept
+PROCEDURE make_example(concept TEXT, context TEXT, audience TEXT)
+RETURNS TEXT
+DO
+    GENERATE concrete_example(concept, context, audience) INTO @example
+    COMMIT @example
+END
+
+-- Inner PROCEDURE: check comprehension level and simplify if needed
+PROCEDURE calibrate_complexity(text TEXT, audience TEXT, target_grade INT DEFAULT 8)
+RETURNS TEXT
+DO
+    GENERATE assess_reading_level(text) INTO @reading_level
+    EVALUATE @reading_level
+        WHEN > target_grade THEN
+            GENERATE simplify(text, audience) INTO @calibrated
+            COMMIT @calibrated
+        OTHERWISE
+            COMMIT text
+    END
+END
+
+-- Outer WORKFLOW: orchestrates the inner procedures
+WORKFLOW layered_explainer
+    INPUT: @topic TEXT, @audience TEXT, @depth TEXT DEFAULT 'standard'
+    OUTPUT: @article TEXT
+DO
+    -- Step 1: Research the topic
+    GENERATE research_overview(@topic) INTO @overview
+
+    -- Step 2: Delegate explanation to inner procedure
+    CALL explain_layer(
+        content  = @overview,
+        audience = @audience,
+        style    = 'clear, engaging, avoid jargon'
+    ) INTO @base_explanation
+
+    -- Step 3: Generate a concrete example via another inner procedure
+    CALL make_example(
+        concept  = @topic,
+        context  = @base_explanation,
+        audience = @audience
+    ) INTO @example
+
+    -- Step 4: Calibrate complexity (nested call inside a conditional)
+    CALL calibrate_complexity(
+        text         = @base_explanation,
+        audience     = @audience,
+        target_grade = 8
+    ) INTO @calibrated_explanation
+
+    -- Step 5: Assemble the final article
+    GENERATE assemble_article(
+        @topic,
+        @calibrated_explanation,
+        @example,
+        @depth
+    ) INTO @article
+
+    COMMIT @article WITH status = 'complete', audience = @audience
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 3076 in / 3064 out
+Latency: 43597ms
+------------------------------------------------------------
+```output
+Here is an assembled version of the input:
+
+**Welcome to the Amazing World of Quantum Computing!**
+
+Imagine a computer that can solve problems way faster than any computer we have today. It's like having a super-smart friend who can do math and science things in a flash!
+
+This is what quantum computing is all about: using special kinds of computers called "quantum computers" to solve problems that are too hard for regular computers.
+
+**What are Qubits?**
+
+Qubits (say "cue-bits") are like the building blocks of quantum computing. They're the tiny units that can exist in multiple states at the same time, which means they can process lots of information really fast!
+
+Think of it like a coin that can be both heads and tails at the same time. It's like having two coins in one!
+
+**How Does Quantum Computing Work?**
+
+Quantum computers use quantum gates (like special instructions) to manipulate those qubits. They can make them do all sorts of cool things, like:
+
+* **Superposition**: existing in multiple places at once
+* **Entanglement**: being connected to other qubits even if they're far apart
+
+**What Can Quantum Computing Do?**
+
+Quantum computers have the potential to:
+
+* **Break codes**: helping us keep our information safe and secure
+* **Solve puzzles**: really fast, which can help in fields like logistics and finance
+* **Do simulations**: create perfect models of things that are hard to study on regular computers
+* **Speed up math**: making it easier for scientists to solve tricky problems
+
+**Challenges**
+
+But there are some challenges we need to overcome:
+
+* **Error correction**: keeping those qubits from getting mixed up or lost
+* **Scalability**: making the computer big enough to do lots of calculations at once
+* **Noise**: dealing with random errors that can happen in quantum computers
+
+**What's Happening Now?**
+
+Researchers and companies are working hard to make quantum computing a reality. Some cool things they're doing include:
+
+* Building bigger and better quantum computers
+* Developing new ways to control those qubits
+* Creating special materials that can help quantum computers work better
+
+**The Future of Quantum Computing!**
+
+With so much potential, it's exciting to think about what the future might hold for quantum computing. Will we use it to solve world problems? Make new discoveries? Who knows!
+
+One thing is for sure: quantum computing has the power to change the game and make our lives easier, faster, and more fun!
+
+**High School Students Unite!**
+
+Welcome to the amazing world of science! As a high school student, you're probably curious about all sorts of cool topics. Today, we're going to explore one of the most exciting areas of science: quantum computing!
+
+**What is Quantum Computing?**
+
+Quantum computing is like having a super-smart friend who can do math and science things in a flash! It's a way of processing information that's way faster than regular computers.
+
+**Qubits: The Building Blocks**
+
+Qubits (say "cue-bits") are like the LEGO blocks of quantum computing. They're tiny units that can exist in multiple states at the same time, which means they can process lots of information really fast!
+
+Think of it like a coin that can be both heads and tails at the same time. It's like having two coins in one!
+
+**How Does Quantum Computing Work?**
+
+Quantum computers use quantum gates (like special instructions) to manipulate those qubits. They can make them do all sorts of cool things, like:
+
+* **Superposition**: existing in multiple places at once
+* **Entanglement**: being connected to other qubits even if they're far apart
+
+**What Can Quantum Computing Do?**
+
+Quantum computers have the potential to:
+
+* **Break codes**: helping us keep our information safe and secure
+* **Solve puzzles**: really fast, which can help in fields like logistics and finance
+* **Do simulations**: create perfect models of things that are hard to study on regular computers
+* **Speed up math**: making it easier for scientists to solve tricky problems
+
+**Challenges**
+
+But there are some challenges we need to overcome:
+
+* **Error correction**: keeping those qubits from getting mixed up or lost
+* **Scalability**: making the computer big enough to do lots of calculations at once
+* **Noise**: dealing with random errors that can happen in quantum computers
+
+**What's Happening Now?**
+
+Researchers and companies are working hard to make quantum computing a reality. Some cool things they're doing include:
+
+* Building bigger and better quantum computers
+* Developing new ways to control those qubits
+* Creating special materials that can help quantum computers work better
+
+**The Future of Quantum Computing!**
+
+With so much potential, it's exciting to think about what the future might hold for quantum computing. Will we use it to solve world problems
+```
+------------------------------------------------------------
+Variables:
+  @topic = quantum computing
+  @audience = high school students
+  @depth = standard
+  @overview = **Research Overview: Quantum Computing**
+
+Quantum computing is a revolutionary technology that uses the principles of quantum mechanics to perform calculations and operations on data. It has the potential to solve complex problems that are currently unsolvable or require an unfeasible amount of time to solve using classical computers.
+
+**Key Concepts:**
+
+1. **Qubits:** Quantum bits, also known as qubits, are the fundamental units of quantum information. They can exist in multiple states simultaneously, allowing for exponential scaling in computational power.
+2. **Quantum Gates:** Quantum gates are the quantum equivalent of logic gates in classical computing. They perform operations on qubits to manipulate their state.
+3. **Superposition:** Superposition is a quantum phenomenon where a qubit can exist in multiple states simultaneously. This property allows for parallel processing and exponential scaling in computational power.
+4. **Entanglement:** Entanglement is a quantum phenomenon where two or more qubits become connected, allowing them to be correlated with each other regardless of the distance between them.
+
+**Applications:**
+
+1. **Cryptography:** Quantum computing can potentially break current encryption algorithms, but it also enables new cryptographic techniques that are quantum-resistant.
+2. **Optimization:** Quantum computing can solve complex optimization problems much faster than classical computers, making it suitable for fields like logistics and finance.
+3. **Simulations:** Quantum computing can simulate complex systems more accurately than classical computers, enabling breakthroughs in fields like chemistry and materials science.
+4. **Machine Learning:** Quantum computing can speed up certain machine learning algorithms, such as k-means clustering and support vector machines.
+
+**Challenges:**
+
+1. **Error Correction:** Quantum computers are prone to errors due to the fragile nature of qubits. Developing robust error correction techniques is essential for large-scale quantum computing.
+2. **Scalability:** Currently, most quantum computers are small-scale and require significant resources to operate. Scaling up to thousands or millions of qubits while maintaining control over the system is a major challenge.
+3. **Quantum Noise:** Quantum noise can cause errors in quantum computations. Developing methods to mitigate this noise is crucial for large-scale quantum computing.
+
+**Current State:**
+
+1. **Google's Sycamore Chip:** In 2019, Google announced a 53-qubit quantum processor called Sycamore, which demonstrated quantum supremacy.
+2. **IBM's Quantum Experience:** IBM offers a cloud-based quantum computer with up to 53 qubits, enabling researchers and developers to explore quantum computing.
+3. **Rigetti Computing's Forest:** Rigetti Computing has developed a 128-qubit quantum processor called Forest, which is designed for practical applications.
+
+**Future Directions:**
+
+1. **Quantum-Classical Hybrids:** Developing hybrid systems that combine classical and quantum computing can help overcome current scalability challenges.
+2. **Adiabatic Quantum Computers:** Adiabatic quantum computers use a continuous process to find the ground state of a system, which can lead to more efficient computation.
+3. **Topological Quantum Computing:** Topological quantum computing uses exotic materials called topological insulators to create fault-tolerant quantum processors.
+
+**Conclusion:**
+
+Quantum computing has the potential to revolutionize various fields by solving complex problems that are currently unsolvable or require an unfeasible amount of time to solve using classical computers. While significant challenges remain, ongoing research and development aim to overcome these obstacles and unlock the full potential of quantum computing.
+  @base_explanation = **Welcome to the Amazing World of Quantum Computing!**
+
+Imagine a computer that can solve problems way faster than any computer we have today. It's like having an super-smart friend who can do math and science things in a flash!
+
+This is what quantum computing is all about: using special kinds of computers called "quantum computers" to solve problems that are too hard for regular computers.
+
+**What are Qubits?**
+
+Qubits (say "cue-bits") are like the building blocks of quantum computing. They're the tiny units that can exist in multiple states at the same time, which means they can process lots of information really fast!
+
+Think of it like a coin that can be both heads and tails at the same time. It's like having two coins in one!
+
+**How Does Quantum Computing Work?**
+
+Quantum computers use quantum gates (like special instructions) to manipulate these qubits. They can make them do all sorts of cool things, like:
+
+* **Superposition**: existing in multiple places at once
+* **Entanglement**: being connected to other qubits even if they're far apart
+
+**What Can Quantum Computing Do?**
+
+Quantum computers have the potential to:
+
+* **Break codes**: helping us keep our information safe and secure
+* **Solve puzzles**: really fast, which can help in fields like logistics and finance
+* **Do simulations**: create perfect models of things that are hard to study on regular computers
+* **Speed up math**: making it easier for scientists to solve tricky problems
+
+**Challenges**
+
+But there are some challenges we need to overcome:
+
+* **Error correction**: keeping those qubits from getting mixed up or lost
+* **Scalability**: making the computer big enough to do lots of calculations at once
+* **Noise**: dealing with random errors that can happen in quantum computers
+
+**What's Happening Now?**
+
+Researchers and companies are working hard to make quantum computing a reality. Some cool things they're doing include:
+
+* Building bigger and better quantum computers
+* Developing new ways to control those qubits
+* Creating special materials that can help quantum computers work better
+
+**The Future of Quantum Computing!**
+
+With so much potential, it's exciting to think about what the future might hold for quantum computing. Will we use it to solve world problems? Make new discoveries? Who knows!
+
+One thing is for sure: quantum computing has the power to change the game and make our lives easier, faster, and more fun!
+  @example = **High School Students Unite!**
+
+Welcome to the amazing world of science! As a high school student, you're probably curious about all sorts of cool topics. Today, we're going to explore one of the most exciting areas of science: quantum computing!
+
+**What is Quantum Computing?**
+
+Quantum computing is like having a super-smart friend who can do math and science things in a flash! It's a way of processing information that's way faster than regular computers.
+
+**Qubits: The Building Blocks**
+
+Qubits (say "cue-bits") are like the LEGO blocks of quantum computing. They're tiny units that can exist in multiple states at the same time, which means they can process lots of information really fast!
+
+Think of it like a coin that can be both heads and tails at the same time. It's like having two coins in one!
+
+**How Does Quantum Computing Work?**
+
+Quantum computers use quantum gates (like special instructions) to manipulate those qubits. They can make them do all sorts of cool things, like:
+
+* **Superposition**: existing in multiple places at once
+* **Entanglement**: being connected to other qubits even if they're far apart
+
+**What Can Quantum Computing Do?**
+
+Quantum computers have the potential to:
+
+* **Break codes**: helping us keep our information safe and secure
+* **Solve puzzles**: really fast, which can help in fields like logistics and finance
+* **Do simulations**: create perfect models of things that are hard to study on regular computers
+* **Speed up math**: making it easier for scientists to solve tricky problems
+
+**Challenges**
+
+But there are some challenges we need to overcome:
+
+* **Error correction**: keeping those qubits from getting mixed up or lost
+* **Scalability**: making the computer big enough to do lots of calculations at once
+* **Noise**: dealing with random errors that can happen in quantum computers
+
+**What's Happening Now?**
+
+Researchers and companies are working hard to make quantum computing a reality. Some cool things they're doing include:
+
+* Building bigger and better quantum computers
+* Developing new ways to control those qubits
+* Creating special materials that can help quantum computers work better
+
+**The Future of Quantum Computing!**
+
+With so much potential, it's exciting to think about what the future might hold for quantum computing. Will we use it to solve world problems? Make new discoveries? Who knows!
+
+One thing is for sure: quantum computing has the power to change the game and make our lives easier, faster, and more fun!
+
+**Get Involved!**
+
+As a high school student, you have a lot of potential to contribute to the field of quantum computing. Here are some ways you can get involved:
+
+* **Learn more**: read books, watch videos, and talk to experts about quantum computing
+* **Join a coding club or robotics team**: practice your problem-solving skills and learn new programming languages
+* **Participate in science fairs or competitions**: showcase your projects and ideas to the world!
+
+The future of quantum computing is bright, and it's up to you to help shape it!
+  @calibrated_explanation = **Welcome to the Amazing World of Quantum Computing!**
+
+Imagine a computer that can solve problems way faster than any computer we have today. It's like having an super-smart friend who can do math and science things in a flash!
+
+This is what quantum computing is all about: using special kinds of computers called "quantum computers" to solve problems that are too hard for regular computers.
+
+**What are Qubits?**
+
+Qubits (say "cue-bits") are like the building blocks of quantum computing. They're the tiny units that can exist in multiple states at the same time, which means they can process lots of information really fast!
+
+Think of it like a coin that can be both heads and tails at the same time. It's like having two coins in one!
+
+**How Does Quantum Computing Work?**
+
+Quantum computers use quantum gates (like special instructions) to manipulate these qubits. They can make them do all sorts of cool things, like:
+
+* **Superposition**: existing in multiple places at once
+* **Entanglement**: being connected to other qubits even if they're far apart
+
+**What Can Quantum Computing Do?**
+
+Quantum computers have the potential to:
+
+* **Break codes**: helping us keep our information safe and secure
+* **Solve puzzles**: really fast, which can help in fields like logistics and finance
+* **Do simulations**: create perfect models of things that are hard to study on regular computers
+* **Speed up math**: making it easier for scientists to solve tricky problems
+
+**Challenges**
+
+But there are some challenges we need to overcome:
+
+* **Error correction**: keeping those qubits from getting mixed up or lost
+* **Scalability**: making the computer big enough to do lots of calculations at once
+* **Noise**: dealing with random errors that can happen in quantum computers
+
+**What's Happening Now?**
+
+Researchers and companies are working hard to make quantum computing a reality. Some cool things they're doing include:
+
+* Building bigger and better quantum computers
+* Developing new ways to control those qubits
+* Creating special materials that can help quantum computers work better
+
+**The Future of Quantum Computing!**
+
+With so much potential, it's exciting to think about what the future might hold for quantum computing. Will we use it to solve world problems? Make new discoveries? Who knows!
+
+One thing is for sure: quantum computing has the power to change the game and make our lives easier, faster, and more fun!
+============================================================
+Log: /home/gongai/.spl/logs/nested_procs-ollama-20260323-215517.log

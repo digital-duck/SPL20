@@ -1,8 +1,0 @@
-PROMPT classify_intent
-SELECT @input AS text LIMIT 100 TOKENS
-GENERATE extract_entities(text) INTO @entities;
-
-DO
-  GENERATE classify_entities(@entities) INTO @intent;
-  COMMIT @intent;
-END;

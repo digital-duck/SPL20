@@ -1,0 +1,233 @@
+
+```bash
+spl2 run ./29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs output_format=markdown
+```
+
+```spl2
+-- Recipe 29: Meeting Notes → Action Items
+-- Transcript in, structured TODO list + owners out.
+-- Demonstrates multi-step extraction + structured output from long-form text.
+--
+-- Usage:
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 \
+--       transcript="$(cat meeting.txt)"
+--
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama \
+--       transcript="Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs" \
+--       output_format="markdown"
+
+CREATE FUNCTION action_item_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "meeting_summary": {"type": "string"},
+    "decisions":       {"type": "array", "items": {"type": "string"}},
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task":     {"type": "string"},
+          "owner":    {"type": "string"},
+          "due_date": {"type": "string"},
+          "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+          "context":  {"type": "string"}
+        },
+        "required": ["task", "priority"]
+      }
+    },
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "next_meeting":   {"type": "string"}
+  },
+  "required": ["meeting_summary", "action_items"]
+}
+$$;
+
+WORKFLOW meeting_to_actions
+    INPUT: @transcript TEXT, @output_format TEXT DEFAULT 'json'
+    OUTPUT: @output TEXT
+DO
+    -- Step 1: Identify speakers and normalize transcript
+    GENERATE normalize_transcript(@transcript) INTO @clean_transcript
+
+    -- Step 2: Extract structured action items
+    GENERATE extract_actions(@clean_transcript, action_item_schema()) INTO @structured_json
+
+    -- Step 3: Validate — flag unowned high-priority items
+    GENERATE validate_action_items(@structured_json) INTO @validation_notes
+
+    -- Step 4: Format output
+    EVALUATE @output_format
+        WHEN = 'markdown' THEN
+            GENERATE format_as_markdown(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'markdown'
+        WHEN = 'email' THEN
+            GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'email'
+        OTHERWISE
+            SET @output = @structured_json
+            COMMIT @output WITH status = 'complete', format = 'json'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Long transcript — chunk and summarize first
+        GENERATE summarize_transcript(@transcript) INTO @summary
+        GENERATE extract_actions(@summary, action_item_schema()) INTO @structured_json
+        SET @output = @structured_json
+        COMMIT @output WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 757 in / 1042 out
+Latency: 12960ms
+------------------------------------------------------------
+```output
+To extract actions from a transcript, you can create a function that uses named entity recognition (NER) techniques to identify names and locations mentioned in the text. Here's an example of how you could do this:
+
+```python
+import re
+import spacy
+
+# Load the spaCy model for English
+nlp = spacy.load("en_core_web_sm")
+
+def extract_actions(transcript):
+    # Process the transcript using spaCy
+    doc = nlp(transcript)
+
+    # Initialize an empty list to store extracted actions
+    actions = []
+
+    # Iterate over the entities in the document
+    for entity in doc.ents:
+        # Check if the entity is a person or location (assuming these are the only types of actions)
+        if entity.label_ == "PERSON":
+            actions.append(entity.text)
+
+    return actions
+
+transcript = """Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs"""
+
+actions = extract_actions(transcript)
+print(actions)
+```
+
+This script will output:
+
+```python
+['we', 'also']
+```
+
+However, this is a very basic example. In practice, you would likely want to use more sophisticated NER techniques and consider other types of entities as well.
+
+To make the code more flexible and reusable, you could also create a class with an `extract_actions` method that takes a transcript and returns a list of extracted actions:
+
+```python
+import re
+import spacy
+
+class TranscriptParser:
+    def __init__(self):
+        self.nlp = spacy.load("en_core_web_sm")
+
+    def extract_actions(self, transcript):
+        doc = self.nlp(transcript)
+        actions = [entity.text for entity in doc.ents if entity.label_ == "PERSON"]
+        return actions
+
+parser = TranscriptParser()
+transcript = """Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs"""
+
+actions = parser.extract_actions(transcript)
+print(actions)
+```
+
+This version of the script is more modular and can be easily extended to handle other types of entities or to use different NER models.
+```
+------------------------------------------------------------
+Variables:
+  @transcript = Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs
+  @output_format = markdown
+  @clean_transcript = import re
+
+def normalize_transcript(transcript):
+    # Remove leading/trailing whitespace from each line
+    lines = [line.strip() for line in transcript.split('\n')]
+    
+    # Normalize punctuation
+    lines = [' '.join(re.split(r'([.!?])', line)) for line in lines]
+    lines = [' '.join(re.split(r'([,;:])', line)) for line in lines]
+    lines = [re.sub(r'\s+', ' ', line) for line in lines]
+    
+    # Remove duplicate lines
+    lines = list(set(lines))
+    
+    return '\n'.join(lines)
+
+transcript = """Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs"""
+
+print(normalize_transcript(transcript))
+  @validation_notes = The code provided has a few issues that prevent it from being fully functional:
+
+1.  The `re` module is not used anywhere in the code, which means it's unnecessary.
+2.  The `extract_actions` method within the class doesn't handle all types of entities correctly. It only checks for "PERSON" entities and returns their text. In a real-world application, you would likely want to extract actions from various entity types (e.g., location, organization, date).
+
+Here's an enhanced version of the code that addresses these issues:
+
+```python
+import spacy
+
+class TranscriptParser:
+    def __init__(self):
+        self.nlp = spacy.load("en_core_web_sm")
+
+    def extract_actions(self, transcript):
+        doc = self.nlp(transcript)
+        actions = []
+        
+        # Extract actions from PERSON entities
+        for person in doc.ents:
+            if person.label_ == "PERSON":
+                actions.append(person.text)
+                
+        # Extract actions from DATE entities (assuming these represent deadlines or time constraints)
+        for date in doc.ents:
+            if date.label_ == "DATE":
+                actions.append(date.text)
+                
+        # Extract actions from LOCATION entities
+        for location in doc.ents:
+            if location.label_ == "GPE":  # Government-protected entity (locations)
+                actions.append(location.text)
+                    
+        return actions
+
+parser = TranscriptParser()
+transcript = """Alice: we need to fix the login bug before Friday.
+Bob: I'll handle it.
+Alice: also need to update the docs"""
+
+actions = parser.extract_actions(transcript)
+print(actions)
+```
+
+In this code:
+
+*   We added support for extracting actions from `DATE` entities, which can represent deadlines or time constraints.
+*   For location entities, we use the "GPE" label since it's the standard label for geographic locations in spaCy.
+*   The `extract_actions` method now returns a list of extracted actions, including those from various entity types.
+
+This enhanced version provides more flexibility and accuracy in extracting actions from transcripts.
+============================================================
+Log: /home/gongai/.spl/logs/meeting_actions-ollama-20260320-193158.log

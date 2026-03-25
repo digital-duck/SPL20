@@ -1,0 +1,150 @@
+
+```bash
+spl2 run ./25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 topic=quantum computing audience=high school students
+```
+
+```sql
+-- Recipe 25: Nested Procedures
+-- Demonstrates PROCEDURE calling PROCEDURE — deep composability without external orchestration.
+-- Pattern: a high-level workflow delegates subtasks to reusable PROCEDURE units.
+--
+-- Usage:
+--   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+--       topic="quantum computing" audience="high school students"
+--
+--   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+--       topic="CRISPR gene editing" audience="policy makers" depth="deep"
+
+-- Inner PROCEDURE: generate a single explanation layer
+PROCEDURE explain_layer(content TEXT, audience TEXT, style TEXT DEFAULT 'clear and engaging')
+RETURNS TEXT
+DO
+    GENERATE explain(content, audience, style) INTO @explanation
+    COMMIT @explanation
+END
+
+-- Inner PROCEDURE: generate a concrete example for a concept
+PROCEDURE make_example(concept TEXT, context TEXT, audience TEXT)
+RETURNS TEXT
+DO
+    GENERATE concrete_example(concept, context, audience) INTO @example
+    COMMIT @example
+END
+
+-- Inner PROCEDURE: check comprehension level and simplify if needed
+PROCEDURE calibrate_complexity(text TEXT, audience TEXT, target_grade INT DEFAULT 8)
+RETURNS TEXT
+DO
+    GENERATE assess_reading_level(text) INTO @reading_level
+    EVALUATE @reading_level
+        WHEN > target_grade THEN
+            GENERATE simplify(text, audience) INTO @calibrated
+            COMMIT @calibrated
+        OTHERWISE
+            COMMIT text
+    END
+END
+
+-- Outer WORKFLOW: orchestrates the inner procedures
+WORKFLOW layered_explainer
+    INPUT: @topic TEXT, @audience TEXT, @depth TEXT DEFAULT 'standard'
+    OUTPUT: @article TEXT
+DO
+    -- Step 1: Research the topic
+    GENERATE research_overview(@topic) INTO @overview
+
+    -- Step 2: Delegate explanation to inner procedure
+    CALL explain_layer(
+        content  = @overview,
+        audience = @audience,
+        style    = 'clear, engaging, avoid jargon'
+    ) INTO @base_explanation
+
+    -- Step 3: Generate a concrete example via another inner procedure
+    CALL make_example(
+        concept  = @topic,
+        context  = @base_explanation,
+        audience = @audience
+    ) INTO @example
+
+    -- Step 4: Calibrate complexity (nested call inside a conditional)
+    CALL calibrate_complexity(
+        text         = @base_explanation,
+        audience     = @audience,
+        target_grade = 8
+    ) INTO @calibrated_explanation
+
+    -- Step 5: Assemble the final article
+    GENERATE assemble_article(
+        @topic,
+        @calibrated_explanation,
+        @example,
+        @depth
+    ) INTO @article
+
+    COMMIT @article WITH status = 'complete', audience = @audience
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 3276 in / 2671 out
+Latency: 141414ms
+------------------------------------------------------------
+```output
+Based on the input article about quantum computing, I will assemble an article that provides information on how quantum computing can be used to improve education for high school students.
+
+**Title:** "Quantum Computing for High School Students: Unlocking the Future of STEM Education"
+
+**Introduction:**
+
+As we continue to explore the possibilities of quantum computing, it's essential to involve the next generation of scientists and engineers in this exciting field. Quantum computing has the potential to revolutionize various aspects of education, from personalized learning to real-world problem-solving.
+
+**The Power of Quantum Computing for High School Students:**
+
+Quantum computing can be used to improve high school students' understanding of mathematical concepts, develop their problem-solving skills, and open doors to career opportunities in STEM fields. By introducing quantum computing frameworks and algorithms, teachers can create engaging and interactive lessons that make complex concepts more accessible.
+
+**Applications of Quantum Computing in Education:**
+
+1. **Quantum Computing for Science Literacy**: Develop interactive simulations that allow high school students to explore quantum mechanics and its applications. Create virtual labs where students can conduct experiments with qubits and observe the effects of superposition and entanglement.
+2. **Quantum Computing for Math and Statistics**: Introduce high school students to mathematical concepts like linear algebra, calculus, and probability using quantum computing frameworks. Use quantum-inspired algorithms to optimize complex problems in mathematics and statistics, such as machine learning and data analysis.
+3. **Quantum Computing for Coding and Software Development**: Teach high school students programming languages like Python or Java with a focus on quantum computing and machine learning. Introduce students to coding challenges and competitions that involve quantum computing, such as solving optimization problems or predicting stock prices.
+
+**Benefits of Quantum Computing in Education:**
+
+1. **Improved Understanding**: Quantum computing enables high school students to gain a deeper understanding of mathematical concepts and their real-world applications.
+2. **Enhanced Problem-Solving Skills**: By working with quantum algorithms and simulations, students develop problem-solving skills that can be applied to various fields.
+3. **Career Opportunities**: Exposure to quantum computing opens doors for career opportunities in STEM fields, from research and development to entrepreneurship.
+
+**Challenges Ahead:**
+
+1. **Accessibility**: Ensure that high-quality educational resources are accessible to all students, regardless of their background or location.
+2. **Teacher Training**: Provide teachers with the necessary training and support to effectively integrate quantum computing into their curricula.
+3. **Standardization**: Establish standards for evaluating student progress and outcomes in quantum computing education.
+
+**Conclusion:**
+
+Quantum computing has the potential to revolutionize the way we approach STEM education, particularly for high school students. By providing accessible and engaging educational resources, we can inspire a new generation of scientists, engineers, and innovators who are equipped to tackle complex problems in quantum computing.
+```
+------------------------------------------------------------
+Variables:
+  @topic = quantum computing
+  @audience = high school students
+  @overview = **Research Overview: Quantum Computing**
+
+Quantum computing is a revolutionary technology that leverages the principles of quantum mechanics to perform calculations and operations on data. It has the 
+  @base_explanation = **Welcome to the Amazing World of Quantum Computing!**
+
+Imagine a computer that can solve problems way faster than the most powerful supercomputers today. A computer that can simulate complex systems 
+  @example = Based on the input, I'll create a concrete example of how quantum computing can be used to improve education for high school students.
+
+**Title:** "Quantum Computing for High School Students: Unlockin
+  @calibrated_explanation = **Welcome to the Amazing World of Quantum Computing!**
+
+Imagine a computer that can solve problems way faster than the most powerful supercomputers today. A computer that can simulate complex systems 
+  @article = Based on the input article about quantum computing, I will assemble an article that provides information on how quantum computing can be used to improve education for high school students.
+
+**Title:**
+============================================================
+Log: /home/gongai/.spl/logs/nested_procs-ollama-20260320-055219.log

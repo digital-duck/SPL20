@@ -1,7 +1,7 @@
 """SPL 2.0 Parser: hand-written recursive descent parser producing AST from tokens.
 
 Extends SPL 1.0 parser with WORKFLOW, PROCEDURE, EVALUATE, WHILE, DO,
-COMMIT, RETRY, RAISE, assignment, GENERATE...INTO, CALL, and SELECT...INTO.
+COMMIT, RETRY, RAISE, LOGGING, assignment, GENERATE...INTO, CALL, and SELECT...INTO.
 """
 
 from spl.tokens import Token, TokenType
@@ -15,7 +15,8 @@ from spl.ast_nodes import (
     WorkflowStatement, ProcedureStatement, DoBlock, ExceptionHandler,
     EvaluateStatement, WhenClause, SemanticCondition, ComparisonCondition,
     WhileStatement, CommitStatement, RetryStatement, RaiseStatement,
-    AssignmentStatement, GenerateIntoStatement, CallStatement, SelectIntoStatement,
+    LoggingStatement, AssignmentStatement, GenerateIntoStatement, CallStatement,
+    SelectIntoStatement, FStringLiteral, ListLiteral,
 )
 
 
@@ -84,6 +85,10 @@ class Parser:
         if self._check(TokenType.CALL):
             return self._parse_call_statement()
 
+        # LOGGING expr [TO 'file']
+        if self._check(TokenType.LOGGING):
+            return self._parse_logging_statement()
+
         # GENERATE ... INTO @var (inside workflows)
         if self._check(TokenType.GENERATE):
             return self._parse_generate_into_statement()
@@ -118,8 +123,8 @@ class Parser:
         return self._check_any(TokenType.END, TokenType.EXCEPTION, TokenType.EOF)
 
     def _is_when_or_end(self) -> bool:
-        """Check if we've reached WHEN, OTHERWISE, or END."""
-        return self._check_any(TokenType.WHEN, TokenType.OTHERWISE, TokenType.END, TokenType.EOF)
+        """Check if we've reached WHEN, ELSE, or END."""
+        return self._check_any(TokenType.WHEN, TokenType.ELSE, TokenType.END, TokenType.EOF)
 
     # ================================================================
     # SPL 1.0: PROMPT Statement (unchanged)
@@ -759,6 +764,8 @@ class Parser:
         default_value = None
 
         # Optional type
+        # Type annotation — BOOL, TEXT, NUMBER, LIST all arrive as IDENTIFIER
+        # since none of them are reserved keywords
         if self._check(TokenType.IDENTIFIER):
             param_type = self._advance().value
 
@@ -892,7 +899,7 @@ class Parser:
             ))
 
         otherwise_stmts = []
-        if self._check(TokenType.OTHERWISE):
+        if self._check(TokenType.ELSE):
             self._advance()
             while not self._check_any(TokenType.END, TokenType.EOF):
                 otherwise_stmts.append(self._parse_body_statement())
@@ -904,7 +911,7 @@ class Parser:
         return EvaluateStatement(
             expression=expression,
             when_clauses=when_clauses,
-            otherwise_statements=otherwise_stmts,
+            else_statements=otherwise_stmts,
         )
 
     def _parse_evaluate_condition(self):
@@ -1094,6 +1101,33 @@ class Parser:
         return RaiseStatement(exception_type=exception_type, message=message)
 
     # ================================================================
+    # SPL 2.0: LOGGING Statement
+    # ================================================================
+
+    def _parse_logging_statement(self) -> LoggingStatement:
+        """Parse LOGGING <expr> [LEVEL DEBUG|INFO|WARN|ERROR] [TO 'file_path']
+        Examples:
+            LOGGING @chunk_summary
+            LOGGING f'Step {@chunk_index} complete' LEVEL DEBUG
+            LOGGING @debug_info TO 'debug.log'
+            LOGGING f'Error: {@msg}' LEVEL ERROR TO 'errors.log'
+        """
+        self._expect(TokenType.LOGGING)
+        expression = self._parse_expression()
+
+        level = "INFO"
+        if self._check(TokenType.LEVEL):
+            self._advance()
+            level = self._expect_identifier_or_keyword().value.upper()
+
+        destination = None
+        if self._check(TokenType.TO):
+            self._advance()
+            destination = self._expect(TokenType.STRING).value
+
+        return LoggingStatement(expression=expression, level=level, destination=destination)
+
+    # ================================================================
     # SPL 2.0: Assignment Statement
     # ================================================================
 
@@ -1264,10 +1298,10 @@ class Parser:
     # ================================================================
 
     def _parse_expression(self) -> Expression:
-        """Parse an expression with optional +/- operations."""
+        """Parse an expression with optional +/- and || (concat) operations."""
         left = self._parse_primary()
 
-        while self._check_any(TokenType.PLUS, TokenType.MINUS):
+        while self._check_any(TokenType.PLUS, TokenType.MINUS, TokenType.PIPE_PIPE):
             op = self._advance().value
             right = self._parse_primary()
             left = BinaryOp(left=left, op=op, right=right)
@@ -1290,6 +1324,31 @@ class Parser:
                 self._expect(TokenType.RBRACKET)
                 return FunctionCall(name="GET", arguments=[param, index_expr])
             return param
+
+        # F-string literal: f'text {@var} text'
+        if tok.type == TokenType.FSTRING:
+            self._advance()
+            return FStringLiteral(template=tok.value)
+
+        # List literal: [] or [expr, expr, ...]
+        if tok.type == TokenType.LBRACKET:
+            self._advance()  # consume [
+            elements: list[Expression] = []
+            if not self._check(TokenType.RBRACKET):
+                elements.append(self._parse_expression())
+                while self._check(TokenType.COMMA):
+                    self._advance()
+                    elements.append(self._parse_expression())
+            self._expect(TokenType.RBRACKET)
+            return ListLiteral(elements=elements)
+
+        # Boolean literals
+        if tok.type == TokenType.TRUE:
+            self._advance()
+            return Literal(value=True, literal_type="bool")
+        if tok.type == TokenType.FALSE:
+            self._advance()
+            return Literal(value=False, literal_type="bool")
 
         # String literal
         if tok.type == TokenType.STRING:

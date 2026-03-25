@@ -235,6 +235,8 @@
         "spl",
         "run",
         "./13_map_reduce/map_reduce.spl",
+        "--tools",
+        "./13_map_reduce/tools.py",
         "--adapter",
         "ollama",
         "document=The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization.",

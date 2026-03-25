@@ -1,0 +1,149 @@
+
+```bash
+spl2 run ./11_debate_arena/debate.spl --adapter ollama -m gemma3 topic=AI should be open-sourced
+```
+
+```sql
+-- Recipe 11: Debate Arena
+-- Two LLM personas argue opposing sides of a topic, then a judge picks the winner.
+-- Demonstrates multi-perspective reasoning, adversarial generation, and semantic evaluation.
+--
+-- Usage:
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m gemma3 topic="AI should be open-sourced"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
+
+WORKFLOW debate_arena
+    INPUT: @topic TEXT
+    OUTPUT: @verdict TEXT
+DO
+    @round := 0
+    @max_rounds := 3
+    @pro_history := ''
+    @con_history := ''
+
+    -- Opening statements
+    GENERATE pro_argument(@topic, 'opening statement') INTO @pro
+    GENERATE con_argument(@topic, 'opening statement') INTO @con
+
+    @pro_history := @pro
+    @con_history := @con
+
+    -- Rebuttal rounds
+    WHILE @round < @max_rounds DO
+        -- Pro rebuts Con's latest point
+        GENERATE pro_argument(@topic, @con_history) INTO @pro_rebuttal
+        @pro_history := @pro_history + '\n---\n' + @pro_rebuttal
+
+        -- Con rebuts Pro's latest point
+        GENERATE con_argument(@topic, @pro_history) INTO @con_rebuttal
+        @con_history := @con_history + '\n---\n' + @con_rebuttal
+
+        @round := @round + 1
+    END
+
+    -- Judge evaluates both sides
+    GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+
+    COMMIT @verdict WITH status = 'complete', rounds = @round
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+        COMMIT @verdict WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @pro_history WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 9
+Tokens: 12127 in / 5142 out
+Latency: 86341ms
+------------------------------------------------------------
+Committed: **Revised Argument:**
+
+The development and deployment of artificial intelligence (AI) technologies have the potential to revolutionize numerous industries and improve lives worldwide. However, the current trend towards proprietary and closed-source AI systems raises significant concerns about access, transparency, and accountability.
+
+**Argument 1: Increased Collaboration and Innovation**
+
+Open-sourcing AI can foster a community-driven approach to research and development, leading to accelerated innovation and breakthroughs. By making AI code freely available, developers from diverse backgrounds can contribute to the field, share their expertise, and collaborate on projects that might not have been possible otherwise.
+
+**Argument 2: Improved Transparency and Accountability**
+
+Closed-source AI systems often lack transparency, making it difficult for researchers, policymakers, and the public to understand how these technologies work and what data they are used with. Open-sourcing AI can provide a level of visibility, enabling users to evaluate the code's integrity, identify potential biases, and hold developers accountable for their actions.
+
+**Argument 3: Enhanced Democratic Control**
+
+Open-sourced AI can help democratize access to these powerful technologies, allowing governments, non-profits, and individual developers to contribute to the development process. This can lead to more inclusive decision-making, as diverse stakeholders can participate in shaping the direction of AI research and applications.
+
+**Addressing Counterarguments:**
+
+*   **Counterargument 1: Potential Security Risks**
+While there is a potential risk that open-sourcing AI could compromise security, this concern can be mitigated by implementing robust security measures, such as regular audits, vulnerability testing, and secure coding practices. Moreover, the benefits of increased collaboration and transparency far outweigh the potential risks.
+*   **Counterargument 2: Loss of Intellectual Property Rights**
+The loss of intellectual property rights can be addressed by establishing clear licensing terms, granting credit to original creators, and providing alternative revenue streams for contributors.
+
+**Emphasizing the Social Impact**
+
+Open-sourcing AI has the potential to positively impact numerous aspects of society, including:
+
+*   **Increased access to education**: By making AI code freely available, developers from diverse backgrounds can contribute to the field, share their expertise, and collaborate on projects that might not have been possible otherwise.
+*   **Improved civic engagement**: Open-sourced AI can facilitate more inclusive decision-making processes, enabling diverse stakeholders to participate in shaping the direction of AI research and applications.
+*   **Enhanced public health outcomes**: By making AI code freely available, researchers and developers can work together to develop AI solutions that address pressing public health challenges.
+
+**Addressing the "Trade-Off" between Security and Openness**
+
+While some might argue that sacrificing security for the sake of openness is a trade-off that's too high, I firmly believe that robust security measures can be implemented without compromising the open-source model. By prioritizing transparency and accountability, we can create an ecosystem where diverse stakeholders collaborate to develop AI technologies that benefit humanity as a whole.
+
+**Conclusion:**
+
+In conclusion, open-sourcing AI is not only a necessary step forward in the development of these technologies but also essential for promoting collaboration, transparency, and democratic control over the future direction of AI research. By embracing openness, we can unlock the full potential of AI to drive positive change, improve lives worldwide, and foster a more inclusive and equitable society.
+
+**Additional Suggestions:**
+
+1.  **Highlight the role of diverse stakeholders in AI development**: Emphasize the importance of inclusive decision-making processes, where diverse stakeholders (e.g., researchers, policymakers, industry experts) contribute to shaping the direction of AI research and applications.
+2.  **Explore the potential for open-sourcing AI as a public good**: Consider framing open-sourcing AI as a public good that can benefit society as a whole, rather than just a means for individual developers or companies to advance their interests.
+
+By incorporating these suggestions, the revised argument becomes even stronger and more persuasive, emphasizing the benefits of open-sourcing AI and addressing potential concerns in a comprehensive manner.
+------------------------------------------------------------
+Variables:
+  @topic = AI should be open-sourced
+  @round = 3.0
+  @max_rounds = 3
+  @pro_history = Here's a persuasive argument in favor of making AI open-sourced:
+
+**Opening Statement**
+
+The development and deployment of Artificial Intelligence (AI) systems has reached an unprecedented level of so
+  @con_history = **Con Argument: AI Should Be Open-Sourced**
+
+**Opening Statement:**
+
+"The development and deployment of artificial intelligence (AI) technologies have the potential to revolutionize numerous industrie
+  @pro = Here's a persuasive argument in favor of making AI open-sourced:
+
+**Opening Statement**
+
+The development and deployment of Artificial Intelligence (AI) systems has reached an unprecedented level of so
+  @con = **Con Argument: AI Should Be Open-Sourced**
+
+**Opening Statement:**
+
+"The development and deployment of artificial intelligence (AI) technologies have the potential to revolutionize numerous industrie
+  @pro_rebuttal = Based on the evaluation provided, here are some additional suggestions to further strengthen the con-argument:
+
+**Additional Suggestions:**
+
+1. **Emphasize the social impact**: While the argument high
+  @con_rebuttal = I'll provide a structured response that incorporates the suggestions from my previous evaluation:
+
+**Revised Argument:**
+
+The development and deployment of artificial intelligence (AI) technologies ha
+  @verdict = **Revised Argument:**
+
+The development and deployment of artificial intelligence (AI) technologies have the potential to revolutionize numerous industries and improve lives worldwide. However, the cur
+============================================================
+Log: /home/gongai/.spl/logs/debate-ollama-20260319-203702.log

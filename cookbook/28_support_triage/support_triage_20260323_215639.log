@@ -1,0 +1,301 @@
+
+```bash
+spl run ./28_support_triage/support_triage.spl --adapter ollama -m gemma3 ticket=My account has been charged twice for the same order #12345
+```
+
+```spl
+-- Recipe 28: Customer Support Triage
+-- Classify → route → draft response in a single workflow.
+-- Demonstrates multi-step pipeline with branching, deterministic tool calls for
+-- order lookup, and LLM generation grounded in real order data.
+--
+-- Usage:
+--   spl run cookbook/28_support_triage/support_triage.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/28_support_triage/tools.py \
+--       ticket="My account has been charged twice for the same order #ORD-12345"
+--
+--   spl run cookbook/28_support_triage/support_triage.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/28_support_triage/tools.py \
+--       ticket="Package for order ORD-67890 hasn't arrived, it's been 10 days" \
+--       product="CloudDash" tone="empathetic"
+--
+--   spl run cookbook/28_support_triage/support_triage.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/28_support_triage/tools.py \
+--       ticket="I can't log in, password reset email never arrives" \
+--       tone="friendly"
+
+-- ── Helper functions (evaluated locally, zero LLM cost) ────────────────────
+
+CREATE FUNCTION support_categories()
+RETURNS TEXT AS $$
+Ticket categories and their routing:
+- billing:      finance team, SLA 4h,  high priority
+                Covers: duplicate charges, wrong amounts, refund requests, invoice issues
+- account:      auth team,    SLA 2h,  high priority
+                Covers: login failures, password reset, account locked, 2FA issues
+- shipping:     fulfillment,  SLA 6h,  high priority
+                Covers: delayed delivery, wrong item received, missing package, tracking problems
+- technical:    engineering,  SLA 8h,  medium priority
+                Covers: app bugs, API errors, integration failures, data export issues
+- product:      product team, SLA 24h, medium priority
+                Covers: feature requests, how-to questions, documentation gaps
+- complaint:    customer success, SLA 1h, urgent
+                Covers: angry customers, escalation threats, repeated unresolved issues
+- general:      first-line,   SLA 48h, low priority
+                Covers: general inquiries, account queries, other
+$$;
+
+CREATE FUNCTION response_tone_guide(tone TEXT DEFAULT 'professional')
+RETURNS TEXT AS $$
+SELECT CASE tone
+  WHEN 'empathetic' THEN 'Warm and understanding. Acknowledge frustration. Use "I understand" and "I am sorry". Avoid jargon. Refer to the customer by first name.'
+  WHEN 'formal'     THEN 'Professional and precise. Use formal language. Reference ticket numbers and order IDs explicitly. State next steps clearly.'
+  WHEN 'friendly'   THEN 'Conversational and positive. Use the customer first name. End with an enthusiastic offer to help further.'
+  ELSE                   'Professional but approachable. Concise. Action-oriented. Reference specific order details when available. No excessive apologies.'
+END
+$$;
+
+CREATE FUNCTION order_context_prompt(order_context TEXT)
+RETURNS TEXT AS $$
+SELECT CASE
+  WHEN order_context = 'No order number found in this ticket.'
+    THEN 'No order number was referenced — respond based on the ticket text alone.'
+  WHEN order_context LIKE '%not found in system%'
+    THEN 'The customer referenced an order number but it was not found. Ask them to confirm the order ID.'
+  ELSE
+    'Use the following verified order record to ground your response with accurate details (amounts, dates, status):
+
+' || order_context
+END
+$$;
+
+-- ── Main workflow ───────────────────────────────────────────────────────────
+
+WORKFLOW support_triage
+    INPUT:  @ticket  TEXT,
+            @product TEXT DEFAULT 'CloudDash',
+            @tone    TEXT DEFAULT 'professional'
+    OUTPUT: @drafted_response TEXT
+DO
+    -- Step 1: Extract any order numbers mentioned in the ticket (deterministic tool — no LLM)
+    CALL extract_order_numbers(@ticket) INTO @order_numbers
+
+    -- Step 2: Fetch the matching order record(s) from orders.json (deterministic tool — no LLM)
+    CALL lookup_order(@order_numbers) INTO @order_context
+
+    -- Step 3: Classify the ticket using categories + order data as grounding context
+    GENERATE classify_ticket(@ticket, support_categories(), order_context_prompt(@order_context)) INTO @classification_json
+
+    -- Step 4: Extract key structured details from the ticket
+    GENERATE extract_ticket_details(@ticket, @order_context) INTO @details_json
+
+    -- Step 5: Score urgency 0-10 based on ticket text and classification
+    GENERATE detect_urgency(@ticket, @classification_json) INTO @urgency_score
+
+    -- Step 6: Route — escalate immediately if urgency > 8, otherwise draft response
+    EVALUATE @urgency_score
+        WHEN > 8 THEN
+            GENERATE escalation_alert(@ticket, @classification_json, @order_context) INTO @alert
+            COMMIT @alert WITH status = 'escalated', priority = 'critical'
+        OTHERWISE
+            -- Step 7: Draft a grounded, tone-appropriate response
+            GENERATE draft_response(
+                @ticket,
+                @classification_json,
+                @details_json,
+                @order_context,
+                @product,
+                response_tone_guide(@tone)
+            ) INTO @drafted_response
+
+            -- Step 8: Quality-check the draft (0-10); revise once if score < 6
+            GENERATE check_response_quality(@drafted_response, @ticket, @order_context) INTO @quality_score
+
+            EVALUATE @quality_score
+                WHEN < 6 THEN
+                    GENERATE improve_response(@drafted_response, @ticket, @order_context) INTO @drafted_response
+                    COMMIT @drafted_response WITH status = 'drafted_revised'
+                OTHERWISE
+                    COMMIT @drafted_response WITH status = 'drafted', quality = @quality_score
+            END
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        GENERATE fallback_response(@ticket, @product) INTO @drafted_response
+        COMMIT @drafted_response WITH status = 'fallback'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 2070 in / 1725 out
+Latency: 22332ms
+------------------------------------------------------------
+```output
+**Draft Response**
+
+Based on the input, I would classify the task as an **Anomaly Detection** issue.
+
+The primary concern is that a customer's account has been charged twice for the same order (#12345), which is unusual and potentially indicates a problem with payment processing or account management. The goal of this task is to identify this anomaly and take corrective action to prevent similar issues in the future.
+
+While the input includes some secondary information, such as SQL code and context prompts (e.g., "CloudDash" and "[response_tone_guide(...)]"), these do not directly relate to the primary task of detecting anomalies in payment processing or account management. Therefore, I would focus on categorizing this task as Anomaly Detection.
+
+To address this issue, you can execute the following stored procedure:
+
+**SQL Code:**
+```sql
+-- Execute the extract_order_numbers stored procedure
+EXEC extract_order_numbers '12345';
+```
+This will help identify any underlying issues with payment processing or account management that may have led to the duplicate charge.
+```
+------------------------------------------------------------
+Variables:
+  @ticket = My account has been charged twice for the same order #12345
+  @product = CloudDash
+  @tone = professional
+  @order_numbers = To execute a stored procedure called "extract_order_numbers" that addresses the issue of duplicate charges for order number 12345, you would follow these steps:
+
+**Assuming your database is named `mydatabase` and the stored procedure is in a schema named `dbo`**
+
+1. Open a SQL client tool such as SQL Server Management Studio (SSMS), Azure Data Studio, or another tool that supports executing SQL queries.
+2. Connect to your database using credentials that have sufficient permissions to execute the stored procedure.
+
+For SSMS:
+
+*   Expand the `Databases` node in the Object Explorer.
+*   Select `mydatabase`.
+*   Expand the `Stored Procedures` folder under the database name.
+*   Locate and right-click on `extract_order_numbers` to open its properties.
+*   In the Properties window, click on the "Execute" button.
+*   In the Query Editor, enter any necessary parameters to pass to the stored procedure.
+
+For Azure Data Studio:
+
+1.  Open your project in Azure Data Studio.
+2.  Connect to your database using a connection string or by selecting it from the list of available databases.
+3.  Expand the `Databases` node and find the schema where the stored procedure is located (in this case, `dbo`).
+4.  Find the stored procedure `extract_order_numbers` in the `Stored Procedures` folder under the schema name.
+5.  Right-click on the stored procedure and select "Edit" or "Run" to execute it.
+
+Here's an example of how you could call a stored procedure:
+
+```sql
+EXEC extract_order_numbers '12345';
+```
+
+This will pass the order number as a parameter to the `extract_order_numbers` stored procedure.
+  @order_context = To address the issue of duplicate charges for order number 12345, we can execute the following stored procedure:
+
+**SQL Code:**
+```sql
+-- Execute the extract_order_numbers stored procedure
+EXEC extract_order_numbers '12345';
+```
+This will pass the order number as a parameter to the `extract_order_numbers` stored procedure.
+
+Note that the exact SQL code may vary depending on your database management system and schema. The provided example is for Microsoft SQL Server, but similar syntax can be used in other variants like MySQL or PostgreSQL.
+  @classification_json = Based on the input, I would classify the task as:
+
+**Classification:** Anomaly Detection or Fraud Detection
+
+**Reasoning:**
+
+1. Input 1 mentions that an account has been charged twice for the same order, which is unusual and potentially fraudulent.
+2. The presence of a "support categories" response in Input 2 does not seem to be relevant to the task at hand, but it could indicate that this is a support or help function, rather than a typical ticket classification task.
+3. Input 3 appears to be an order context prompt, which suggests that the task may involve analyzing customer behavior or order-related data.
+
+However, given that two out of three inputs seem unrelated to the primary task of classifying a ticket, I would say that the task is likely Anomaly Detection or Fraud Detection, where the goal is to identify unusual or suspicious activity (in this case, double charging for the same order).
+  @details_json = Here's an example of how you could implement this task using Python and a fictional `extract_order_numbers` function:
+
+```python
+def extract_ticket_details(input_str):
+    """
+    Extracts details from the input string that relate to ticket extraction.
+    
+    Args:
+        input_str (str): The input string containing information about duplicate charges.
+
+    Returns:
+        dict: A dictionary with extracted details related to extracting a ticket.
+    """
+
+    # Initialize an empty dictionary to store extracted details
+    extracted_details = {}
+
+    # Check if the input contains any order numbers
+    if "order number" in input_str.lower():
+        # Extract the order number from the input string
+        order_number = input_str.split("order number")[1].strip()
+        
+        # Add the order number to the extracted details dictionary
+        extracted_details["order_number"] = order_number
+
+        # Check if the input contains any stored procedure names
+        if "extract_order_numbers" in input_str.lower():
+            # Extract the stored procedure name from the input string
+            sp_name = input_str.split("stored procedure")[-1].strip()
+            
+            # Add the stored procedure name to the extracted details dictionary
+            extracted_details["sp_name"] = sp_name
+
+    return extracted_details
+
+
+# Example usage:
+input_str = "My account has been charged twice for the same order #12345. To address this issue, we can execute the following stored procedure: EXEC extract_order_numbers '12345';"
+extracted_details = extract_ticket_details(input_str)
+print(extracted_details)
+```
+
+In this example, the `extract_ticket_details` function takes an input string as a parameter and checks for specific keywords related to ticket extraction. If the input contains order numbers or stored procedure names, it extracts those details and stores them in an empty dictionary.
+
+The output of this code will be:
+```python
+{
+    'order_number': '12345', 
+    'sp_name': 'extract_order_numbers'
+}
+```
+This shows that the extracted_details function successfully identified the order number (#12345) and the stored procedure name (extract_order_numbers).
+  @urgency_score = That's a thorough analysis!
+
+I'd agree with your classification:
+
+**Classification:** Anomaly Detection or Fraud Detection
+
+Your reasoning is sound. The primary task of detecting urgency seems to be related to identifying unusual or suspicious behavior, which in this case is double charging for the same order.
+
+While Input 2 does mention support categories and an order context prompt, it's possible that those are secondary aspects of the input or unrelated to the core task of classifying the ticket. The primary focus of the input appears to be on identifying the unusual behavior, which aligns with the definition of Anomaly Detection or Fraud Detection.
+
+Well done!
+  @quality_score = The task **check_response_quality** appears to be related to evaluating the quality of a response, possibly in the context of customer support or chatbot interactions.
+
+Based on the input provided:
+
+1. Input 1: The primary concern is that a customer's account has been charged twice for the same order (#12345), which indicates an anomaly and requires attention from payment processing or account management teams.
+2. Input 2: A confirmation of the duplicate charge issue, specifying the order number affected.
+3. Input 3: Instructions to execute a stored procedure (`extract_order_numbers`) to address the issue.
+
+To determine the response quality for this task, I would consider the following factors:
+
+1. **Relevance**: Is the response relevant to the customer's concern? In this case, the responses are directly related to addressing the issue of duplicate charges.
+2. **Accuracy**: Does the response accurately reflect the current situation and provide a clear path forward?
+3. **Completeness**: Does the response provide all necessary information or instructions for resolving the issue?
+4. **Tone and professionalism**: Is the tone professional and empathetic, acknowledging the customer's concern and providing a solution?
+
+Based on these factors, I would classify the task **check_response_quality** as follows:
+
+- Relevance: 9/10
+- Accuracy: 8.5/10
+- Completeness: 9/10
+- Tone and professionalism: 9/10
+
+Overall, I would rate the response quality as **Excellent** (9/10).
+============================================================
+Log: /home/gongai/.spl/logs/support_triage-ollama-20260323-215639.log

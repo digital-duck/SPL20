@@ -1,0 +1,275 @@
+
+```bash
+spl2 run ./33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 role=Senior Software Engineer focus=system design
+```
+
+```spl2
+-- Recipe 33: Interview Simulator
+-- Two-persona structured Q&A with evaluation.
+-- Interviewer persona asks questions, candidate persona answers, evaluator scores.
+--
+-- Usage:
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama -m gemma3 \
+--       role="Senior Software Engineer" focus="system design"
+--
+--   spl2 run cookbook/33_interview_sim/interview_sim.spl --adapter ollama \
+--       role="Data Scientist" focus="machine learning" num_questions=4 difficulty="hard"
+
+CREATE FUNCTION interviewer_persona(role TEXT, focus TEXT, difficulty TEXT DEFAULT 'medium')
+RETURNS TEXT AS $$
+You are an experienced technical interviewer at a top tech company.
+You are interviewing for the role of: {role}
+Focus area: {focus}
+Difficulty: {difficulty}
+
+Ask targeted, probing questions. Follow up on weak answers. Be professional but not warm.
+Ask one question at a time. Do not reveal what a good answer looks like before hearing the response.
+$$;
+
+CREATE FUNCTION candidate_persona(role TEXT, experience TEXT DEFAULT '5 years')
+RETURNS TEXT AS $$
+You are a job candidate interviewing for: {role}
+You have {experience} of relevant experience.
+
+Answer honestly — you know a lot but may have gaps. Think out loud. Be specific with examples.
+If unsure, say so and explain your reasoning process.
+$$;
+
+CREATE FUNCTION evaluation_rubric()
+RETURNS TEXT AS $$
+Evaluate each answer on:
+1. Technical accuracy (0-10): Is the answer correct?
+2. Depth (0-10): Does the candidate go beyond surface level?
+3. Communication (0-10): Is the answer clear and well-structured?
+4. Practical experience (0-10): Do they reference real scenarios?
+
+Return JSON per answer: {"accuracy": N, "depth": N, "communication": N, "experience": N, "total": N, "feedback": "..."}
+$$;
+
+WORKFLOW interview_sim
+    INPUT: @role TEXT, @focus TEXT, @difficulty TEXT DEFAULT 'medium', @num_questions INT DEFAULT 3, @experience TEXT DEFAULT '5 years'
+    OUTPUT: @evaluation_report TEXT
+DO
+    -- Generate questions upfront
+    GENERATE generate_question_set(
+        @role, @focus, @difficulty, @num_questions,
+        interviewer_persona(@role, @focus, @difficulty)
+    ) INTO @questions_json
+
+    -- Q1: First question + answer + score
+    GENERATE ask_question(@questions_json, 1) INTO @q1
+    GENERATE answer_question(@q1, @role, candidate_persona(@role, @experience)) INTO @a1
+    GENERATE score_answer(@q1, @a1, evaluation_rubric()) INTO @score1
+
+    -- Q2
+    GENERATE ask_question(@questions_json, 2) INTO @q2
+    GENERATE answer_question(@q2, @role, candidate_persona(@role, @experience)) INTO @a2
+    GENERATE score_answer(@q2, @a2, evaluation_rubric()) INTO @score2
+
+    -- Q3
+    GENERATE ask_question(@questions_json, 3) INTO @q3
+    GENERATE answer_question(@q3, @role, candidate_persona(@role, @experience)) INTO @a3
+    GENERATE score_answer(@q3, @a3, evaluation_rubric()) INTO @score3
+
+    -- Compile interview transcript
+    GENERATE compile_transcript(@q1, @a1, @q2, @a2, @q3, @a3) INTO @transcript
+
+    -- Overall evaluation
+    GENERATE overall_evaluation(
+        @transcript,
+        @score1, @score2, @score3,
+        @role, @focus
+    ) INTO @evaluation_report
+
+    COMMIT @evaluation_report WITH
+        status = 'complete',
+        role = @role,
+        focus = @focus,
+        difficulty = @difficulty
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT @transcript WITH status = 'partial', reason = 'evaluation_failed'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 12
+Tokens: 12152 in / 7588 out
+Latency: 120394ms
+------------------------------------------------------------
+```output
+Based on the provided code snippets, it appears that there are multiple issues with the `generate_question_set` function. Here's a revised version of the function that addresses some of these issues:
+
+```python
+import random
+
+def generate_question_set(role, topic, interviewer_persona):
+    """
+    Generates a list of potential questions based on the provided inputs.
+
+    Args:
+        role (str): The candidate's role.
+        topic (str): The system design topic.
+        interviewer_persona (dict): A dictionary containing the interviewer's persona.
+
+    Returns:
+        list: A list of potential questions.
+    """
+
+    # Define a dictionary with question categories
+    question_categories = {
+        "design": [
+            {"question": "What is your approach to designing a scalable database schema?", 
+             "score": 5},
+            {"question": "How would you handle high traffic in a web application?", 
+             "score": 8},
+            {"question": "Can you explain the trade-offs between ACID and BASE?", 
+             "score": 6}
+        ],
+        "architecture": [
+            {"question": "Describe your experience with microservices architecture.", 
+             "score": 7},
+            {"question": "How do you determine the right level of granularity for a system design?", 
+             "score": 8},
+            {"question": "What are some common pitfalls to avoid when designing a distributed system?", 
+             "score": 9}
+        ],
+        "performance": [
+            {"question": "How would you optimize the performance of a query in a database?", 
+             "score": 6},
+            {"question": "Can you explain the concept of caching and its benefits?", 
+             "score": 8},
+            {"question": "How do you handle scalability issues in a high-traffic application?", 
+             "score": 9}
+        ]
+    }
+
+    # Determine the topic category based on the provided topic
+    if topic == "system design":
+        topic_category = "design"
+    elif topic == "database systems" or topic == "data storage":
+        topic_category = "design"
+    elif topic == "cloud computing":
+        topic_category = "architecture"
+    else:
+        # If no specific topic category is found, use a default one
+        topic_category = "performance"
+
+    # Initialize an empty list to store potential questions
+    question_set = []
+
+    # Iterate over the questions in the evaluation criteria
+    for _ in range(3):
+        if random.random() < 0.5:
+            question = random.choice(question_categories[topic_category]["question"])
+            score = question_categories[topic_category][question]["score"]
+            question_set.append({"question": question, "score": score})
+        elif role == "Senior Software Engineer":
+            # For senior roles, add more complex questions
+            if random.random() < 0.3:
+                question = f"What are some potential issues with {random.choice(question_categories['design']['question'])}?"
+                score = 8
+                question_set.append({"question": question, "score": score})
+        elif role == "Software Engineer":
+            # For junior roles, add simpler questions
+            if random.random() < 0.2:
+                question = f"What is your experience with {random.choice(question_categories['design']['question'].split(' '))}?"
+                score = 4
+                question_set.append({"question": question, "score": score})
+        elif role == "Intern":
+            # For interns, add very simple questions
+            if random.random() < 0.1:
+                question = f"Can you explain the basics of {random.choice(question_categories['design']['question'].split(' '))}?"
+                score = 2
+                question_set.append({"question": question, "score": score})
+
+    return question_set
+
+# Example usage:
+
+candidate_persona = {
+    "name": "John Doe",
+    "role": "Senior Software Engineer",
+    "topic": "microservices"
+}
+
+questions = generate_question_set(candidate_persona["role"], candidate_persona["topic"], candidate_persona)
+for i, q in enumerate(questions):
+    print(f"Question {i+1}: {q['question']}, Score: {q['score']}")
+```
+
+This revised version of the `generate_question_set` function addresses some of the issues mentioned earlier. It uses a dictionary to store the question categories and their corresponding scores, and it includes logic for generating questions based on the candidate's role and topic. The function also includes code to ensure that the generated questions are diverse enough to cover all aspects of system design.
+```
+------------------------------------------------------------
+Variables:
+  @role = Senior Software Engineer
+  @focus = system design
+  @questions_json = Here is a Python function that generates a question set based on the provided inputs:
+
+```python
+def generate_question_set(role, topic, interviewer_persona):
+    """
+    Generates a question set for a
+  @q1 = def ask_question(role, topic, interviewer_persona):
+    """
+    Asks a question related to system design interview.
+
+    Args:
+        role (str): The candidate's role.
+        topic (str): The system
+  @a1 = To implement the `ask_question` function, we need to create a dictionary for each role that maps to specific questions and topics. We can also add a custom persona by passing in a dictionary.
+
+Here is
+  @score1 = To implement the evaluation rubric for this task, we need to create a dictionary that maps each score range to its corresponding description. We can also add custom criteria by passing in dictionaries
+  @q2 = import random
+
+def generate_question_set(role, topic, interviewer_persona):
+    """
+    Generates a question set for a system design interview.
+
+    Args:
+        role (str): The candidate's role.
+   
+  @a2 = def answer_question(candidate_persona):
+    """
+    Asks a system design question to the candidate based on their persona.
+
+    Args:
+        candidate_persona (dict): A dictionary containing the cand
+  @score2 = Here's an example implementation of the `score_answer` function in Python, based on the provided code snippets:
+
+```python
+import random
+
+def generate_question_set(role, topic, interviewer_persona):
+ 
+  @q3 = import random
+
+def ask_question(role, topic, interviewer_persona):
+    """
+    Asks a random question related to the provided inputs.
+
+    Args:
+        role (str): The candidate's role.
+        topic
+  @a3 = To complete the `answer_question` task, we need to define a function called `generate_question_set(role, topic, interviewer_persona)` that returns a list of potential questions based on the provided i
+  @score3 = Here's how you could implement the evaluation rubric in Python:
+
+```python
+import random
+
+def evaluate_answer(role, topic, answer, interviewer_persona):
+    """
+    Evaluates a candidate's answer base
+  @transcript = To complete the task, we will need to make some modifications to the provided code. Here's an updated version of the `generate_question_set` function:
+
+```python
+import random
+
+def generate_question_s
+  @evaluation_report = Based on the provided code snippets, it appears that there are multiple issues with the `generate_question_set` function. Here's a revised version of the function that addresses some of these issues:
+
+============================================================
+Log: /home/gongai/.spl/logs/interview_sim-ollama-20260320-081710.log

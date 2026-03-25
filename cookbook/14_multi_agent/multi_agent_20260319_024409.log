@@ -1,0 +1,122 @@
+============================================================
+Status: complete
+LLM Calls: 8
+Tokens: 6363 in / 4333 out
+Latency: 64324ms
+------------------------------------------------------------
+Committed: Here is a revised version of the code, addressing the issues mentioned earlier:
+
+```python
+import re
+
+def find_opportunities(input_dict: dict) -> dict:
+    """
+    Find opportunities related to AI applications in input_dict.
+    
+    Parameters:
+    input_dict (dict): A dictionary containing key facts and themes.
+    
+    Returns:
+    dict: A dictionary with theme names as keys and lists of opportunity names as values.
+    """
+    try:
+        # Initialize an empty dictionary to store the results
+        result = {}
+        
+        # Check if 'key facts' and 'key themes' exist in the input dictionary
+        if "key facts" not in input_dict or "key themes" not in input_dict:
+            raise KeyError("Input dictionary must contain both 'key facts' and 'key themes'")
+        
+        # Iterate over each theme in the input dictionary
+        for theme, data in input_dict["key themes"].items():
+            # Initialize an empty list to store opportunities related to AI applications
+            ai_opportunities = []
+            
+            # Check if 'opportunities' key exists in the theme's data
+            if "opportunities" not in data:
+                raise KeyError(f"'opportunities' key does not exist in {theme} data")
+            
+            # Iterate over each opportunity in the theme's 'opportunities' list
+            for opportunity, description in data["opportunities"].items():
+                # Use regular expression to check if 'Related to AI Application' is in the description
+                if re.search(r"Related to AI Application", description, re.IGNORECASE):
+                    # Extract the AI application name from the description
+                    ai_application_name = re.sub(r"Related to AI Application ", "", description).strip()
+                    
+                    # Add the opportunity and its related AI application name to the list
+                    ai_opportunities.append((opportunity, ai_application_name))
+        
+        # Add the theme and its related opportunities to the result dictionary
+        result[theme] = [opportunity for opportunity, _ in ai_opportunities]
+        
+        return result
+    
+    except KeyError as e:
+        print(f"Error: {e}")
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def process_input(input_dict: dict) -> None:
+    """
+    Process the input dictionary and print opportunities related to AI applications.
+    """
+    # Call the find_opportunities function
+    opportunities = find_opportunities(input_dict)
+    
+    # Print the findings
+    for theme, themes in opportunities.items():
+        print(f"Theme: {theme}")
+        
+        # Iterate over each opportunity in the theme's list
+        for opportunity in themes:
+            # Check if the opportunity is related to an AI application
+            if isinstance(opportunity, str):
+                print(f"- {opportunity}: Opportunity")
+            else:
+                print(f"- {opportunity[0]}: {opportunity[1]}")
+
+
+# Define input1
+input1 = {
+    "key facts": [
+        {"text": "AI-powered algorithms can analyze large amounts of medical data..."},
+        {"text": "Virtual assistants are being used in healthcare settings..."},
+        # ... (rest of the key facts)
+    ],
+    "key themes": [
+        {"theme": "Improving Patient Care", "opportunities": ["diagnosis", "personalized medicine", "predictive analytics"]},
+        {"theme": "Automation and Efficiency", "opportunities": ["administrative tasks", "medical imaging analysis", "clinical workflows"]},
+        # ... (rest of the key themes)
+    ]
+}
+
+# Call the process_input function
+process_input(input1)
+```
+
+In this revised version, I have addressed the issues mentioned earlier:
+
+*   Added input validation to ensure that the input dictionary contains both 'key facts' and 'key themes'.
+*   Improved code organization by separating data processing from printing results.
+*   Used more descriptive variable names for better readability.
+*   Added try-except blocks to handle potential errors when calling the `find_opportunities` function or parsing its output.
+*   Included docstrings and comments to describe the functionality of the `find_opportunities` function.
+------------------------------------------------------------
+Variables:
+  @topic = Impact of AI on healthcare
+  @research = Here are some key facts about the impact of Artificial Intelligence (AI) on healthcare:
+
+1. **Improved Diagnosis**: AI-powered algorithms can analyze large amounts of medical data, including images an
+  @analysis = Trends:
+This analysis provides an in-depth look at the current state of Artificial Intelligence (AI) in healthcare, highlighting its potential to improve patient care, automate administrative tasks, e
+  @report = Here is a revised version of the code, addressing the issues mentioned earlier:
+
+```python
+import re
+
+def find_opportunities(input_dict: dict) -> dict:
+    """
+    Find opportunities related to AI app
+============================================================
+Log: /home/gongai/.spl/logs/multi_agent-ollama-20260319-024409.log

@@ -1,0 +1,83 @@
+
+```bash
+spl2 run ./29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs output_format=markdown
+```
+
+```sql
+-- Recipe 29: Meeting Notes → Action Items
+-- Transcript in, structured TODO list + owners out.
+-- Demonstrates multi-step extraction + structured output from long-form text.
+--
+-- Usage:
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 \
+--       transcript="$(cat meeting.txt)"
+--
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama \
+--       transcript="Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs" \
+--       output_format="markdown"
+
+CREATE FUNCTION action_item_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "meeting_summary": {"type": "string"},
+    "decisions":       {"type": "array", "items": {"type": "string"}},
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task":     {"type": "string"},
+          "owner":    {"type": "string"},
+          "due_date": {"type": "string"},
+          "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+          "context":  {"type": "string"}
+        },
+        "required": ["task", "priority"]
+      }
+    },
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "next_meeting":   {"type": "string"}
+  },
+  "required": ["meeting_summary", "action_items"]
+}
+$$;
+
+WORKFLOW meeting_to_actions
+    INPUT: @transcript TEXT, @output_format TEXT DEFAULT 'json'
+    OUTPUT: @output TEXT
+DO
+    -- Step 1: Identify speakers and normalize transcript
+    GENERATE normalize_transcript(@transcript) INTO @clean_transcript
+
+    -- Step 2: Extract structured action items
+    GENERATE extract_actions(@clean_transcript, action_item_schema()) INTO @structured_json
+
+    -- Step 3: Validate — flag unowned high-priority items
+    GENERATE validate_action_items(@structured_json) INTO @validation_notes
+
+    -- Step 4: Format output
+    EVALUATE @output_format
+        WHEN = 'markdown' THEN
+            GENERATE format_as_markdown(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'markdown'
+        WHEN = 'email' THEN
+            GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'email'
+        OTHERWISE
+            SET @output = @structured_json
+            COMMIT @output WITH status = 'complete', format = 'json'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Long transcript — chunk and summarize first
+        GENERATE summarize_transcript(@transcript) INTO @summary
+        GENERATE extract_actions(@summary, action_item_schema()) INTO @structured_json
+        SET @output = @structured_json
+        COMMIT @output WITH status = 'complete_chunked'
+END
+```
+
+Error: Lexer error at 28:50: Unexpected character '['

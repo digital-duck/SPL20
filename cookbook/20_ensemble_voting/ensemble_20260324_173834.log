@@ -1,0 +1,475 @@
+
+```bash
+spl run ./20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question=What causes inflation?
+```
+
+```spl
+-- Recipe 20: Ensemble Voting
+-- Generates multiple independent answers, then uses majority voting to pick the best.
+-- Demonstrates ensemble methods, comparative scoring, and consensus-driven output.
+--
+-- Usage:
+--   spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question="What causes inflation?"
+--   spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="Is Rust faster than C++?"
+--   spl run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="What is the best database for time-series data?"
+
+WORKFLOW ensemble_voting
+    INPUT: @question TEXT
+    OUTPUT: @final_answer TEXT
+DO
+    -- Step 1: Generate 5 independent candidate answers with varying temperatures
+    GENERATE answer_candidate(@question) INTO @candidate_1
+    GENERATE answer_candidate(@question) INTO @candidate_2
+    GENERATE answer_candidate(@question) INTO @candidate_3
+    GENERATE answer_candidate(@question) INTO @candidate_4
+    GENERATE answer_candidate(@question) INTO @candidate_5
+
+    -- Step 2: Score each candidate on accuracy, completeness, and clarity
+    GENERATE score_candidate(@candidate_1, @question) INTO @score_1
+    GENERATE score_candidate(@candidate_2, @question) INTO @score_2
+    GENERATE score_candidate(@candidate_3, @question) INTO @score_3
+    GENERATE score_candidate(@candidate_4, @question) INTO @score_4
+    GENERATE score_candidate(@candidate_5, @question) INTO @score_5
+
+    -- Step 3: Find consensus — identify common themes across candidates
+    GENERATE find_consensus(
+        @candidate_1, @candidate_2, @candidate_3,
+        @candidate_4, @candidate_5
+    ) INTO @consensus
+
+    -- Step 4: Select the best candidate based on scores and consensus alignment
+    GENERATE select_winner(
+        @candidate_1, @score_1,
+        @candidate_2, @score_2,
+        @candidate_3, @score_3,
+        @candidate_4, @score_4,
+        @candidate_5, @score_5,
+        @consensus
+    ) INTO @best_candidate
+
+    -- Step 5: Polish the winning answer, incorporating consensus insights
+    GENERATE polish(@best_candidate, @consensus, @question) INTO @final_answer
+
+    COMMIT @final_answer WITH status = 'complete', candidates = 5
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        -- If budget runs out, use whatever candidates we have
+        GENERATE select_winner(
+            @candidate_1, @score_1,
+            @candidate_2, @score_2,
+            @candidate_3, @score_3
+        ) INTO @final_answer
+        COMMIT @final_answer WITH status = 'partial', candidates = 3
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 13
+Tokens: 6070 in / 3958 out
+Latency: 55681ms
+------------------------------------------------------------
+```output
+# Causes of Inflation
+
+Inflation is a complex phenomenon that can be caused by a variety of factors. While the specific causes may vary depending on the context, some commonly agreed-upon causes include:
+
+## Monetary Policy
+
+Central banks printing more money can lead to inflation as it increases the amount of money circulating in the economy.
+
+### Example
+
+```python
+# Define possible answers and scores for monetary policy
+monetary_policy_answers = [
+    ("Monetary policy", 1),
+    ("Demand-pull inflation", 1),
+    ("Cost-push inflation", 1),
+]
+
+# Initialize candidate score to 0
+candidate_score = 0
+
+# Shuffle the possible answers using random.shuffle()
+random.shuffle(monetary_policy_answers)
+
+# Iterate over the shuffled possible answers and check if each answer is correct
+for answer, score in monetary_policy_answers:
+    if answer == "Monetary policy":
+        candidate_score += score
+```
+
+## Demand-Pull Inflation
+
+When aggregate demand exceeds the available supply of goods and services, businesses may raise their prices, leading to inflation.
+
+### Example
+
+```python
+# Define possible answers and scores for demand-pull inflation
+demand_pull_inflation_answers = [
+    ("Monetary policy", 1),
+    ("Demand-pull inflation", 1),
+    ("Cost-push inflation", 1),
+]
+
+# Initialize candidate score to 0
+candidate_score = 0
+
+# Shuffle the possible answers using random.shuffle()
+random.shuffle(demand_pull_inflation_answers)
+
+# Iterate over the shuffled possible answers and check if each answer is correct
+for answer, score in demand_pull_inflation_answers:
+    if answer == "Demand-pull inflation":
+        candidate_score += score
+```
+
+## Supply Chain Disruptions
+
+Disruptions to global supply chains can cause price increases and lead to inflation.
+
+### Example
+
+```python
+# Define possible answers and scores for supply chain disruptions
+supply_chain_disruptions_answers = [
+    ("Monetary policy", 1),
+    ("Demand-pull inflation", 1),
+    ("Cost-push inflation", 1),
+]
+
+# Initialize candidate score to 0
+candidate_score = 0
+
+# Shuffle the possible answers using random.shuffle()
+random.shuffle(supply_chain_disruptions_answers)
+
+# Iterate over the shuffled possible answers and check if each answer is correct
+for answer, score in supply_chain_disruptions_answers:
+    if answer == "Supply chain disruptions":
+        candidate_score += score
+```
+
+## Commodity Price Shocks
+
+Sudden changes in global commodity prices can drive up inflation.
+
+### Example
+
+```python
+# Define possible answers and scores for commodity price shocks
+commodity_price_shocks_answers = [
+    ("Monetary policy", 1),
+    ("Demand-pull inflation", 1),
+    ("Cost-push inflation", 1),
+]
+
+# Initialize candidate score to 0
+candidate_score = 0
+
+# Shuffle the possible answers using random.shuffle()
+random.shuffle(commodity_price_shocks_answers)
+
+# Iterate over the shuffled possible answers and check if each answer is correct
+for answer, score in commodity_price_shocks_answers:
+    if answer == "Commodity price shocks":
+        candidate_score += score
+```
+
+## Economic Growth
+
+A rapidly growing economy can lead to increased demand and higher prices, contributing to inflation.
+
+### Example
+
+```python
+# Define possible answers and scores for economic growth
+economic_growth_answers = [
+    ("Monetary policy", 1),
+    ("Demand-pull inflation", 1),
+    ("Cost-push inflation", 1),
+]
+
+# Initialize candidate score to 0
+candidate_score = 0
+
+# Shuffle the possible answers using random.shuffle()
+random.shuffle(economic_growth_answers)
+
+# Iterate over the shuffled possible answers and check if each answer is correct
+for answer, score in economic_growth_answers:
+    if answer == "Economic growth":
+        candidate_score += score
+```
+
+## Resource Shortages
+
+Scarcity of essential resources can lead to price increases due to reduced supply.
+
+### Example
+
+```python
+# Define possible answers and scores for resource shortages
+resource_shortages_answers = [
+    ("Monetary policy", 1),
+    ("Demand-pull inflation", 1),
+    ("Cost-push inflation", 1),
+]
+
+# Initialize candidate score to 0
+candidate_score = 0
+
+# Shuffle the possible answers using random.shuffle()
+random.shuffle(resource_shortages_answers)
+
+# Iterate over the shuffled possible answers and check if each answer is correct
+for answer, score in resource_shortages_answers:
+    if answer == "Resource shortages":
+        candidate_score += score
+```
+
+## Wages and Labor Costs
+
+Increases in wages and labor costs can be passed on to consumers through higher prices.
+
+### Example
+
+```python
+# Define possible answers and scores for wages and labor costs
+wages_and_labor_costs_answers = [
+    ("Monetary policy", 1),
+    ("Demand-pull inflation", 1),
+   
+```
+------------------------------------------------------------
+Variables:
+  @question = What causes inflation?
+  @candidate_1 = Inflation is typically caused by an increase in the money supply, economic growth, or demand for goods and services. Some of the key factors that can lead to inflation include:
+
+1. Monetary policy: Central banks printing more money can cause inflation as there's more money chasing a constant quantity of goods and services.
+2. Economic growth: A rapidly growing economy with high demand for goods and services can drive up prices.
+3. Supply chain disruptions: Shortages or disruptions in supply chains can lead to price increases.
+4. Commodity price shocks: Increases in the cost of raw materials, such as oil or food, can raise prices.
+5. Demand-pull inflation: Strong demand for goods and services can push prices up.
+
+It's worth noting that inflation can also be caused by other factors, such as external shocks (like global events) or structural issues within an economy (such as labor shortages).
+  @candidate_2 = Inflation is a complex and multifaceted issue, but some of the main causes include:
+
+1. Monetary Policy: An increase in the money supply, often caused by central banks printing more money, can lead to higher prices and inflation.
+2. Demand-Pull Inflation: When aggregate demand exceeds the available supply of goods and services, businesses may raise their prices, leading to inflation.
+3. Supply Chain Disruptions: Shortages or disruptions in supply chains can drive up prices and contribute to inflation.
+4. Commodity Price Shocks: Sudden changes in global commodity prices, such as oil or food prices, can lead to inflation.
+5. Economic Growth: Rapid economic growth can lead to increased demand and higher prices, contributing to inflation.
+6. Wages and Labor Costs: Increases in wages and labor costs can lead to higher production costs and, ultimately, higher prices.
+7. Fiscal Policy: Government spending and fiscal policies can also contribute to inflation by increasing aggregate demand.
+
+It's worth noting that these causes are often interconnected and can feed into each other, making it challenging to pinpoint a single cause of inflation.
+  @candidate_3 = Inflation is a complex economic phenomenon, but some of the main causes include:
+
+1. **Monetary policy**: An increase in the money supply or a decrease in interest rates can lead to inflation.
+2. **Demand-pull inflation**: When aggregate demand exceeds the available supply of goods and services, businesses raise prices, leading to inflation.
+3. **Cost-push inflation**: An increase in production costs, such as higher wages or raw materials prices, can lead to inflation.
+4. **Supply chain disruptions**: Disruptions to global supply chains, such as natural disasters or trade wars, can cause price increases and lead to inflation.
+5. **Economic growth**: A rapidly growing economy with high demand for goods and services can lead to inflation.
+6. **Fiscal policy**: Government spending and debt accumulation can lead to inflation if not properly managed.
+7. **Commodity price shocks**: Sudden increases in the prices of key commodities, such as oil or food, can cause inflation.
+
+These are some of the main causes of inflation, but it's worth noting that each economy is unique, and what drives inflation in one country may not be the same in another.
+  @candidate_4 = There are several factors that can cause inflation. Here are some of the main reasons:
+
+1. **Demand and Supply Imbalance**: When demand for goods and services exceeds supply, businesses may raise their prices to capture the excess demand and generate higher profits.
+2. **Monetary Policy**: An increase in the money supply or a decrease in interest rates can lead to inflation. When there's more money circulating in the economy, businesses can raise their prices without worrying about losing sales.
+3. **Economic Growth**: A rapidly growing economy can lead to increased production and higher demand, which can drive up prices.
+4. **Resource Shortages**: Scarcity of essential resources, such as oil or food, can lead to price increases due to reduced supply.
+5. **Wage Pressure**: Increases in wages can lead to higher production costs, which can be passed on to consumers through higher prices.
+6. **External Shocks**: Events like natural disasters, wars, or global conflicts can disrupt supply chains and drive up prices.
+7. **Government Policies**: Fiscal policies, such as taxes and government spending, can also influence inflation.
+
+These factors interact with each other in complex ways, making it challenging to predict exactly when and how inflation will occur.
+  @candidate_5 = There are several factors that can contribute to inflation. Some of the main causes include:
+
+1. Demand and supply imbalance: When demand for goods and services exceeds supply, businesses can raise their prices, leading to inflation.
+2. Monetary policy: An increase in the money supply, often caused by central banks printing more money, can lead to inflation as there is more money chasing a constant quantity of goods and services.
+3. Economic growth: A rapidly growing economy can lead to higher demand for goods and services, driving up prices and causing inflation.
+4. Commodity price shocks: Increases in the prices of essential commodities such as oil, food, and raw materials can drive up inflation.
+5. Wages and labor costs: Increases in wages and labor costs can lead to higher production costs, which can be passed on to consumers through price increases.
+6. External factors: Events such as wars, natural disasters, and global economic trends can also contribute to inflation.
+
+It's worth noting that inflation is a complex issue and there are many other factors at play, but these are some of the main causes.
+  @score_1 = Based on the provided inputs, I will create a scoring system and assign scores to each factor that contributes to inflation.
+
+Here's the scoring system:
+
+1. Monetary policy: 9/10
+    - This is considered one of the most significant factors contributing to inflation due to the direct impact of central banks' actions on the money supply.
+
+2. Economic growth: 8.5/10
+    - Rapid economic growth can lead to increased demand for goods and services, driving up prices.
+
+3. Supply chain disruptions: 7.5/10
+    - Shortages or disruptions in supply chains can cause price increases due to reduced availability of essential goods.
+
+4. Commodity price shocks: 8/10
+    - Increases in the cost of raw materials such as oil or food can directly impact prices.
+
+5. Demand-pull inflation: 9.5/10
+    - Strong demand for goods and services is a key driver of inflation, pushing up prices due to increased competition for limited resources.
+
+Other factors like external shocks (global events) or structural issues within an economy (labor shortages) can also contribute to inflation but are not included in the scoring system as they are considered secondary causes.
+
+Score: 9.5
+  @score_2 = Based on the input provided, I will score the candidate as follows:
+
+* Knowledge: 8/10 - The candidate demonstrates some knowledge of the main causes of inflation, including monetary policy, demand-pull inflation, supply chain disruptions, commodity price shocks, economic growth, wages and labor costs, and fiscal policy.
+* Depth of understanding: 6/10 - While the candidate mentions some common causes of inflation, they do not demonstrate a deep understanding of the complexities of these issues or how they interact with each other.
+* Critical thinking: 5/10 - The candidate does not display critical thinking skills in their response, as they simply list the causes of inflation without discussing their interconnections or implications.
+* Contextual understanding: 7/10 - The candidate demonstrates some understanding of the complexities of inflation, noting that the causes are often interconnected. However, this is not fully explored in their response.
+
+Overall score: 24/30
+
+Recommendation: While the candidate demonstrates some knowledge of the main causes of inflation, they need to further develop their critical thinking and contextual understanding skills to provide a more comprehensive and nuanced answer.
+  @score_3 = import random
+
+def score_candidate():
+    # Define the possible answers
+    possible_answers = [
+        "Monetary policy",
+        "Demand-pull inflation",
+        "Cost-push inflation",
+        "Supply chain disruptions",
+        "Economic growth",
+        "Fiscal policy",
+        "Commodity price shocks"
+    ]
+
+    # Initialize the score to 0
+    score = 0
+
+    # Define the correct answers and their corresponding scores
+    correct_answers = [
+        ("Monetary policy", 1),
+        ("Demand-pull inflation", 1),
+        ("Cost-push inflation", 1),
+        ("Supply chain disruptions", 1),
+        ("Economic growth", 1),
+        ("Fiscal policy", 1),
+        ("Commodity price shocks", 1)
+    ]
+
+    # Shuffle the possible answers
+    random.shuffle(possible_answers)
+
+    # Iterate over the possible answers and check if they are correct
+    for answer, correct_score in correct_answers:
+        if answer == possible_answers[0]:
+            score += correct_score
+
+    return score
+  @score_4 = Inflation is caused by a combination of factors, including:
+
+1. Demand and Supply Imbalance
+2. Monetary Policy
+3. Economic Growth
+4. Resource Shortages
+5. Wage Pressure
+6. External Shocks
+7. Government Policies
+  @score_5 = Based on the input provided, I would score the candidate as follows:
+
+Score: 6/10
+
+Reasons for scoring:
+
+* The candidate mentions several key causes of inflation, including demand and supply imbalance, monetary policy, economic growth, commodity price shocks, wages and labor costs, and external factors.
+* The candidate recognizes that inflation is a complex issue and acknowledges the presence of multiple factors.
+
+However, I would score the candidate slightly lower because:
+
+* There is no mention of any specific examples or evidence to support the causes of inflation.
+* The response could benefit from more nuanced explanations or additional details about each cause.
+* The overall tone of the response seems straightforward and lacks a deeper analysis or critical thinking.
+
+Overall, the candidate demonstrates some understanding of the causes of inflation but could improve their score with more detailed explanations and evidence-based arguments.
+  @consensus = To find consensus among the inputs, I will analyze them for common themes and agreed-upon points. Here's a summary:
+
+Commonly agreed-upon causes of inflation across all inputs include:
+
+1. **Monetary policy**: Central banks printing more money can lead to inflation.
+2. **Demand-pull inflation**: When aggregate demand exceeds the available supply of goods and services, businesses may raise their prices, leading to inflation.
+3. **Supply chain disruptions**: Disruptions to global supply chains can cause price increases and lead to inflation.
+4. **Commodity price shocks**: Sudden changes in global commodity prices can drive up inflation.
+
+Other factors that contribute to inflation across multiple inputs include:
+
+1. **Economic growth**: A rapidly growing economy can lead to increased demand and higher prices, contributing to inflation.
+2. **Resource shortages**: Scarcity of essential resources can lead to price increases due to reduced supply.
+3. **Wages and labor costs**: Increases in wages and labor costs can be passed on to consumers through higher prices.
+
+Differences among the inputs include:
+
+1. **External factors**: Some inputs mention external shocks (Input 2, Input 4) or global economic trends (Input 5), while others do not.
+2. **Fiscal policy**: Some inputs discuss fiscal policies as a cause of inflation (Input 2, Input 3, Input 4), while others do not explicitly mention it.
+
+Overall, the consensus is that inflation is caused by a combination of factors, including monetary policy, demand-pull inflation, supply chain disruptions, and commodity price shocks. Economic growth, resource shortages, and wages and labor costs are also contributing factors.
+  @best_candidate = The code you provided is in Python, and it defines a function called `score_candidate` that calculates the score of a candidate based on their understanding of the causes of inflation.
+
+Here's a breakdown of how the function works:
+
+1. It defines a list of possible answers (`possible_answers`) and initializes the score to 0.
+2. It defines a list of correct answers (`correct_answers`) along with their corresponding scores.
+3. It shuffles the `possible_answers` using the `random.shuffle()` function.
+4. It iterates over the shuffled `possible_answers` and checks if each answer is correct. If it is, it adds the corresponding score to the total score.
+5. Finally, it returns the total score.
+
+To improve this code, here are some suggestions:
+
+1. Add more comments: The code could benefit from additional comments to explain what each section does and why it's written in a particular way.
+2. Use more descriptive variable names: Some of the variable names, such as `score` and `correct_answers`, could be more descriptive. For example, you could use `candidate_score` instead of `score`.
+3. Consider using a more robust method for shuffling the answers: The current implementation uses the `random.shuffle()` function, which may not always produce a uniform distribution. You could consider using a more advanced randomization algorithm.
+4. Add error handling: What happens if the input list is empty or contains duplicate answers? You should add some basic error handling to ensure the code behaves correctly in these cases.
+
+Here's an updated version of the code with these suggestions:
+
+```python
+import random
+
+def score_candidate():
+    # Define the possible answers and their corresponding scores
+    possible_answers = [
+        ("Monetary policy", 1),
+        ("Demand-pull inflation", 1),
+        ("Cost-push inflation", 1),
+        ("Supply chain disruptions", 1),
+        ("Economic growth", 1),
+        ("Fiscal policy", 1),
+        ("Commodity price shocks", 1)
+    ]
+
+    # Initialize the candidate score to 0
+    candidate_score = 0
+
+    # Check if the input list is empty or contains duplicate answers
+    if len(possible_answers) == 0:
+        raise ValueError("Input list cannot be empty")
+    elif len(set([answer for answer, _ in possible_answers])) != len(possible_answers):
+        raise ValueError("Input list must contain unique answers")
+
+    # Shuffle the possible answers using a more robust method
+    random.shuffle(possible_answers)
+
+    # Iterate over the shuffled possible answers and check if each answer is correct
+    for answer, score in possible_answers:
+        if answer == possible_answers[0]:
+            candidate_score += score
+
+    return candidate_score
+```
+
+This updated version includes more descriptive variable names, error handling, and a more robust method for shuffling the answers.
+============================================================
+Log: /home/gongai/.spl/logs/ensemble-ollama-20260324-173834.log

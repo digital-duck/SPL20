@@ -1,0 +1,149 @@
+
+```bash
+spl2 run ./29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs output_format=markdown
+```
+
+```spl2
+-- Recipe 29: Meeting Notes → Action Items
+-- Transcript in, structured TODO list + owners out.
+-- Demonstrates multi-step extraction + structured output from long-form text.
+--
+-- Usage:
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 \
+--       transcript="$(cat meeting.txt)"
+--
+--   spl2 run cookbook/29_meeting_actions/meeting_actions.spl --adapter ollama \
+--       transcript="Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs" \
+--       output_format="markdown"
+
+CREATE FUNCTION action_item_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "meeting_summary": {"type": "string"},
+    "decisions":       {"type": "array", "items": {"type": "string"}},
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task":     {"type": "string"},
+          "owner":    {"type": "string"},
+          "due_date": {"type": "string"},
+          "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+          "context":  {"type": "string"}
+        },
+        "required": ["task", "priority"]
+      }
+    },
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "next_meeting":   {"type": "string"}
+  },
+  "required": ["meeting_summary", "action_items"]
+}
+$$;
+
+WORKFLOW meeting_to_actions
+    INPUT: @transcript TEXT, @output_format TEXT DEFAULT 'json'
+    OUTPUT: @output TEXT
+DO
+    -- Step 1: Identify speakers and normalize transcript
+    GENERATE normalize_transcript(@transcript) INTO @clean_transcript
+
+    -- Step 2: Extract structured action items
+    GENERATE extract_actions(@clean_transcript, action_item_schema()) INTO @structured_json
+
+    -- Step 3: Validate — flag unowned high-priority items
+    GENERATE validate_action_items(@structured_json) INTO @validation_notes
+
+    -- Step 4: Format output
+    EVALUATE @output_format
+        WHEN = 'markdown' THEN
+            GENERATE format_as_markdown(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'markdown'
+        WHEN = 'email' THEN
+            GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'email'
+        OTHERWISE
+            SET @output = @structured_json
+            COMMIT @output WITH status = 'complete', format = 'json'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Long transcript — chunk and summarize first
+        GENERATE summarize_transcript(@transcript) INTO @summary
+        GENERATE extract_actions(@summary, action_item_schema()) INTO @structured_json
+        SET @output = @structured_json
+        COMMIT @output WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 684 in / 968 out
+Latency: 12483ms
+------------------------------------------------------------
+```output
+```python
+import re
+
+def extract_actions(action_item_schema):
+    # Assuming action_item_schema is a dictionary with 'name' and 'text' keys
+    if not isinstance(action_item_schema, dict) or 'name' not in action_item_schema or 'text' not in action_item_schema:
+        raise ValueError("Invalid schema")
+
+    extracted_action = {
+        "name": action_item_schema['name'],
+        "text": action_item_schema['text']
+    }
+
+    return extracted_action
+
+# Test the function
+action_item_schema = {
+    "name": "Fix login bug",
+    "text": "Update the login functionality"
+}
+
+print(extract_actions(action_item_schema))
+```
+
+In this code, we define a function `extract_actions` that takes an action item schema as input. The action item schema is expected to be a dictionary with 'name' and 'text' keys.
+
+We then check if the input schema is valid (i.e., it has 'name' and 'text' keys). If not, we raise a ValueError.
+
+Finally, we create a new dictionary `extracted_action` that contains only the 'name' and 'text' values from the input schema and return this dictionary.
+```
+------------------------------------------------------------
+Variables:
+  @transcript = Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs
+  @output_format = markdown
+  @clean_transcript = To normalize a transcript, we can extract the speaker's name and the content of their message, then format them into a standard format.
+
+Here's an example of how you could do this with Python:
+
+```pyt
+  @structured_json = ```python
+import re
+
+def extract_actions(action_item_schema):
+    # Assuming action_item_schema is a dictionary with 'name' and 'text' keys
+    if not isinstance(action_item_schema, dict) or 'name' no
+  @validation_notes = The code you provided is mostly correct. However, there are a few improvements we can make to improve code quality and robustness:
+
+```python
+import re
+
+def validate_action_item(action_item_schema):
+ 
+  @output = ```python
+import re
+
+def extract_actions(action_item_schema):
+    # Assuming action_item_schema is a dictionary with 'name' and 'text' keys
+    if not isinstance(action_item_schema, dict) or 'name' no
+============================================================
+Log: /home/gongai/.spl/logs/meeting_actions-ollama-20260320-081514.log

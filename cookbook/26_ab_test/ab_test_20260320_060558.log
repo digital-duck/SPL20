@@ -1,0 +1,197 @@
+
+```bash
+spl2 run ./26_ab_test/ab_test.spl --adapter ollama -m gemma3 task=Explain neural networks prompt_a=Explain like I'm 5 prompt_b=Give a technical explanation with analogies
+```
+
+```sql
+-- Recipe 26: Prompt A/B Test
+-- Compare two prompt variants using CTEs + EVALUATE scoring. Pick the winner automatically.
+-- Demonstrates data-driven prompt engineering built into the workflow itself.
+--
+-- Usage:
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama -m gemma3 \
+--       task="Explain neural networks" \
+--       prompt_a="Explain like I'm 5" \
+--       prompt_b="Give a technical explanation with analogies"
+--
+--   spl2 run cookbook/26_ab_test/ab_test.spl --adapter ollama \
+--       task="Write a product description for a standing desk" \
+--       prompt_a="Focus on health benefits" \
+--       prompt_b="Focus on productivity and focus"
+
+-- Scoring rubric as a reusable function
+CREATE FUNCTION scoring_rubric()
+RETURNS TEXT AS $$
+Rate the response on a scale of 0–10 for each criterion:
+1. Clarity (0-10): Is it easy to understand?
+2. Completeness (0-10): Does it fully address the task?
+3. Relevance (0-10): Is every sentence on-topic?
+4. Engagement (0-10): Is it interesting to read?
+
+Return JSON: {"clarity": N, "completeness": N, "relevance": N, "engagement": N, "total": N, "rationale": "..."}
+$$;
+
+WORKFLOW ab_test
+    INPUT: @task TEXT, @prompt_a TEXT, @prompt_b TEXT, @winner_threshold FLOAT DEFAULT 1.5
+    OUTPUT: @winner_output TEXT
+DO
+    -- Generate both variants in parallel CTEs (conceptually)
+    WITH
+        variant_a AS (
+            PROMPT run_variant_a
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_a AS instruction
+            GENERATE response(task, instruction)
+        ),
+        variant_b AS (
+            PROMPT run_variant_b
+            SELECT
+                system_role('You are a helpful assistant. Respond to the task as instructed.'),
+                @task AS task,
+                @prompt_b AS instruction
+            GENERATE response(task, instruction)
+        )
+    SELECT
+        variant_a.response AS response_a,
+        variant_b.response AS response_b
+    INTO @response_a, @response_b
+
+    -- Score both variants
+    GENERATE evaluate_response(@response_a, @task, scoring_rubric()) INTO @score_a_json
+    GENERATE evaluate_response(@response_b, @task, scoring_rubric()) INTO @score_b_json
+
+    -- Extract numeric totals
+    GENERATE extract_total(@score_a_json) INTO @score_a
+    GENERATE extract_total(@score_b_json) INTO @score_b
+
+    -- Pick winner or declare tie
+    EVALUATE (@score_a - @score_b)
+        WHEN > @winner_threshold THEN
+            SET @winner_output = @response_a
+            COMMIT @winner_output WITH
+                winner = 'A',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_a - @score_b)
+        WHEN < (0 - @winner_threshold) THEN
+            SET @winner_output = @response_b
+            COMMIT @winner_output WITH
+                winner = 'B',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b,
+                margin = (@score_b - @score_a)
+        OTHERWISE
+            -- Scores too close — return both with explanation
+            GENERATE compare_outputs(@response_a, @response_b, @score_a_json, @score_b_json) INTO @winner_output
+            COMMIT @winner_output WITH
+                winner = 'tie',
+                prompt_a_score = @score_a,
+                prompt_b_score = @score_b
+    END
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'A/B test failed during generation.' WITH status = 'error'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 1812 in / 3020 out
+Latency: 170407ms
+------------------------------------------------------------
+```output
+Here is a comparison of the two code snippets:
+
+**Similarities:**
+
+* Both functions aim to evaluate responses based on a scoring rubric.
+* Both functions take three inputs: `input_1`, `input_2`, and `input_3`.
+* Both functions use conditional statements to check if the input meets certain criteria.
+
+**Differences:**
+
+* **Functionality:** The first function evaluates the response based on specific points or criteria in a rubric, while the second function calculates a score based on the relevance of the response and its level of detail.
+* **Input format:** The first function expects `input_3` to be a list of points or criteria, while the second function assumes that `input_3` is a string containing a scoring mark (e.g., "good" or "bad").
+* **Evaluation logic:** The first function uses a more complex evaluation logic, where each point in the rubric has a specific weightage and criteria for evaluation. The second function uses a simpler approach, where the score is calculated based on the relevance of the response and its level of detail.
+* **Output format:** Both functions return a dictionary containing the evaluation results, but the first function provides additional feedback and details about each criterion met or not met.
+
+**Improvement suggestions:**
+
+1. Consider adding more specific error handling to ensure that the inputs are in the correct format.
+2. The second function could benefit from additional validation to ensure that the relevance check is accurate and consistent.
+3. The scoring logic in the first function could be made more flexible by allowing for different types of points or criteria, or by using a more dynamic evaluation approach.
+
+Here's an updated version of the `evaluate_response` function in Input 2 with some minor improvements:
+```python
+def evaluate_response(input1, input2, input3):
+    # Check if input3 is a valid scoring mark
+    if not isinstance(input3, str) or len(input3) != 4:
+        raise ValueError("Invalid scoring mark")
+
+    # Calculate the score based on relevance and scoring mark
+    if check_relevance(input2):
+        score = calculate_score(relevance="high", mark=input3)
+    else:
+        score = calculate_score(relevance="low", mark=input3)
+
+    return score
+
+def calculate_score(relevance, mark):
+    # Simplified scoring logic for demonstration purposes only
+    scores = {
+        "high": {"good": 10, "bad": 0},
+        "low": {"good": 1, "bad": 5}
+    }
+    return scores[relevance][mark]
+```
+Note that this is just a minor update and the scoring logic can be improved further to make it more flexible and accurate.
+```
+------------------------------------------------------------
+Variables:
+  @task = Explain neural networks
+  @prompt_a = Explain like I'm 5
+  @prompt_b = Give a technical explanation with analogies
+  @response_a = 
+  @response_b = 
+  @score_a_json = def evaluate_response(input_1, input_2, input_3):
+    """
+    Evaluates the response based on the provided scoring rubric.
+
+    Args:
+        input_1 (str): The first input.
+        input_2 (str): The
+  @score_b_json = def evaluate_response(input1, input2, input3):
+    # Check if the response is relevant to the topic
+    relevance = check_relevance(input2)
+    
+    # Calculate the score based on the scoring rubric
+ 
+  @score_a = def extract_total(input_3):
+    """
+    Extracts the total number of points from the scoring rubric.
+
+    Args:
+        input_3 (list): The scoring rubric.
+
+    Returns:
+        int: The total number 
+  @score_b = ### Extract Total Score Function
+
+Here is an example implementation for extracting the total score:
+
+```python
+def extract_total(response, input1, input2, input3):
+    """
+    Extracts and returns the
+  @winner_output = Here is a comparison of the two code snippets:
+
+**Similarities:**
+
+* Both functions aim to evaluate responses based on a scoring rubric.
+* Both functions take three inputs: `input_1`, `input_2`, and `
+============================================================
+Log: /home/gongai/.spl/logs/ab_test-ollama-20260320-060558.log

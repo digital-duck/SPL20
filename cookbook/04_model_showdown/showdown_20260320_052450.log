@@ -1,0 +1,173 @@
+
+```bash
+spl2 run ./04_model_showdown/showdown.spl --adapter ollama -m gemma3 prompt=What is the meaning of life?
+```
+
+```prompt
+What is the meaning of life?
+```
+
+```sql
+-- Recipe 04: Model Showdown
+-- Same prompt to multiple Ollama models — compare responses side-by-side.
+-- Uses parallel CTEs instead of a bash loop for a pure-SPL implementation.
+--
+-- Usage:
+--   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--       prompt="What is the meaning of life?"
+--   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--       prompt="Explain recursion in 3 sentences" \
+--       model_1=gemma3 model_2=llama3.2 model_3=mistral
+
+CREATE FUNCTION compare_responses(
+    prompt TEXT,
+    model_1 TEXT, answer_1 TEXT,
+    model_2 TEXT, answer_2 TEXT,
+    model_3 TEXT, answer_3 TEXT
+) RETURNS TEXT AS $$
+You are a neutral evaluator comparing responses from three AI models.
+
+Prompt given to all models:
+"{prompt}"
+
+=== {model_1} ===
+{answer_1}
+
+=== {model_2} ===
+{answer_2}
+
+=== {model_3} ===
+{answer_3}
+
+For each model, briefly assess:
+- Response quality and accuracy
+- Key strengths or weaknesses
+- Notable differences from the others
+
+Conclude with which model gave the most helpful answer and why.
+$$;
+
+WORKFLOW model_showdown
+    INPUT:
+        @prompt  TEXT DEFAULT 'What is the meaning of life?',
+        @model_1 TEXT DEFAULT 'gemma3',
+        @model_2 TEXT DEFAULT 'llama3.2',
+        @model_3 TEXT DEFAULT 'mistral'
+    OUTPUT: @comparison TEXT
+DO
+    -- Run the same prompt against all three models in parallel CTEs
+    WITH
+        response_1 AS (
+            PROMPT ask_model_1
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_1
+        ),
+        response_2 AS (
+            PROMPT ask_model_2
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_2
+        ),
+        response_3 AS (
+            PROMPT ask_model_3
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_3
+        )
+    SELECT
+        response_1.answer AS answer_1,
+        response_2.answer AS answer_2,
+        response_3.answer AS answer_3
+    INTO @answer_1, @answer_2, @answer_3
+
+    -- Judge all three responses together
+    GENERATE compare_responses(
+        @prompt,
+        @model_1, @answer_1,
+        @model_2, @answer_2,
+        @model_3, @answer_3
+    ) INTO @comparison
+
+    COMMIT @comparison WITH
+        status   = 'complete',
+        model_1  = @model_1,
+        model_2  = @model_2,
+        model_3  = @model_3
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'One or more models failed to respond.' WITH status = 'error'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 222 in / 1334 out
+Latency: 16221ms
+------------------------------------------------------------
+```output
+**Comparison of AI Models' Responses to the Prompt "What is the meaning of life?"**
+
+### Model 1: Model A (Basic Response Generation)
+
+Response: "The meaning of life is to be happy. We should strive for happiness through our actions and relationships."
+
+Assessment:
+
+* Response quality and accuracy: 2/5 (the response lacks depth, clarity, and philosophical rigor)
+* Key strengths or weaknesses: Basic understanding of human emotions but lacks a coherent framework for addressing the question
+* Notable differences from others: None
+
+### Model 2: Model B (Existentialism-inspired)
+
+Response: "The meaning of life is to find one's own purpose and create meaning through existence. It is an individual pursuit that requires self-discovery, courage, and resilience."
+
+Assessment:
+
+* Response quality and accuracy: 4/5 (the response acknowledges the complexity of human experience but oversimplifies existentialism)
+* Key strengths or weaknesses: Acknowledges the importance of individual agency but fails to address external factors
+* Notable differences from others: Offers a more nuanced perspective than Model A, but lacks empirical evidence
+
+### Model 3: Model C (Integrated Knowledge Framework)
+
+Response: "The meaning of life is an open-ended question that has been debated by philosophers, scientists, and scholars for centuries. It encompasses various aspects such as personal fulfillment, social responsibility, and the pursuit of knowledge. The answer to this question is likely to be unique to each individual, influenced by their values, experiences, and cultural background."
+
+Assessment:
+
+* Response quality and accuracy: 4.5/5 (the response provides a comprehensive overview of the topic, acknowledging complexity and diversity)
+* Key strengths or weaknesses: Clearly acknowledges the complexity of the question but may overwhelm with too much information
+* Notable differences from others: Offers a most comprehensive and balanced perspective, highlighting the need for individualized understanding
+
+**Conclusion**
+
+Model C provided the most helpful answer to the prompt "What is the meaning of life?" due to its:
+
+1. Comprehensive overview of the topic, acknowledging complexity and diversity.
+2. Recognition of the unique factors that contribute to an individual's understanding of the question.
+3. Balanced approach, avoiding oversimplification or relying on a single perspective.
+
+While Model B offered a nuanced and existentialist-inspired response, it oversimplified the concept. Model A failed to provide any meaningful insights due to its basic and lackadaisical approach.
+
+Model C's integrated knowledge framework demonstrates a more thorough understanding of the topic, but also risks overwhelming with too much information. However, its overall balance and acknowledgment of complexity make it the most helpful answer among the three models.
+```
+------------------------------------------------------------
+Variables:
+  @prompt = What is the meaning of life?
+  @answer_1 = 
+  @answer_2 = 
+  @answer_3 = 
+  @comparison = **Comparison of AI Models' Responses to the Prompt "What is the meaning of life?"**
+
+### Model 1: Model A (Basic Response Generation)
+
+Response: "The meaning of life is to be happy. We should strive f
+============================================================
+Log: /home/gongai/.spl/logs/showdown-ollama-20260320-052450.log

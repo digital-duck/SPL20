@@ -1,0 +1,357 @@
+
+```bash
+spl run ./18_guardrails/guardrails.spl --adapter ollama -m gemma3 user_input=Explain how encryption works
+```
+
+```spl
+-- Recipe 18: Guardrails Pipeline
+-- Input validation → safe generation → output validation → response.
+-- Demonstrates safety-first patterns: content filtering, PII detection, and output sanitization.
+-- Four gates before a response is committed.
+--
+-- Usage (from catalog):
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--       --tools cookbook/18_guardrails/tools.py \
+--       input_id=safe_encryption
+--
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--       --tools cookbook/18_guardrails/tools.py \
+--       input_id=pii_ssn
+--
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--       --tools cookbook/18_guardrails/tools.py \
+--       input_id=harmful_malware
+--
+-- Usage (ad-hoc — no catalog):
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--       --tools cookbook/18_guardrails/tools.py \
+--       user_input="My SSN is 123-45-6789, help me file taxes"
+--
+-- Discover available test inputs:
+--   spl run ... input_id=list
+
+WORKFLOW guardrails_pipeline
+    INPUT:  @input_id   TEXT DEFAULT '',
+            @user_input TEXT DEFAULT ''
+    OUTPUT: @safe_response TEXT
+    SECURITY: CLASSIFICATION: internal
+DO
+    -- Step 1: Load test input from catalog (deterministic — no LLM)
+    -- If input_id is blank, @user_input is used directly in subsequent steps.
+    CALL load_test_input(@input_id) INTO @test_context
+
+    -- Gate 1a: Keyword pre-screen (deterministic — no LLM)
+    -- Fast check for obvious harmful / off-topic patterns before spending tokens.
+    CALL classify_input_keywords(@user_input) INTO @keyword_class
+
+    EVALUATE @keyword_class
+        WHEN STARTSWITH 'harmful' THEN
+            COMMIT 'I cannot help with that request.' WITH
+                status        = 'blocked_harmful',
+                gate          = 'keyword_prescreen',
+                keyword_match = @keyword_class
+        WHEN STARTSWITH 'off_topic' THEN
+            COMMIT 'That question is outside my scope. Please ask something relevant.' WITH
+                status        = 'blocked_off_topic',
+                gate          = 'keyword_prescreen',
+                keyword_match = @keyword_class
+        OTHERWISE
+            -- Continue to LLM classification
+    END
+
+    -- Gate 1b: LLM input content classification (nuanced cases keywords miss)
+    GENERATE classify_input(@user_input, @test_context) INTO @input_class
+
+    EVALUATE @input_class
+        WHEN 'harmful' THEN
+            COMMIT 'I cannot help with that request.' WITH
+                status = 'blocked_harmful',
+                gate   = 'llm_classifier'
+        WHEN 'off_topic' THEN
+            COMMIT 'That question is outside my scope. Please ask something relevant.' WITH
+                status = 'blocked_off_topic',
+                gate   = 'llm_classifier'
+        OTHERWISE
+            -- Input is acceptable, continue
+    END
+
+    -- Gate 2: PII detection (deterministic — no LLM)
+    CALL detect_pii(@user_input) INTO @pii_report
+
+    EVALUATE @pii_report
+        WHEN STARTSWITH 'pii_found' THEN
+            -- Gate 2b: Redact PII (deterministic — no LLM)
+            CALL redact_pii(@user_input) INTO @clean_input
+        OTHERWISE
+            SET @clean_input = @user_input
+    END
+
+    -- Gate 3: Generate response with safety-tuned prompt
+    GENERATE safe_response(@clean_input) INTO @raw_response
+
+    -- Gate 4: Output validation — check for PII leakage or harmful content
+    GENERATE validate_output(@raw_response, @clean_input) INTO @output_check
+
+    EVALUATE @output_check
+        WHEN 'safe' THEN
+            SET @safe_response = @raw_response
+        WHEN 'contains_pii' THEN
+            -- Deterministic PII redaction on the output too
+            CALL redact_pii(@raw_response) INTO @safe_response
+        WHEN 'hallucination' THEN
+            GENERATE safe_response(@clean_input) INTO @safe_response
+            RETRY WITH temperature = 0.1
+        OTHERWISE
+            SET @safe_response = 'I was unable to generate a safe response. Please rephrase your question.'
+    END
+
+    COMMIT @safe_response WITH
+        status       = 'complete',
+        input_class  = @input_class,
+        pii_detected = @pii_report
+
+EXCEPTION
+    WHEN RefusalToAnswer THEN
+        COMMIT 'This request cannot be processed.' WITH status = 'refused'
+    WHEN HallucinationDetected THEN
+        COMMIT 'Unable to provide a verified response.' WITH status = 'hallucination_blocked'
+    WHEN BudgetExceeded THEN
+        COMMIT @safe_response WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 9
+Tokens: 1651 in / 2534 out
+Latency: 30720ms
+------------------------------------------------------------
+```output
+**Encryption Explained**
+
+Encryption is the process of converting plaintext (readable data) into ciphertext (unreadable data) to protect it from unauthorized access. Here's a simplified overview of how encryption works:
+
+1. **Key Generation**: A key pair is generated, consisting of a public key and a private key. The public key is used for encryption, while the private key is used for decryption.
+2. **Encryption Algorithm**: An encryption algorithm (such as AES or RSA) is applied to the plaintext data using the public key. This process transforms the plaintext into ciphertext.
+3. **Ciphertext Output**: The resulting ciphertext is the encrypted data that can only be decrypted with the corresponding private key.
+4. **Decryption**: When the recipient has access to the private key, they can apply the same encryption algorithm to the ciphertext, using their private key as input.
+
+**Encryption Types**
+
+There are several types of encryption:
+
+1. **Symmetric Encryption**: Uses the same key for both encryption and decryption (e.g., AES).
+2. **Asymmetric Encryption**: Uses a pair of keys: one public key for encryption and a corresponding private key for decryption (e.g., RSA).
+
+**Why is Encryption Important?**
+
+Encryption provides several benefits:
+
+1. **Confidentiality**: Protects data from unauthorized access.
+2. **Data Integrity**: Ensures that data remains unmodified during transmission or storage.
+3. **Authentication**: Verifies the identity of the sender and receiver.
+
+By using encryption, individuals and organizations can safeguard sensitive information, ensuring confidentiality, integrity, and authenticity of their data.
+
+Would you like to know more about a specific aspect of encryption?
+```
+------------------------------------------------------------
+Variables:
+  @user_input = Explain how encryption works
+  @test_context = I can't execute code or procedures for you, but I can guide you on how to approach this task.
+
+The `load_test_input()` procedure is likely a custom function designed to load test data into your application. Here's a general outline of the steps you could take:
+
+1. **Understand the Procedure**: Before executing the procedure, make sure you understand what it does and what kind of data it loads. Review the code or documentation provided for this function.
+
+2. **Identify the Environment**: Determine the environment where the procedure is being executed. Is it a database, an API, or a file-based system?
+
+3. **Prepare the Data**: Prepare any necessary input data to load into your application. This could include CSV files, JSON data, or even user-generated input.
+
+4. **Execute the Procedure**: Once you have the necessary data prepared, execute the `load_test_input()` procedure by calling it with your data as an argument.
+
+5. **Monitor and Verify Results**: After executing the procedure, monitor the results to ensure that the data has been loaded correctly and without any errors.
+
+Here's a simple example using Python:
+
+```python
+def load_test_input(data):
+    # Assuming this function is designed to handle some type of input data
+    if isinstance(data, list):
+        print("Loaded List")
+    elif isinstance(data, dict):
+        print("Loaded Dictionary")
+
+# Example usage:
+data = ["Test", 123, (4,5)]
+load_test_input(data)
+```
+
+Remember that the actual execution and handling of `load_test_input()` will depend on its specific implementation and your application's architecture.
+  @keyword_class = **Classifying Input Keywords using Natural Language Processing (NLP)**
+
+The `classify_input_keywords` procedure is a text classification technique used to categorize input keywords into predefined categories. In this example, we'll use the `explain how encryption works` string as input.
+
+**Step 1: Tokenization**
+
+Tokenization involves breaking down the input string into individual words or tokens. We can use the NLTK library in Python to perform tokenization.
+```python
+import nltk
+from nltk.tokenize import word_tokenize
+
+input_string = "explain how encryption works"
+tokens = word_tokenize(input_string)
+print(tokens)  # Output: ['explain', 'how', 'encryption', 'works']
+```
+**Step 2: Stopword Removal**
+
+Stopwords are common words like "the," "and," etc. that do not carry much meaning in text classification. We can use the NLTK library to remove stopwords from our tokens.
+```python
+from nltk.corpus import stopwords
+
+stop_words = set(stopwords.words('english'))
+filtered_tokens = [token for token in tokens if token.lower() not in stop_words]
+print(filtered_tokens)  # Output: ['explain', 'how', 'encryption', 'works']
+```
+**Step 3: Stemming or Lemmatization**
+
+Stemming or lemmatization reduces words to their base form, making it easier for our algorithm to compare them. We can use the PorterStemmer class from NLTK to perform stemming.
+```python
+from nltk.stem import PorterStemmer
+
+stemmer = PorterStemmer()
+stemmed_tokens = [stemmer.stem(token) for token in filtered_tokens]
+print(stemmed_tokens)  # Output: ['explain', 'how', 'encrypt', 'work']
+```
+**Step 4: Bag-of-Words Representation**
+
+A bag-of-words representation represents our input text as a vector of word frequencies. We can use the CountVectorizer class from scikit-learn to create this representation.
+```python
+from sklearn.feature_extraction.text import CountVectorizer
+
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform([' '.join(stemmed_tokens)])
+print(X.toarray())  # Output: [[1. 0. 0. 0.]]
+```
+**Step 5: Classification**
+
+We can train a classifier using the bag-of-words representation and our predefined categories.
+
+**Example Code**
+```python
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+# Preprocessing steps
+nltk.download('punkt')
+nltk.download('stopwords')
+
+input_string = "explain how encryption works"
+tokens = word_tokenize(input_string)
+stop_words = set(stopwords.words('english'))
+filtered_tokens = [token for token in tokens if token.lower() not in stop_words]
+stemmer = PorterStemmer()
+stemmed_tokens = [stemmer.stem(token) for token in filtered_tokens]
+
+# Bag-of-words representation
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform([' '.join(stemmed_tokens)])
+
+# Classification using Naive Bayes classifier
+clf = MultinomialNB()
+clf.fit(X, ['classification'])
+```
+**Note**: This is a simplified example and may not achieve optimal results. In practice, you would want to use more advanced techniques like TF-IDF or word embeddings (e.g., Word2Vec).
+  @input_class = Based on the provided input, I can classify it into the following categories:
+
+1. **Technical Explanation**: Input 1 is a request for an explanation of how encryption works, which falls under the category of technical explanations.
+2. **Task Guidance**: Input 2 provides guidance on how to approach a task related to executing a custom procedure called `load_test_input()`, which can be classified as task guidance or instructional content.
+3. **Code Example**: The example code provided at the end of the input is an illustration of how the `load_test_input()` procedure might be used, which falls under the category of coding examples.
+
+Overall, the input appears to be a mix of technical explanation, task guidance, and coding examples, making it suitable for a knowledge base or documentation platform where users can find answers to their questions and learn new skills.
+  @pii_report = Encryption is a process of converting plaintext data into unreadable ciphertext to protect it from unauthorized access. Here's an explanation on how encryption works and the `detect_pii` procedure:
+
+**How Encryption Works:**
+
+1. **Key Generation**: A key is generated, which is used for both encryption and decryption.
+2. **Encryption Process**: The plaintext data is converted into ciphertext using a cryptographic algorithm (e.g., AES). The key is used to determine the transformation of each plaintext byte into the corresponding ciphertext byte.
+3. **Decryption Process**: To decrypt the ciphertext, the same key is used to reverse the transformation, resulting in the original plaintext.
+
+**detect_pii Procedure:**
+
+The `detect_pii` procedure is designed to detect potentially identifiable information (PII) in a given dataset. Here's an explanation of how it might work:
+
+1. **Data Preprocessing**: The input data is cleaned and preprocessed to remove any irrelevant or unnecessary information.
+2. **Feature Extraction**: Relevant features are extracted from the data, such as names, addresses, phone numbers, etc.
+3. **Pattern Matching**: The extracted features are matched against a database of known PII patterns using machine learning algorithms (e.g., neural networks).
+4. **Classification**: The output is classified into either "PII detected" or "no PII detected".
+5. **Report Generation**: A report is generated indicating whether any PII was detected and if so, what specific information was found.
+
+**Example Code:**
+
+Here's a simplified example of how the `detect_pii` procedure might be implemented in Python using machine learning:
+```python
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+# Load dataset
+df = pd.read_csv("data.csv")
+
+# Preprocess data
+df["name"] = df["name"].str.lower()
+df["address"] = df["address"].str.replace("\n", " ")
+df["phone_number"] = df["phone_number"].str.replace("-", "")
+
+# Extract features
+vectorizer = TfidfVectorizer(stop_words="english")
+X = vectorizer.fit_transform([" ".join(df["name"]), " ".join(df["address"]), " ".join(df["phone_number"])])
+y = pd.Series([0, 1, 1, 1] * 10)  # labels for PII detection
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+# Train model
+model = RandomForestClassifier(n_estimators=100)
+model.fit(X_train, y_train)
+
+# Make predictions on test set
+y_pred = model.predict(X_test)
+
+# Evaluate model performance
+accuracy = model.score(X_test, y_test)
+print(f"Accuracy: {accuracy:.3f}")
+
+# Detect PII in new data
+new_data = ["John Doe 123 Main St", "Jane Smith 456 Elm St"]
+X_new = vectorizer.transform([" ".join(new_data[0]), " ".join(new_data[1])])
+y_pred_new = model.predict(X_new)
+if y_pred_new[0]:
+    print("PII detected!")
+else:
+    print("No PII detected.")
+```
+Note that this is a highly simplified example and real-world `detect_pii` procedures would require more complex data preprocessing, feature extraction, and machine learning models.
+  @clean_input = Explain how encryption works
+  @output_check = **Encryption Process**
+
+Encryption is the process of converting plaintext (readable data) into ciphertext (unreadable data) to protect it from unauthorized access. Here's a step-by-step explanation of how encryption works:
+
+1. **Key Generation**: A key pair is generated, consisting of a public key and a private key. The public key is used for encryption, while the private key is used for decryption.
+2. **Encryption Algorithm**: An encryption algorithm (such as AES or RSA) is applied to the plaintext data using the public key. This process transforms the plaintext into ciphertext.
+3. **Ciphertext Output**: The resulting ciphertext is the encrypted data that can only be decrypted with the corresponding private key.
+4. **Decryption**: When the recipient has access to the private key, they can apply the same encryption algorithm to the ciphertext, using their private key as input.
+
+**Key Concepts**
+
+*   **Symmetric Encryption**: Uses the same key for both encryption and decryption (e.g., AES).
+*   **Asymmetric Encryption**: Uses a pair of keys: one public key for encryption and a corresponding private key for decryption (e.g., RSA).
+
+By understanding how encryption works, individuals and organizations can take steps to protect sensitive information and ensure confidentiality, integrity, and authenticity of their data.
+============================================================
+Log: /home/gongai/.spl/logs/guardrails-ollama-20260324-173800.log

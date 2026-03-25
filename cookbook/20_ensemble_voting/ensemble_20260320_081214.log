@@ -1,0 +1,165 @@
+
+```bash
+spl2 run ./20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question=What causes inflation?
+```
+
+```spl2
+-- Recipe 20: Ensemble Voting
+-- Generates multiple independent answers, then uses majority voting to pick the best.
+-- Demonstrates ensemble methods, comparative scoring, and consensus-driven output.
+--
+-- Usage:
+--   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama -m gemma3 question="What causes inflation?"
+--   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="Is Rust faster than C++?"
+--   spl2 run cookbook/20_ensemble_voting/ensemble.spl --adapter ollama question="What is the best database for time-series data?"
+
+WORKFLOW ensemble_voting
+    INPUT: @question TEXT
+    OUTPUT: @final_answer TEXT
+DO
+    -- Step 1: Generate 5 independent candidate answers with varying temperatures
+    GENERATE answer_candidate(@question) INTO @candidate_1
+    GENERATE answer_candidate(@question) INTO @candidate_2
+    GENERATE answer_candidate(@question) INTO @candidate_3
+    GENERATE answer_candidate(@question) INTO @candidate_4
+    GENERATE answer_candidate(@question) INTO @candidate_5
+
+    -- Step 2: Score each candidate on accuracy, completeness, and clarity
+    GENERATE score_candidate(@candidate_1, @question) INTO @score_1
+    GENERATE score_candidate(@candidate_2, @question) INTO @score_2
+    GENERATE score_candidate(@candidate_3, @question) INTO @score_3
+    GENERATE score_candidate(@candidate_4, @question) INTO @score_4
+    GENERATE score_candidate(@candidate_5, @question) INTO @score_5
+
+    -- Step 3: Find consensus — identify common themes across candidates
+    GENERATE find_consensus(
+        @candidate_1, @candidate_2, @candidate_3,
+        @candidate_4, @candidate_5
+    ) INTO @consensus
+
+    -- Step 4: Select the best candidate based on scores and consensus alignment
+    GENERATE select_winner(
+        @candidate_1, @score_1,
+        @candidate_2, @score_2,
+        @candidate_3, @score_3,
+        @candidate_4, @score_4,
+        @candidate_5, @score_5,
+        @consensus
+    ) INTO @best_candidate
+
+    -- Step 5: Polish the winning answer, incorporating consensus insights
+    GENERATE polish(@best_candidate, @consensus, @question) INTO @final_answer
+
+    COMMIT @final_answer WITH status = 'complete', candidates = 5
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        -- If budget runs out, use whatever candidates we have
+        GENERATE select_winner(
+            @candidate_1, @score_1,
+            @candidate_2, @score_2,
+            @candidate_3, @score_3
+        ) INTO @final_answer
+        COMMIT @final_answer WITH status = 'partial', candidates = 3
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 13
+Tokens: 5306 in / 2991 out
+Latency: 41595ms
+------------------------------------------------------------
+```output
+Input 1:
+
+* Demand-pull inflation: Aggregate demand exceeds available supply, leading to higher prices.
+* Cost-push inflation: Increase in production costs (wages or raw materials) leads to higher prices.
+* Monetary policy (specifically, excessive money supply): Excessive money supply can lead to inflation if it outpaces economic growth.
+* Economic growth: Rapid economic growth can increase demand for goods and services, driving up prices.
+* Supply chain disruptions: Disruptions to global supply chains cause price increases.
+* Resource shortages: Shortages of essential resources can drive up prices due to increased demand.
+
+Input 3:
+
+* Demand-pull inflation: Aggregate demand exceeds available supply, leading to higher prices.
+* Cost-push inflation: Increase in production costs (wages or raw materials) leads to higher prices.
+* Monetary policy (specifically, excessive money supply): Excessive money supply can lead to inflation if it outpaces economic growth.
+* Economic growth: Rapid economic growth can increase demand for goods and services, driving up prices.
+* Supply chain disruptions: Disruptions to global supply chains cause price increases.
+* Natural disasters and commodity price shocks: These external factors can disrupt supply chains and lead to price increases.
+
+Input 4:
+
+* Demand-pull inflation: Aggregate demand exceeds available supply, leading to higher prices.
+* Cost-push inflation: Increase in production costs (wages or raw materials) leads to higher prices.
+* Monetary policy (specifically, excessive money supply): Excessive money supply can lead to inflation if it outpaces economic growth.
+* Economic growth: Rapid economic growth can increase demand for goods and services, driving up prices.
+* Supply chain disruptions: Disruptions to global supply chains cause price increases.
+* Expectations: Drivers of expectations are not explicitly mentioned.
+
+Input 5:
+
+* Demand-pull inflation: Aggregate demand exceeds available supply, leading to higher prices.
+* Cost-push inflation: Increase in production costs (wages or raw materials) leads to higher prices.
+* Monetary policy (specifically, excessive money supply): Excessive money supply can lead to inflation if it outpaces economic growth.
+* Economic growth: Rapid economic growth can increase demand for goods and services, driving up prices.
+* Supply chain disruptions: Disruptions to global supply chains cause price increases.
+* Currency devaluation: A decline in the value of a country's currency can make its exports more expensive, leading to higher prices.
+
+Input 3 mentions natural disasters and commodity price shocks as factors that can contribute to inflation.
+```
+------------------------------------------------------------
+Variables:
+  @question = What causes inflation?
+  @candidate_1 = Inflation is caused by a combination of factors, including:
+
+1. **Demand and Supply Imbalance**: When demand for goods and services exceeds the available supply, businesses can raise their prices, lea
+  @candidate_2 = Inflation is a complex economic phenomenon, and there are several factors that can contribute to it. Some of the most common causes of inflation include:
+
+1. **Monetary policy**: An increase in the mo
+  @candidate_3 = Inflation is caused by an increase in the general price level of goods and services in an economy over time. It's measured as an annual percentage increase in the Consumer Price Index (CPI). The main 
+  @candidate_4 = Inflation is typically caused by a combination of factors, including:
+
+1. Demand and supply imbalance: When aggregate demand exceeds the available supply of goods and services, businesses can raise th
+  @candidate_5 = There are several factors that can cause inflation. Some of the main causes include:
+
+1. Demand-pull inflation: This occurs when aggregate demand exceeds the available supply of goods and services, le
+  @score_1 = Based on the provided inputs, I would define inflation as:
+
+"Inflation is a complex economic phenomenon characterized by a sustained increase in the general price level of goods and services in an eco
+  @score_2 = Based on the input, I would suggest elaborating on the concept of expectations as a cause of inflation. Expectations can play a significant role in shaping consumer behavior and driving up prices.
+
+Fo
+  @score_3 = Inflation is caused by an increase in the general price level of goods and services in an economy over time. The main causes of inflation include:
+
+1. Demand-pull inflation
+2. Cost-push inflation
+3. M
+  @score_4 = Based on the information provided, I would score the candidate as follows:
+
+Candidate's response: "Inflation is typically caused by a combination of factors."
+
+Score: 6/10
+
+Reasoning:
+
+* The candidate
+  @score_5 = It appears you've provided a list of potential causes of inflation. I'll summarize them for you:
+
+1. Demand-pull inflation: Aggregate demand exceeds available supply, leading to higher prices.
+2. Cost
+  @consensus = To find consensus among these different input sources, I would analyze them as follows:
+
+1. All five inputs agree on the causes of inflation:
+	* Demand-pull inflation (all)
+	* Cost-push inflation (all
+  @best_candidate = Based on the provided inputs, it appears that there are multiple factors that contribute to inflation, and each source provides a slightly different perspective on its causes. Here is a summary of the
+  @final_answer = Input 1:
+
+* Demand-pull inflation: Aggregate demand exceeds available supply, leading to higher prices.
+* Cost-push inflation: Increase in production costs (wages or raw materials) leads to higher pri
+============================================================
+Log: /home/gongai/.spl/logs/ensemble-ollama-20260320-081214.log

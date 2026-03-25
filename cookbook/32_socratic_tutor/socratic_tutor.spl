@@ -56,11 +56,14 @@ WORKFLOW socratic_tutor
             @max_questions INT  DEFAULT 5
     OUTPUT: @dialogue TEXT
 DO
+    LOGGING f'Socratic tutor | level={@student_level} topic={@topic} topic_id={@topic_id}' LEVEL INFO
+
     -- Step 1: Load structured topic context from catalog (deterministic — no LLM)
     CALL load_topic(@topic_id, @subject) INTO @topic_context
 
     -- Step 2: Get level-appropriate vocabulary and scaffolding guidance (deterministic — no LLM)
     CALL get_level_guidance(@student_level) INTO @level_guide
+    LOGGING 'Topic and level guidance loaded' LEVEL DEBUG
 
     -- Step 3: Opening Socratic question — grounded by topic context and level guide (LLM)
     GENERATE opening_question(
@@ -102,6 +105,7 @@ DO
         @topic,
         @topic_context
     ) INTO @understanding_score
+    LOGGING f'Understanding score: {@understanding_score}' LEVEL INFO
 
     -- Step 8: Adapt the third question based on understanding score
     EVALUATE @understanding_score
@@ -113,7 +117,7 @@ DO
                 @student_2,
                 socratic_persona(@student_level)
             ) INTO @question_3
-        OTHERWISE
+        ELSE
             -- Student needs more scaffolding — hint question to unblock
             GENERATE hint_question(
                 @question_2,
@@ -141,5 +145,6 @@ DO
         @understanding_score
     ) INTO @dialogue
 
+    LOGGING f'Dialogue compiled | understanding_score={@understanding_score}' LEVEL INFO
     COMMIT @dialogue WITH status = 'complete', understanding_score = @understanding_score
 END

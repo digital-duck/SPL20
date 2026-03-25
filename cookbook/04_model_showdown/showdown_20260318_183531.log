@@ -1,0 +1,107 @@
+==============================================
+  SPL 2.0 Model Showdown
+==============================================
+  Prompt: What is the meaning of life?
+  Models: gemma3 llama3.2 mistral
+==============================================
+
+>>> gemma3
+----------------------------------------------
+============================================================
+Model: gemma3
+Tokens: 48 in / 614 out
+Latency: 9970ms
+Cost: $0.000000
+------------------------------------------------------------
+That’s a question that’s occupied philosophers and individuals for centuries! There’s no single, universally agreed-upon answer to “What is the meaning of life?” It’s a profoundly personal and complex question, and the beauty of it is that *you* get to define it. 
+
+Here's a breakdown of different perspectives:
+
+**1. Philosophical Perspectives:**
+
+* **Nihilism:** This viewpoint suggests that life is inherently without objective meaning, purpose, or intrinsic value. It doesn’t mean life is necessarily bad, just that we’re free to create our own meaning.
+* **Existentialism:** Existentialists believe that we are born into a meaningless world and it’s our responsibility to create our own values and meaning through our choices and actions. We are “condemned to be free.”
+* **Absurdism:** Similar to existentialism, absurdism recognizes the inherent conflict between humanity's search for meaning and the meaningless nature of the universe. It encourages embracing this absurdity and living authentically despite it.
+* **Hedonism:** This focuses on pleasure and happiness as the ultimate goal of life.
+* **Utilitarianism:** This emphasizes maximizing happiness and well-being for the greatest number of people.
+
+**2. Religious & Spiritual Perspectives:**
+
+* **Many Religions:** Often provide answers centered around serving a higher power, fulfilling a divine plan, achieving enlightenment, or attaining an afterlife. This typically involves following specific moral codes and practices.
+* **Buddhism:** Focuses on escaping the cycle of suffering (samsara) through practices like meditation and cultivating compassion.
+* **Hinduism:**  Emphasizes dharma (righteous conduct), karma (the law of cause and effect), and achieving moksha (liberation from the cycle of rebirth).
+
+**3. Humanistic & Psychological Perspectives:**
+
+* **Self-Actualization (Maslow):**  The drive to fulfill one's potential, become the best version of oneself, and contribute to the world.
+* **Finding Purpose Through Connection:** Many people find meaning through relationships with loved ones, contributing to their communities, and pursuing passions.
+* **Experiencing Life Fully:**  Some believe the meaning of life is simply to experience it – to embrace joy, sorrow, and everything in between.
+
+**Ultimately, the "meaning of life" isn’t something to be *found*, but something to be *created*.** 
+
+**Here are some questions to help *you* define your own meaning:**
+
+* What brings you joy and fulfillment?
+* What are you passionate about?
+* What impact do you want to have on the world?
+* What values are important to you?
+
+---
+
+Would you like me to delve deeper into a specific aspect of this question, such as:
+
+*   A particular philosophical school of thought?
+*   Religious perspectives on the meaning of life?
+*   How different cultures approach this question?
+============================================================
+
+>>> llama3.2
+----------------------------------------------
+============================================================
+Model: llama3.2
+Tokens: 57 in / 442 out
+Latency: 7011ms
+Cost: $0.000000
+------------------------------------------------------------
+The question of the meaning of life has been debated and explored by philosophers, theologians, scientists, and many others for centuries. While there is no one definitive answer, here are some perspectives:
+
+**Philosophical perspectives:**
+
+1. **Existentialism**: According to existentialist philosophers like Jean-Paul Sartre and Martin Heidegger, life has no inherent meaning. Instead, it's up to each individual to create their own purpose and give their life meaning.
+2. **Utilitarianism**: Jeremy Bentham and John Stuart Mill argued that the meaning of life is to maximize overall happiness and well-being for the greatest number of people.
+3. **Hedonism**: Some philosophers, like Epicurus, believed that the meaning of life is to seek pleasure and avoid pain.
+
+**Religious perspectives:**
+
+1. **Theological perspectives**: Many religions believe that the meaning of life is to fulfill a divine purpose or follow a set of sacred laws (e.g., Christianity, Islam, Judaism).
+2. **Spiritual growth**: Some spiritual traditions, like Buddhism and Hinduism, see the meaning of life as personal growth, self-realization, and liberation from suffering.
+
+**Scientific perspectives:**
+
+1. **Biological perspective**: From a biological standpoint, the meaning of life can be seen as survival and reproduction, as these are the fundamental drives that have shaped the evolution of life on Earth.
+2. **Cosmological perspective**: Some scientists, like Carl Sagan, argue that the meaning of life is to understand and appreciate our place in the universe.
+
+**Personal perspectives:**
+
+1. **Self-actualization**: Many people find meaning in life by pursuing their passions, building meaningful relationships, and contributing to something larger than themselves.
+2. **Purpose and impact**: Others find meaning in making a positive impact on the world, whether through work, volunteerism, or creative pursuits.
+
+Ultimately, the meaning of life is a highly personal and subjective question that each individual must answer for themselves. While these perspectives offer some guidance, they are not mutually exclusive, and many people find meaning by combining elements from multiple sources.
+
+What do you think? What gives your life meaning?
+============================================================
+
+>>> mistral
+----------------------------------------------
+============================================================
+Model: mistral
+Tokens: 44 in / 89 out
+Latency: 5042ms
+Cost: $0.000000
+------------------------------------------------------------
+ While I don't claim to have all the answers, many philosophers and thinkers throughout history have pondered over this question. The meaning of life remains a deeply personal and subjective topic. However, some common themes include seeking happiness, knowledge, personal growth, love, and contributing positively to the world around us. Ultimately, the answer can vary greatly depending on one's beliefs, culture, and individual experiences.
+============================================================
+
+==============================================
+  Showdown complete!
+==============================================

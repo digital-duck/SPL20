@@ -1,0 +1,159 @@
+
+```bash
+spl2 run ./04_model_showdown/showdown.spl --adapter ollama -m gemma3 prompt=What is the meaning of life?
+```
+
+```sql
+-- Recipe 04: Model Showdown
+-- Same prompt to multiple Ollama models — compare responses side-by-side.
+-- Uses parallel CTEs instead of a bash loop for a pure-SPL implementation.
+--
+-- Usage:
+--   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--       prompt="What is the meaning of life?"
+--   spl2 run cookbook/04_model_showdown/showdown.spl --adapter ollama \
+--       prompt="Explain recursion in 3 sentences" \
+--       model_1=gemma3 model_2=llama3.2 model_3=mistral
+
+CREATE FUNCTION compare_responses(
+    prompt TEXT,
+    model_1 TEXT, answer_1 TEXT,
+    model_2 TEXT, answer_2 TEXT,
+    model_3 TEXT, answer_3 TEXT
+) RETURNS TEXT AS $$
+You are a neutral evaluator comparing responses from three AI models.
+
+Prompt given to all models:
+"{prompt}"
+
+=== {model_1} ===
+{answer_1}
+
+=== {model_2} ===
+{answer_2}
+
+=== {model_3} ===
+{answer_3}
+
+For each model, briefly assess:
+- Response quality and accuracy
+- Key strengths or weaknesses
+- Notable differences from the others
+
+Conclude with which model gave the most helpful answer and why.
+$$;
+
+WORKFLOW model_showdown
+    INPUT:
+        @prompt  TEXT DEFAULT 'What is the meaning of life?',
+        @model_1 TEXT DEFAULT 'gemma3',
+        @model_2 TEXT DEFAULT 'llama3.2',
+        @model_3 TEXT DEFAULT 'mistral'
+    OUTPUT: @comparison TEXT
+DO
+    -- Run the same prompt against all three models in parallel CTEs
+    WITH
+        response_1 AS (
+            PROMPT ask_model_1
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_1
+        ),
+        response_2 AS (
+            PROMPT ask_model_2
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_2
+        ),
+        response_3 AS (
+            PROMPT ask_model_3
+            SELECT
+                system_role('You are a helpful, knowledgeable assistant.'),
+                @prompt AS prompt
+            GENERATE answer(prompt)
+            USING MODEL @model_3
+        )
+    SELECT
+        response_1.answer AS answer_1,
+        response_2.answer AS answer_2,
+        response_3.answer AS answer_3
+    INTO @answer_1, @answer_2, @answer_3
+
+    -- Judge all three responses together
+    GENERATE compare_responses(
+        @prompt,
+        @model_1, @answer_1,
+        @model_2, @answer_2,
+        @model_3, @answer_3
+    ) INTO @comparison
+
+    COMMIT @comparison WITH
+        status   = 'complete',
+        model_1  = @model_1,
+        model_2  = @model_2,
+        model_3  = @model_3
+
+EXCEPTION
+    WHEN GenerationError THEN
+        COMMIT 'One or more models failed to respond.' WITH status = 'error'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 222 in / 1373 out
+Latency: 17087ms
+------------------------------------------------------------
+Committed: **Model 1: Responds with a philosophical quote**
+
+Response: "The meaning of life is to find your purpose, to pursue your passions, and to make a positive impact on the world."
+
+Assessment:
+
+* Response quality and accuracy: Limited. The response is based on a pre-existing quote rather than providing a unique or insightful answer.
+* Key strengths or weaknesses: Weakness - relies heavily on external sources rather than generating original content.
+* Notable differences from the others: None, as all three models provide philosophical or inspirational responses.
+
+**Model 2: Offers a scientific perspective**
+
+Response: "The meaning of life is to survive and reproduce, according to evolutionary biology. However, this definition can be seen as limited, as it only considers physical existence. A more comprehensive answer would involve the pursuit of knowledge, happiness, and fulfillment."
+
+Assessment:
+
+* Response quality and accuracy: Good. The response is well-structured and acknowledges the limitations of scientific definitions.
+* Key strengths or weaknesses: Strength - provides a clear and concise explanation of biological perspectives on life's meaning.
+* Notable differences from the others: None, as all three models touch on philosophical or inspirational aspects.
+
+**Model 3: Provides a humanistic perspective**
+
+Response: "The meaning of life is to find connection and purpose with others. It involves cultivating relationships, pursuing personal growth, and contributing to society in meaningful ways. Ultimately, it's a deeply subjective experience that varies from person to person."
+
+Assessment:
+
+* Response quality and accuracy: Excellent. The response is empathetic, nuanced, and acknowledges individual differences.
+* Key strengths or weaknesses: Strength - offers a relatable and inclusive perspective on life's meaning.
+* Notable differences from the others: This model diverges most from the other two by focusing on interpersonal connections and community.
+
+**Conclusion**
+
+Model 3 provides the most helpful answer. While all three models offer insightful perspectives, Model 3's response is more comprehensive, empathetic, and acknowledges individual experiences. Its focus on human connections and personal growth makes it a more relatable and inclusive answer to the question of life's meaning.
+------------------------------------------------------------
+Variables:
+  @prompt = What is the meaning of life?
+  @answer_1 = 
+  @answer_2 = 
+  @answer_3 = 
+  @comparison = **Model 1: Responds with a philosophical quote**
+
+Response: "The meaning of life is to find your purpose, to pursue your passions, and to make a positive impact on the world."
+
+Assessment:
+
+* Response
+============================================================
+Log: /home/gongai/.spl/logs/showdown-ollama-20260319-203506.log

@@ -11,22 +11,28 @@ WORKFLOW tree_of_thought
     INPUT: @problem TEXT
     OUTPUT: @best_solution TEXT
 DO
+    LOGGING f'Tree of thought | problem: {@problem}' LEVEL INFO
+
     -- Step 1: Generate multiple initial approaches
+    LOGGING 'Generating 3 initial approaches ...' LEVEL DEBUG
     GENERATE approach_1(@problem) INTO @path_a
     GENERATE approach_2(@problem) INTO @path_b
     GENERATE approach_3(@problem) INTO @path_c
 
     -- Step 2: Develop each approach one level deeper
+    LOGGING 'Developing all 3 paths ...' LEVEL DEBUG
     GENERATE develop(@path_a, @problem) INTO @path_a_developed
     GENERATE develop(@path_b, @problem) INTO @path_b_developed
     GENERATE develop(@path_c, @problem) INTO @path_c_developed
 
     -- Step 3: Score each path on multiple criteria
+    LOGGING 'Scoring paths ...' LEVEL DEBUG
     GENERATE evaluate_path(@path_a_developed, @problem) INTO @score_a
     GENERATE evaluate_path(@path_b_developed, @problem) INTO @score_b
     GENERATE evaluate_path(@path_c_developed, @problem) INTO @score_c
 
     -- Step 4: Select the best path
+    LOGGING f'Scores: A={@score_a} B={@score_b} C={@score_c} — selecting best ...' LEVEL INFO
     GENERATE select_best(
         @path_a_developed, @score_a,
         @path_b_developed, @score_b,
@@ -34,16 +40,19 @@ DO
     ) INTO @best_path
 
     -- Step 5: Refine the winning path into a final solution
+    LOGGING 'Refining winning path ...' LEVEL DEBUG
     GENERATE refine_solution(@best_path, @problem) INTO @best_solution
 
     -- Step 6: Verify the solution holds up
     GENERATE verify(@best_solution, @problem) INTO @verification
+    LOGGING f'Verification result: {@verification}' LEVEL INFO
 
     EVALUATE @verification
         WHEN 'sound' THEN
             COMMIT @best_solution WITH status = 'complete', paths_explored = 3
-        OTHERWISE
+        ELSE
             -- If verification fails, combine insights from all paths
+            LOGGING 'Verification failed — synthesizing all paths' LEVEL WARN
             GENERATE synthesize_all(
                 @path_a_developed, @path_b_developed, @path_c_developed, @problem
             ) INTO @best_solution

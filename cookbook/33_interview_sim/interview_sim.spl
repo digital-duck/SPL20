@@ -76,20 +76,23 @@ $$;
 -- ── Main workflow ───────────────────────────────────────────────────────────
 
 WORKFLOW interview_sim
-    INPUT:  @role_key     TEXT DEFAULT '',
-            @candidate_id TEXT DEFAULT '',
-            @role         TEXT DEFAULT '',
-            @focus        TEXT DEFAULT '',
-            @difficulty   TEXT DEFAULT 'medium',
-            @num_questions INT DEFAULT 3,
-            @experience   TEXT DEFAULT '5 years'
+    INPUT:  @role_key      TEXT DEFAULT '',
+            @candidate_id  TEXT DEFAULT '',
+            @role          TEXT DEFAULT '',
+            @focus         TEXT DEFAULT '',
+            @difficulty    TEXT DEFAULT 'medium',
+            @num_questions INT  DEFAULT 3,
+            @experience    TEXT DEFAULT '5 years'
     OUTPUT: @evaluation_report TEXT
 DO
+    LOGGING f'Interview sim | role={@role} focus={@focus} difficulty={@difficulty}' LEVEL INFO
+
     -- Step 1: Load role and focus area context (deterministic — no LLM)
     CALL load_role(@role_key, @focus) INTO @role_context
 
     -- Step 2: Load candidate profile (deterministic — no LLM)
     CALL load_candidate(@candidate_id) INTO @candidate_profile
+    LOGGING f'Role and candidate loaded | candidate_id={@candidate_id}' LEVEL DEBUG
 
     -- Step 3: Generate the full question set upfront (LLM, grounded by role context)
     GENERATE generate_question_set(
@@ -123,12 +126,14 @@ DO
     ) INTO @a3
 
     -- Step 6: Score each answer against the rubric (LLM)
+    LOGGING 'Scoring answers ...' LEVEL DEBUG
     GENERATE score_answer(@q1, @a1, @role_context, evaluation_rubric()) INTO @score1
     GENERATE score_answer(@q2, @a2, @role_context, evaluation_rubric()) INTO @score2
     GENERATE score_answer(@q3, @a3, @role_context, evaluation_rubric()) INTO @score3
 
     -- Step 7: Aggregate scores across all questions (deterministic — no LLM)
     CALL aggregate_scores(@score1, @score2, @score3) INTO @agg_scores
+    LOGGING f'Aggregate scores: {@agg_scores}' LEVEL INFO
 
     -- Step 8: Compile the interview transcript (deterministic — no LLM)
     CALL compile_transcript(
@@ -147,6 +152,7 @@ DO
         @candidate_profile
     ) INTO @evaluation_report
 
+    LOGGING f'Evaluation complete | role={@role} focus={@focus}' LEVEL INFO
     COMMIT @evaluation_report WITH
         status     = 'complete',
         role       = @role,

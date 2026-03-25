@@ -1,3 +1,4 @@
+
 -- Recipe 26: Prompt A/B Test
 -- Compare two prompt variants using EVALUATE scoring. Pick the winner automatically.
 -- Demonstrates data-driven prompt engineering built into the workflow itself.
@@ -86,7 +87,7 @@ DO
                 score_a   = @score_a,
                 score_b   = @score_b,
                 margin    = (@score_b - @score_a)
-        OTHERWISE
+        ELSE
             -- Scores too close — format both with explanation (deterministic — no LLM)
             CALL format_tie_result(@response_a, @response_b, @score_a_json, @score_b_json) INTO @winner_output
             COMMIT @winner_output WITH

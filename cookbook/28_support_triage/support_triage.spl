@@ -74,27 +74,33 @@ WORKFLOW support_triage
             @tone    TEXT DEFAULT 'professional'
     OUTPUT: @drafted_response TEXT
 DO
+    LOGGING f'Support triage | product={@product} tone={@tone}' LEVEL INFO
+
     -- Step 1: Extract any order numbers mentioned in the ticket (deterministic tool — no LLM)
     CALL extract_order_numbers(@ticket) INTO @order_numbers
 
     -- Step 2: Fetch the matching order record(s) from orders.json (deterministic tool — no LLM)
     CALL lookup_order(@order_numbers) INTO @order_context
+    LOGGING f'Order context loaded | order_numbers={@order_numbers}' LEVEL DEBUG
 
     -- Step 3: Classify the ticket using categories + order data as grounding context
     GENERATE classify_ticket(@ticket, support_categories(), order_context_prompt(@order_context)) INTO @classification_json
+    LOGGING f'Classification: {@classification_json}' LEVEL DEBUG
 
     -- Step 4: Extract key structured details from the ticket
     GENERATE extract_ticket_details(@ticket, @order_context) INTO @details_json
 
     -- Step 5: Score urgency 0-10 based on ticket text and classification
     GENERATE detect_urgency(@ticket, @classification_json) INTO @urgency_score
+    LOGGING f'Urgency score: {@urgency_score}' LEVEL INFO
 
     -- Step 6: Route — escalate immediately if urgency > 8, otherwise draft response
     EVALUATE @urgency_score
         WHEN > 8 THEN
+            LOGGING f'High urgency — escalating | score={@urgency_score}' LEVEL WARN
             GENERATE escalation_alert(@ticket, @classification_json, @order_context) INTO @alert
             COMMIT @alert WITH status = 'escalated', priority = 'critical'
-        OTHERWISE
+        ELSE
             -- Step 7: Draft a grounded, tone-appropriate response
             GENERATE draft_response(
                 @ticket,
@@ -107,12 +113,14 @@ DO
 
             -- Step 8: Quality-check the draft (0-10); revise once if score < 6
             GENERATE check_response_quality(@drafted_response, @ticket, @order_context) INTO @quality_score
+            LOGGING f'Draft quality score: {@quality_score}' LEVEL DEBUG
 
             EVALUATE @quality_score
                 WHEN < 6 THEN
+                    LOGGING f'Quality below threshold — revising | score={@quality_score}' LEVEL WARN
                     GENERATE improve_response(@drafted_response, @ticket, @order_context) INTO @drafted_response
                     COMMIT @drafted_response WITH status = 'drafted_revised'
-                OTHERWISE
+                ELSE
                     COMMIT @drafted_response WITH status = 'drafted', quality = @quality_score
             END
     END

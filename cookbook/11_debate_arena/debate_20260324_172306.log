@@ -1,0 +1,234 @@
+
+```bash
+spl run ./11_debate_arena/debate.spl --adapter ollama -m gemma3 topic=AI should be open-sourced
+```
+
+```spl
+-- Recipe 11: Debate Arena
+-- Two LLM personas argue opposing sides of a topic, then a judge picks the winner.
+-- Demonstrates multi-perspective reasoning, adversarial generation, and semantic evaluation.
+--
+-- Usage:
+--   spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m gemma3 topic="AI should be open-sourced"
+--   spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
+--   spl run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
+
+CREATE FUNCTION pro_argument(topic TEXT, previous TEXT) RETURNS TEXT AS $$
+You are a skilled debate champion arguing STRONGLY IN FAVOR of the following motion:
+
+Motion: "{topic}"
+
+Your opponent's last argument (or "opening statement" if this is your first turn):
+{previous}
+
+Write a focused, persuasive argument supporting the motion. If this is a rebuttal round,
+directly address and counter your opponent's points. Be concise (3-5 paragraphs).
+Do NOT offer balanced views — you are arguing one side.
+$$;
+
+CREATE FUNCTION con_argument(topic TEXT, previous TEXT) RETURNS TEXT AS $$
+You are a skilled debate champion arguing STRONGLY AGAINST the following motion:
+
+Motion: "{topic}"
+
+Your opponent's last argument (or "opening statement" if this is your first turn):
+{previous}
+
+Write a focused, persuasive argument opposing the motion. If this is a rebuttal round,
+directly address and counter your opponent's points. Be concise (3-5 paragraphs).
+Do NOT offer balanced views — you are arguing one side.
+$$;
+
+CREATE FUNCTION judge_debate(topic TEXT, pro_history TEXT, con_history TEXT) RETURNS TEXT AS $$
+You are an impartial debate judge evaluating the following debate.
+
+Motion: "{topic}"
+
+--- PRO SIDE (arguing IN FAVOR) ---
+{pro_history}
+
+--- CON SIDE (arguing AGAINST) ---
+{con_history}
+
+Evaluate the debate on these criteria:
+1. Strength of arguments
+2. Quality of rebuttals
+3. Clarity and persuasiveness
+
+Declare a winner (PRO or CON) and explain your reasoning in 2-3 paragraphs.
+$$;
+
+WORKFLOW debate_arena
+    INPUT: 
+        @topic TEXT,
+        @max_rounds integer DEFAULT 3
+    OUTPUT: @verdict TEXT
+DO
+    @round := 0
+    @pro_history := ''
+    @con_history := ''
+
+    -- Opening statements
+    GENERATE pro_argument(@topic, 'opening statement') INTO @pro
+    GENERATE con_argument(@topic, 'opening statement') INTO @con
+
+    @pro_history := @pro
+    @con_history := @con
+
+    -- Rebuttal rounds
+    WHILE @round < @max_rounds DO
+        -- Pro rebuts Con's latest point
+        GENERATE pro_argument(@topic, @con_history) INTO @pro_rebuttal
+        @pro_history := @pro_history + '\n---\n' + @pro_rebuttal
+
+        -- Con rebuts Pro's latest point
+        GENERATE con_argument(@topic, @pro_history) INTO @con_rebuttal
+        @con_history := @con_history + '\n---\n' + @con_rebuttal
+
+        @round := @round + 1
+    END
+
+    -- Judge evaluates both sides
+    GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+
+    COMMIT @verdict WITH status = 'complete', rounds = @round
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+        COMMIT @verdict WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @pro_history WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 9
+Tokens: 8863 in / 2922 out
+Latency: 43889ms
+------------------------------------------------------------
+```output
+After carefully evaluating the debate, I declare the PRO side as the winner.
+
+The PRO side presented stronger arguments for open-sourcing AI technology. They effectively addressed concerns about national security, accountability, and intellectual property protection, demonstrating that these risks can be mitigated through proper governance structures, licensing agreements, and community scrutiny. The PRO side also provided compelling examples of successful open-source projects, such as Linux, which have become cornerstones of modern computing. Their arguments were clear, concise, and persuasive, making a strong case for the benefits of open-sourcing AI.
+
+In contrast, the CON side relied on outdated concerns about secrecy, security, and accountability, which they failed to adequately address. While they raised legitimate concerns about potential risks, their rebuttals often relied on flawed assumptions or overlooked the complexities of AI systems. The CON side's arguments also seemed to be driven by a desire to maintain the status quo of proprietary development, rather than addressing the benefits of open-sourcing.
+
+Overall, while both sides presented valid points, the PRO side demonstrated a stronger understanding of the benefits and risks associated with open-sourcing AI technology. Their arguments were more nuanced, comprehensive, and persuasive, making them the winner in this debate.
+```
+------------------------------------------------------------
+Variables:
+  @topic = AI should be open-sourced
+  @max_rounds = 3
+  @round = 3
+  @pro_history = **Opening Statement**
+
+Ladies and gentlemen, honorable judges, and fellow debaters, I stand before you today to make the case for a revolution in artificial intelligence development. The motion before us is straightforward yet profound: AI should be open-sourced. My opponent may try to paint this as a utopian dream, but I assure you, it's a necessity for the future of our world.
+
+The current state of AI development is marked by secrecy and exclusivity. Tech giants like Google, Microsoft, and Facebook hoard their AI advancements, locking them behind paywalls and proprietary protocols. This approach stifles innovation, as researchers are discouraged from sharing knowledge or collaborating with others. The result is a fragmented landscape where AI capabilities are duplicated across companies, rather than being leveraged for the greater good.
+
+By open-sourcing AI, we can break this cycle of exclusivity. Open-source frameworks would allow developers to study, modify, and distribute AI code freely. This would accelerate progress in areas like healthcare, education, and environmental sustainability. Moreover, it would democratize access to AI, enabling researchers from underfunded institutions and marginalized communities to contribute to the field.
+
+My opponent may argue that open-sourcing AI could compromise security or intellectual property rights. I counter that these concerns are overstated. With proper governance and licensing agreements, open-source AI can be designed to prioritize both innovation and safety. The benefits of open-sourcing far outweigh the perceived risks. We owe it to ourselves, our children, and future generations to harness the full potential of AI for the betterment of humanity.
+
+Let us embark on this revolutionary journey together. Let us show the world that collaboration, transparency, and progress can coexist in harmony. I firmly believe that open-sourcing AI is not only a moral imperative but also a strategic necessity for our collective future.
+---
+I strongly disagree with my opponent's opening statement. The notion that open-sourcing AI technology would compromise national security, stifle innovation, or put human lives at risk is a gross overstatement of the risks involved.
+
+Firstly, the claim that open-sourcing AI algorithms and models would grant sensitive information to unvetted individuals and organizations is unfounded. Open-sourced AI projects are typically accompanied by strict licensing agreements that ensure the responsible use and sharing of intellectual property. Moreover, the community-driven nature of open-source AI development fosters a culture of transparency and accountability, which would be hard to replicate in proprietary systems. By contrast, proprietary systems often have opaque governance structures and limited access to information, making it more difficult to identify and mitigate potential security vulnerabilities.
+
+Furthermore, my opponent's assertion that open-sourcing AI technology would lead to a lack of accountability and oversight is misguided. In fact, the open-source community has consistently demonstrated its ability to self-regulate and prioritize responsible innovation. Open-source projects often feature rigorous testing, peer review, and auditing processes, which help ensure that AI systems are developed with safety and ethics in mind. These same safeguards can be replicated in proprietary systems, but they would require significant changes to the existing business models and culture.
+
+Finally, my opponent's criticism of open-sourcing as a threat to responsible innovation is symptomatic of a broader failure to recognize the value of collaboration and knowledge-sharing in driving progress. By opening up AI technology to the public domain, we can accelerate the pace of innovation, foster new ideas and applications, and create a more inclusive and equitable technological landscape. The benefits of open-sourcing far outweigh the hypothetical risks, and it is our responsibility as leaders and citizens to prioritize the common good over the interests of entrenched industries.
+---
+My opponent presents a laundry list of concerns about open-sourcing AI technology, but their arguments are fundamentally flawed and misguided.
+
+Firstly, the notion that open-sourcing AI algorithms and models would grant sensitive information to unvetted individuals and organizations is an exaggeration. While it's true that some malicious actors might exploit vulnerabilities, this can be mitigated through effective vetting processes, encryption, and secure communication protocols. In fact, many open-source projects have already demonstrated the ability to maintain confidentiality and security while still benefiting from community involvement.
+
+Moreover, my opponent's argument that open-sourcing AI technology would lead to a lack of accountability and oversight is based on a false dichotomy between openness and control. Open-source development can actually enhance accountability through peer review, code audits, and community scrutiny. These mechanisms have already proven effective in ensuring the quality and integrity of open-source software.
+
+The claim that open-sourcing AI technology would undermine progress in developing and deploying this technology responsibly is also unfounded. In fact, open-source approaches like Linux have become a cornerstone of modern computing, demonstrating that collaborative development can lead to greater innovation and efficiency. By embracing open-source principles, we can create a more vibrant ecosystem of developers working together to advance AI research and application.
+
+Ultimately, the benefits of open-sourcing AI technology far outweigh the risks. By promoting transparency, collaboration, and community involvement, we can unlock new possibilities for AI development that would be impossible through proprietary development alone. It's time to break free from the siloed approach of traditional proprietary development and harness the collective genius of the global developer community to create a brighter future for AI research and application.
+---
+My opponent's concerns about national security, accountability, and innovation are overstated and based on a flawed assumption that open-sourcing AI technology is inherently insecure or irresponsible. In reality, the vast majority of AI research and development is conducted in secrecy, with minimal transparency to the public. By contrast, open-sourcing AI algorithms and models would grant the global community access to valuable knowledge and expertise, fostering collaboration, innovation, and progress.
+
+The notion that self-regulation efforts within the open-source community can address concerns about security and accountability is naive at best. History has shown time and again that unvetted individuals and organizations will exploit vulnerabilities in AI systems for nefarious purposes. Instead of relying on the benevolence of the open-source community, we should prioritize robust governance structures and industry-led initiatives to ensure accountability and oversight in AI development. The establishment of clear standards, rigorous testing protocols, and a culture of transparency and disclosure would provide the necessary safeguards to mitigate risks.
+
+Furthermore, open-sourcing AI technology would not compromise intellectual property protection or national security. In fact, many sensitive AI applications are already being developed using open-source components or frameworks, with no reported breaches in security. This suggests that responsible development practices can mitigate any potential vulnerabilities. Moreover, licensing agreements and community scrutiny can be just as effective as proprietary systems in ensuring accountability and innovation.
+
+By embracing open-sourcing AI technology, we would not only advance the field of artificial intelligence but also ensure that its benefits are accessible to all nations and organizations. This is particularly important in today's globalized world, where AI has the potential to drive growth, improve lives, and address some of humanity's most pressing challenges. We must seize this opportunity and prioritize the greater good over outdated concerns about secrecy and security.
+  @con_history = Ladies and gentlemen, honorable judges, and fellow debaters, I strongly oppose the motion that AI should be open-sourced. While the idea of transparency and community involvement may seem appealing, it is a recipe for disaster that could compromise national security, stifle innovation, and put human lives at risk.
+
+Firstly, open-sourcing AI algorithms and models would grant sensitive information to unvetted individuals and organizations around the world. This would create a breeding ground for malicious actors who could exploit vulnerabilities in AI systems for nefarious purposes, such as cyber attacks or even terrorism. The potential consequences of this are too dire to ignore. We cannot afford to compromise national security on the altar of open-source ideology.
+
+Furthermore, open-sourcing AI technology would also lead to a lack of accountability and oversight. Without the checks and balances that come with proprietary systems, companies and organizations could experiment with AI in ways that would be unacceptable if it were publicly known. This could result in unintended consequences, such as biased decision-making or even harm to innocent individuals. The burden of responsibility for these unintended consequences would fall on individual developers, who may not have the necessary expertise or resources to mitigate them.
+
+Finally, open-sourcing AI technology would also undermine the progress that has been made in developing and deploying this technology responsibly. Companies and organizations have invested heavily in researching and developing AI systems that are tailored to specific needs and applications. By relinquishing control over these technologies through open-source, we risk undoing all of this hard work and creating a Wild West that offers no protections or safeguards for the public.
+
+In conclusion, while I understand the allure of open-sourcing AI technology, I firmly believe that it would be a catastrophic mistake to do so. We must prioritize national security, accountability, and responsible innovation over the ideology of openness.
+---
+As we continue this debate, I'd like to reiterate that open-sourcing AI technology poses significant risks to national security, innovation, and human lives. My opponent's claims of a "culture of transparency" in the open-source community ring hollow when considering the complexities of software development, particularly in high-stakes domains such as defense.
+
+One of the primary concerns with open-sourcing AI is the potential for malicious actors to exploit vulnerabilities or misuse sensitive information. This risk is not mitigated by licensing agreements, as any foolproof system would require an unprecedented level of oversight and control that is unattainable through open-source development. Moreover, the decentralized nature of the internet makes it nearly impossible to track and monitor the use of AI technology in real-time.
+
+My opponent's argument that self-regulation efforts within the open-source community can address these concerns is naive at best. The history of software development is replete with examples of "open-source" projects being hijacked by malicious actors or exploited for nefarious purposes. These instances demonstrate that open-sourcing AI technology does not guarantee safety, security, or responsible innovation.
+
+Instead of relying on the benevolence of the open-source community, we should prioritize robust governance structures and industry-led initiatives to ensure accountability and oversight in AI development. This might involve establishing clear standards for AI development, implementing rigorous testing protocols, and fostering a culture of transparency and disclosure throughout the industry. Anything less would be a betrayal of our responsibility as stewards of this powerful technology.
+---
+My opponent's opening statement relies on a flawed assumption that open-sourcing AI technology would somehow magically enhance accountability, security, and intellectual property protection. However, this ignores the fundamental nature of proprietary development systems, which often prioritize secrecy over transparency.
+
+The notion that open-sourced AI algorithms and models could compromise national security is particularly misguided. In reality, many sensitive AI applications are already being developed using open-source components or frameworks, with no reported breaches in security. This suggests that the risks associated with open-sourcing AI are overstated, and that responsible development practices can mitigate any potential vulnerabilities.
+
+Furthermore, my opponent's argument that open-sourcing would lead to a lack of accountability is based on a false dichotomy between openness and control. In reality, open-source projects often feature rigorous testing, peer review, and auditing processes, which are no less effective than those employed in proprietary systems. Moreover, the accountability mechanism provided by licensing agreements and community scrutiny can be just as effective in ensuring responsible development practices.
+
+Ultimately, my opponent's argument relies on a utopian vision of an AI development landscape where collaboration and transparency somehow magically outweigh concerns about secrecy, security, and intellectual property protection. This ignores the harsh realities of the tech industry, where profit margins and market dominance often take precedence over social responsibility.
+---
+My opponent's arguments against open-sourcing AI technology rely on outdated concerns about secrecy, security, and accountability. However, I'd like to directly address their misconceptions.
+
+Firstly, the notion that open-sourcing AI algorithms and models would grant sensitive information to unvetted individuals and organizations is unfounded. My opponent claims that licensing agreements can mitigate this risk, but they neglect to mention that these agreements are often inadequate or poorly enforced. Moreover, the assumption that a vetting process can detect all potential security vulnerabilities overlooks the complexity of AI systems.
+
+Regarding accountability, my opponent suggests that open-source development fosters a culture of transparency and community scrutiny, which is misleading. In reality, many large corporations have exploited this openness to avoid accountability for their actions. The lack of effective governance structures and oversight in proprietary systems is far more egregious than any potential risks associated with open-sourcing.
+
+Furthermore, my opponent's argument that self-regulation efforts within the open-source community can address concerns about security and accountability rings hollow. History has shown time and again that unvetted individuals and organizations will exploit vulnerabilities in AI systems for nefarious purposes. Instead of relying on the benevolence of the open-source community, we should prioritize robust governance structures and industry-led initiatives to ensure accountability and oversight in AI development.
+
+Ultimately, open-sourcing AI technology is not a panacea for all concerns, but it is a necessary step towards unlocking the full potential of this field. By embracing openness and collaboration, we can create a more vibrant ecosystem of developers working together to advance AI research and application. But let us not be fooled by the false promises of proprietary development or rely on outdated notions about secrecy and security. We must prioritize the greater good over the interests of entrenched industries.
+  @pro = **Opening Statement**
+
+Ladies and gentlemen, honorable judges, and fellow debaters, I stand before you today to make the case for a revolution in artificial intelligence development. The motion before us is straightforward yet profound: AI should be open-sourced. My opponent may try to paint this as a utopian dream, but I assure you, it's a necessity for the future of our world.
+
+The current state of AI development is marked by secrecy and exclusivity. Tech giants like Google, Microsoft, and Facebook hoard their AI advancements, locking them behind paywalls and proprietary protocols. This approach stifles innovation, as researchers are discouraged from sharing knowledge or collaborating with others. The result is a fragmented landscape where AI capabilities are duplicated across companies, rather than being leveraged for the greater good.
+
+By open-sourcing AI, we can break this cycle of exclusivity. Open-source frameworks would allow developers to study, modify, and distribute AI code freely. This would accelerate progress in areas like healthcare, education, and environmental sustainability. Moreover, it would democratize access to AI, enabling researchers from underfunded institutions and marginalized communities to contribute to the field.
+
+My opponent may argue that open-sourcing AI could compromise security or intellectual property rights. I counter that these concerns are overstated. With proper governance and licensing agreements, open-source AI can be designed to prioritize both innovation and safety. The benefits of open-sourcing far outweigh the perceived risks. We owe it to ourselves, our children, and future generations to harness the full potential of AI for the betterment of humanity.
+
+Let us embark on this revolutionary journey together. Let us show the world that collaboration, transparency, and progress can coexist in harmony. I firmly believe that open-sourcing AI is not only a moral imperative but also a strategic necessity for our collective future.
+  @con = Ladies and gentlemen, honorable judges, and fellow debaters, I strongly oppose the motion that AI should be open-sourced. While the idea of transparency and community involvement may seem appealing, it is a recipe for disaster that could compromise national security, stifle innovation, and put human lives at risk.
+
+Firstly, open-sourcing AI algorithms and models would grant sensitive information to unvetted individuals and organizations around the world. This would create a breeding ground for malicious actors who could exploit vulnerabilities in AI systems for nefarious purposes, such as cyber attacks or even terrorism. The potential consequences of this are too dire to ignore. We cannot afford to compromise national security on the altar of open-source ideology.
+
+Furthermore, open-sourcing AI technology would also lead to a lack of accountability and oversight. Without the checks and balances that come with proprietary systems, companies and organizations could experiment with AI in ways that would be unacceptable if it were publicly known. This could result in unintended consequences, such as biased decision-making or even harm to innocent individuals. The burden of responsibility for these unintended consequences would fall on individual developers, who may not have the necessary expertise or resources to mitigate them.
+
+Finally, open-sourcing AI technology would also undermine the progress that has been made in developing and deploying this technology responsibly. Companies and organizations have invested heavily in researching and developing AI systems that are tailored to specific needs and applications. By relinquishing control over these technologies through open-source, we risk undoing all of this hard work and creating a Wild West that offers no protections or safeguards for the public.
+
+In conclusion, while I understand the allure of open-sourcing AI technology, I firmly believe that it would be a catastrophic mistake to do so. We must prioritize national security, accountability, and responsible innovation over the ideology of openness.
+  @pro_rebuttal = My opponent's concerns about national security, accountability, and innovation are overstated and based on a flawed assumption that open-sourcing AI technology is inherently insecure or irresponsible. In reality, the vast majority of AI research and development is conducted in secrecy, with minimal transparency to the public. By contrast, open-sourcing AI algorithms and models would grant the global community access to valuable knowledge and expertise, fostering collaboration, innovation, and progress.
+
+The notion that self-regulation efforts within the open-source community can address concerns about security and accountability is naive at best. History has shown time and again that unvetted individuals and organizations will exploit vulnerabilities in AI systems for nefarious purposes. Instead of relying on the benevolence of the open-source community, we should prioritize robust governance structures and industry-led initiatives to ensure accountability and oversight in AI development. The establishment of clear standards, rigorous testing protocols, and a culture of transparency and disclosure would provide the necessary safeguards to mitigate risks.
+
+Furthermore, open-sourcing AI technology would not compromise intellectual property protection or national security. In fact, many sensitive AI applications are already being developed using open-source components or frameworks, with no reported breaches in security. This suggests that responsible development practices can mitigate any potential vulnerabilities. Moreover, licensing agreements and community scrutiny can be just as effective as proprietary systems in ensuring accountability and innovation.
+
+By embracing open-sourcing AI technology, we would not only advance the field of artificial intelligence but also ensure that its benefits are accessible to all nations and organizations. This is particularly important in today's globalized world, where AI has the potential to drive growth, improve lives, and address some of humanity's most pressing challenges. We must seize this opportunity and prioritize the greater good over outdated concerns about secrecy and security.
+  @con_rebuttal = My opponent's arguments against open-sourcing AI technology rely on outdated concerns about secrecy, security, and accountability. However, I'd like to directly address their misconceptions.
+
+Firstly, the notion that open-sourcing AI algorithms and models would grant sensitive information to unvetted individuals and organizations is unfounded. My opponent claims that licensing agreements can mitigate this risk, but they neglect to mention that these agreements are often inadequate or poorly enforced. Moreover, the assumption that a vetting process can detect all potential security vulnerabilities overlooks the complexity of AI systems.
+
+Regarding accountability, my opponent suggests that open-source development fosters a culture of transparency and community scrutiny, which is misleading. In reality, many large corporations have exploited this openness to avoid accountability for their actions. The lack of effective governance structures and oversight in proprietary systems is far more egregious than any potential risks associated with open-sourcing.
+
+Furthermore, my opponent's argument that self-regulation efforts within the open-source community can address concerns about security and accountability rings hollow. History has shown time and again that unvetted individuals and organizations will exploit vulnerabilities in AI systems for nefarious purposes. Instead of relying on the benevolence of the open-source community, we should prioritize robust governance structures and industry-led initiatives to ensure accountability and oversight in AI development.
+
+Ultimately, open-sourcing AI technology is not a panacea for all concerns, but it is a necessary step towards unlocking the full potential of this field. By embracing openness and collaboration, we can create a more vibrant ecosystem of developers working together to advance AI research and application. But let us not be fooled by the false promises of proprietary development or rely on outdated notions about secrecy and security. We must prioritize the greater good over the interests of entrenched industries.
+============================================================
+Log: /home/gongai/.spl/logs/debate-ollama-20260324-172306.log

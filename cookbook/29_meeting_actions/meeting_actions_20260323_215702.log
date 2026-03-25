@@ -1,0 +1,401 @@
+
+```bash
+spl run ./29_meeting_actions/meeting_actions.spl --adapter ollama -m gemma3 transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs output_format=markdown
+```
+
+```spl
+-- Recipe 29: Meeting Notes → Action Items
+-- Transcript in, structured TODO list + owners out.
+-- Demonstrates multi-step extraction + structured output from long-form text,
+-- with deterministic tool calls for file loading, speaker extraction,
+-- date normalisation, and ownership validation.
+--
+-- Usage (load from file):
+--   spl run cookbook/29_meeting_actions/meeting_actions.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/29_meeting_actions/tools.py \
+--       filename=sprint_planning.txt \
+--       output_format=markdown
+--
+-- Usage (inline transcript):
+--   spl run cookbook/29_meeting_actions/meeting_actions.spl \
+--       --adapter ollama -m gemma3 \
+--       --tools cookbook/29_meeting_actions/tools.py \
+--       transcript="Alice: fix the login bug by Friday. Bob: I will handle it." \
+--       output_format=json
+--
+-- Sample transcripts in transcripts/:
+--   sprint_planning.txt   Full sprint planning with assignments and decisions
+--   design_review.txt     API architecture review with open questions
+--   standup.txt           Short daily standup with blockers
+
+-- ── Schema (zero LLM cost — injected as grounding context) ─────────────────
+
+CREATE FUNCTION action_item_schema()
+RETURNS JSON AS $$
+{
+  "type": "object",
+  "properties": {
+    "meeting_title":   {"type": "string"},
+    "meeting_date":    {"type": "string"},
+    "attendees":       {"type": "array", "items": {"type": "string"}},
+    "meeting_summary": {"type": "string"},
+    "decisions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task":     {"type": "string"},
+          "owner":    {"type": "string", "description": "Person responsible. Use exact speaker name or empty string if unassigned."},
+          "due_date": {"type": "string", "description": "Due date or relative phrase e.g. Friday, next Wednesday, end of sprint"},
+          "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+          "context":  {"type": "string", "description": "Why this task matters or what triggered it"}
+        },
+        "required": ["task", "priority"]
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "next_meeting": {"type": "string"}
+  },
+  "required": ["meeting_summary", "action_items"]
+}
+$$;
+
+-- ── Main workflow ───────────────────────────────────────────────────────────
+
+WORKFLOW meeting_to_actions
+    INPUT:  @filename      TEXT DEFAULT '',
+            @transcript    TEXT DEFAULT '',
+            @output_format TEXT DEFAULT 'json'
+    OUTPUT: @output TEXT
+DO
+    -- Step 1: Load transcript from file if filename provided (deterministic — no LLM)
+    CALL load_transcript(@filename) INTO @file_content
+
+    -- Step 2: Extract speaker names for grounding the LLM (deterministic — no LLM)
+    CALL extract_speakers(@file_content) INTO @speakers_from_file
+    CALL extract_speakers(@transcript)   INTO @speakers_from_inline
+
+    -- Step 3: Normalise transcript — merge sources, clean formatting, identify speakers
+    GENERATE normalize_transcript(
+        @file_content,
+        @transcript,
+        @speakers_from_file,
+        @speakers_from_inline
+    ) INTO @clean_transcript
+
+    -- Step 4: Extract structured action items grounded by schema and known speakers
+    GENERATE extract_actions(
+        @clean_transcript,
+        action_item_schema(),
+        @speakers_from_file,
+        @speakers_from_inline
+    ) INTO @structured_json
+
+    -- Step 5: Normalise relative due dates to ISO-8601 (deterministic — no LLM)
+    CALL normalize_dates(@structured_json) INTO @structured_json
+
+    -- Step 6: Validate ownership — flag unowned high-priority items (deterministic — no LLM)
+    CALL validate_ownership(@structured_json) INTO @validation_notes
+
+    -- Step 7: Format and commit output
+    EVALUATE @output_format
+        WHEN = 'markdown' THEN
+            GENERATE format_as_markdown(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'markdown'
+        WHEN = 'email' THEN
+            GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
+            COMMIT @output WITH status = 'complete', format = 'email'
+        OTHERWISE
+            SET @output = @structured_json
+            COMMIT @output WITH status = 'complete', format = 'json'
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Long transcript: summarise first, then extract from the summary
+        GENERATE summarize_transcript(@clean_transcript) INTO @summary
+        GENERATE extract_actions(@summary, action_item_schema(), @speakers_from_file, @speakers_from_inline) INTO @structured_json
+        CALL normalize_dates(@structured_json) INTO @structured_json
+        CALL validate_ownership(@structured_json) INTO @validation_notes
+        SET @output = @structured_json
+        COMMIT @output WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 7
+Tokens: 4023 in / 2668 out
+Latency: 37756ms
+------------------------------------------------------------
+```output
+**Bob**
+"Sounds good, Alice. I'll send over my assessment of the new partner's capabilities by Thursday. By the way, have you considered our team's budget for the integration? We don't want to go overboard on resources without a clear plan."
+
+**Alice**
+"That's a great point, Bob. I was thinking we should allocate a specific amount for their integration costs and propose it to management at the next meeting. What are your thoughts on setting up a joint project team with our partner to ensure a smooth implementation?"
+
+**Bob**
+"I think that's a fantastic idea, Alice! Having a dedicated team will help us stay on track and avoid any potential pitfalls. I'll send over my proposal for the new project team by the end of the day."
+
+**Alice**
+"Excellent, Bob. In the meantime, have you given any more thoughts on how our team can support the marketing campaign? John mentioned that he needs some additional data to make it happen..."
+
+**Bob**
+"Yes, actually! I've been looking into some market trends and I think we can provide him with some valuable insights to help accelerate the campaign. Let me send over a report by Thursday so we can discuss further."
+
+**Alice**
+"That would be great, Bob. And while you're at it, can you also look into getting some feedback from our users on their experience with our current marketing efforts? We need to make sure we're meeting their expectations."
+```
+------------------------------------------------------------
+Variables:
+  @transcript = Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs
+  @output_format = markdown
+  @file_content = I don't have specific code to execute a `load_transcript()` procedure as it depends on the programming language, framework, or library you are using. However, I can provide an example in Python using the pandas and numpy libraries:
+
+```python
+import pandas as pd
+import numpy as np
+
+def load_transcript(file_path):
+    try:
+        # Load transcript data from a CSV file
+        transcript_data = pd.read_csv(file_path)
+        
+        # Preprocess the data (e.g., convert to lowercase, remove punctuation)
+        transcript_data['text'] = transcript_data['text'].apply(lambda x: x.lower())
+        transcript_data['text'] = transcript_data['text'].apply(lambda x: x.strip('.!?;'))
+        
+        return transcript_data
+    
+    except FileNotFoundError:
+        print("File not found")
+        return None
+    
+    except pd.errors.EmptyDataError:
+        print("No data in the file")
+        return None
+    
+    except pd.errors.ParserError as e:
+        print(f"Error parsing the file: {e}")
+        return None
+
+# Example usage
+file_path = 'transcript_data.csv'
+transcript = load_transcript(file_path)
+
+if transcript is not None:
+    print(transcript.head())
+```
+
+Please replace `'transcript_data.csv'` with your actual file path and adjust the function according to your specific requirements.
+
+In general, a `load_transcript()` procedure might involve:
+
+1. Checking if the file exists.
+2. Loading the data from the file (e.g., CSV, JSON, text files).
+3. Preprocessing the data (e.g., converting data types, removing unwanted characters).
+4. Handling errors that may occur during loading or preprocessing.
+
+Without more context about your specific use case or programming language, it's difficult to provide a definitive answer.
+  @speakers_from_file = Here is an example of how you could modify the provided Python function to extract speakers from a transcript:
+
+```python
+import pandas as pd
+import numpy as np
+
+def load_transcript(file_path):
+    try:
+        # Load transcript data from a CSV file
+        transcript_data = pd.read_csv(file_path)
+        
+        # Preprocess the data (e.g., convert to lowercase, remove punctuation)
+        transcript_data['text'] = transcript_data['text'].apply(lambda x: x.lower())
+        transcript_data['text'] = transcript_data['text'].apply(lambda x: x.strip('.!?;'))
+        
+        return transcript_data
+    
+    except FileNotFoundError:
+        print("File not found")
+        return None
+    
+    except pd.errors.EmptyDataError:
+        print("No data in the file")
+        return None
+    
+    except pd.errors.ParserError as e:
+        print(f"Error parsing the file: {e}")
+        return None
+
+def extract_speakers(transcript_data):
+    try:
+        # Initialize an empty dictionary to store speakers and their lines
+        speaker_lines = {}
+        
+        # Iterate over each line in the transcript data
+        for index, row in transcript_data.iterrows():
+            text = row['text']
+            
+            # Check if the speaker is mentioned (e.g., "Speaker 1" or "John")
+            if 'speaker' in text.lower():
+                # Extract the speaker's name from the text
+                speaker = text.strip()[len(text) - len('speaker'):]
+                
+                # Initialize a new list for the speaker's lines
+                if speaker not in speaker_lines:
+                    speaker_lines[speaker] = []
+                
+                speaker_lines[speaker].append(index)
+            
+            # If no speaker is mentioned, assume it's a line from a previously mentioned speaker
+            else:
+                previous_speaker = None
+                for key, value in list(speaker_lines.items()):
+                    if any(index in value for index in range(len(value), 0, -1)):
+                        speaker_lines[key] = [index]
+                        break
+                
+                # If no other speaker has a line before this one, try to determine the previous speaker's name
+                elif speaker_lines:
+                    previous_speaker = max(speaker_lines.keys(), key=lambda x: len([i for i in speaker_lines[x] if i < index]))
+                
+                if previous_speaker is not None and any(index in value for index in range(len(value), 0, -1)):
+                    speaker_lines[previous_speaker].append(index)
+                    
+        return speaker_lines
+    
+    except Exception as e:
+        print(f"Error extracting speakers: {e}")
+        return None
+
+# Example usage
+file_path = 'transcript_data.csv'
+transcript = load_transcript(file_path)
+
+if transcript is not None:
+    speaker_lines = extract_speakers(transcript)
+    
+    if speaker_lines:
+        for speaker, lines in speaker_lines.items():
+            print(f"{speaker}:")
+            for line in lines:
+                print(transcript.loc[line, 'text'])
+```
+
+This modified function uses an empty dictionary to store speakers and their corresponding lines. It iterates over each line in the transcript data, checking if the speaker is mentioned in the text. If a speaker is mentioned, it extracts the speaker's name from the text and adds the current index to the speaker's list of lines.
+
+If no speaker is mentioned, it tries to determine the previous speaker's name by finding the speaker with the most recent line before the current one.
+
+Note that this is a simplified example and may not work for all types of transcripts or languages. You can adjust the function according to your specific requirements and add more error handling as needed.
+  @speakers_from_inline = It seems like you're describing a conversation between individuals, possibly in a conference or meeting setting.
+
+To "execute" this conversation, I can respond as each person:
+
+**Alice**
+"Hey, Bob. We still haven't fixed the login bug. Can we discuss it during our next meeting? Also, someone needs to update the documentation for the changes."
+
+**Bob**
+"Don't worry, Alice. I've taken a look at the code and I think I can resolve the issue by Friday. What's your rough plan for updating the docs?"
+
+**Alice**
+"That would be great, thanks Bob! We need to make sure everything is up-to-date so that our users aren't confused. Can you send me an email with your updated plan?"
+  @clean_transcript = To normalize a transcript, we can use the following steps:
+
+1. Preprocess the data: Convert all text to lowercase, remove punctuation, and replace special characters with spaces.
+2. Tokenize the data: Split the text into individual words or tokens.
+3. Remove stop words: Eliminate common words like "the," "and," "a," etc. that don't add much meaning to the conversation.
+4. Lemmatize the words: Reduce words to their base form (e.g., "running" becomes "run").
+5. Remove out-of-vocabulary words: Discard words that are not recognized by a dictionary or word list.
+6. Normalize speaker labels: Replace non-standard speaker names with standard ones (e.g., "Speaker 1" becomes "Alice").
+
+Here's an updated Python function that includes these steps:
+
+```python
+import pandas as pd
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import re
+
+def normalize_transcript(file_path):
+    try:
+        # Load transcript data from a CSV file
+        transcript_data = pd.read_csv(file_path)
+        
+        # Preprocess the data (e.g., convert to lowercase, remove punctuation)
+        transcript_data['text'] = transcript_data['text'].apply(lambda x: re.sub(r'[^\w\s]', '', x).lower())
+        
+        # Tokenize the data
+        transcript_data['tokens'] = transcript_data['text'].apply(word_tokenize)
+        
+        # Remove stop words
+        stop_words = set(stopwords.words('english'))
+        transcript_data['stop_words_removed'] = transcript_data['tokens'].apply(lambda x: [word for word in x if word not in stop_words])
+        
+        # Lemmatize the words
+        lemmatizer = WordNetLemmatizer()
+        transcript_data['lemmatized_tokens'] = transcript_data['stop_words_removed'].apply(lambda x: [lemmatizer.lemmatize(word) for word in x])
+        
+        # Remove out-of-vocabulary words
+        # Add a list of recognized words here
+        
+        # Normalize speaker labels
+        transcript_data['speaker_labels'] = transcript_data['text'].apply(lambda x: 'Alice' if 'speaker 1' in x else 'Bob')
+        
+        return transcript_data
+    
+    except FileNotFoundError:
+        print("File not found")
+        return None
+    
+    except pd.errors.EmptyDataError:
+        print("No data in the file")
+        return None
+    
+    except Exception as e:
+        print(f"Error normalizing transcript: {e}")
+        return None
+
+# Example usage
+file_path = 'transcript_data.csv'
+transcript = normalize_transcript(file_path)
+
+if transcript is not None:
+    print(transcript.head())
+```
+
+This updated function includes the steps for preprocessing, tokenizing, removing stop words, lemmatizing, removing out-of-vocabulary words, and normalizing speaker labels. Note that you'll need to add a list of recognized words for step 4.
+
+Please note that this is a simplified example and may not work for all types of transcripts or languages. You can adjust the function according to your specific requirements and add more error handling as needed.
+  @validation_notes = This is not a code snippet or an executable procedure, but rather a conversation between two people, Alice and Bob. It appears to be a discussion about project management, budget allocation, and marketing strategies.
+
+If you meant to ask me to analyze the conversation or provide insights on how it could be implemented in a programming context, I can try to help with that!
+
+Here are some possible observations:
+
+1. The conversation involves several tasks, such as:
+	* Assessing the new partner's capabilities
+	* Allocating budget for integration costs
+	* Setting up a joint project team
+	* Providing support for the marketing campaign
+	* Gathering user feedback
+
+2. Alice and Bob seem to be coordinating their efforts and sharing information to ensure a smooth implementation.
+
+3. The conversation highlights the importance of:
+
+	* Clear communication between team members
+	* Collaboration with stakeholders (e.g., management, John)
+	* Timely provision of relevant data and insights
+
+If you have any specific questions or would like me to help with implementing similar functionality in code, please let me know!
+============================================================
+Log: /home/gongai/.spl/logs/meeting_actions-ollama-20260323-215702.log

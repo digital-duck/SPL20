@@ -1,0 +1,21 @@
+============================================================
+Status: complete
+LLM Calls: 9
+Tokens: 565 in / 519 out
+Latency: 8868ms
+------------------------------------------------------------
+Committed: I'm ready to help. However, I don't see any analysis provided for me to base my summary on. Could you please share the analysis with me? I'll be happy to assist you in creating a clear and engaging 2-paragraph summary based on it.
+------------------------------------------------------------
+Variables:
+  @topic = climate change
+  @facts = Please provide me with the **{topic}** you want me to research! 
+
+I need you to tell me what you’d like me to focus on. Once you give me the topic, I’ll deliver a thorough but concise response with ke
+  @analysis = Please provide me with the research you want me to analyze! I need the text of the research to be able to identify the insights and rate their significance. 😊 
+
+Once you paste the research here, I’ll 
+  @draft = I'm ready to help. However, I don't see any analysis provided for me to base my summary on. Could you please share the analysis with me? I'll be happy to assist you in creating a clear and engaging 2-
+  @iteration = 3.0
+  @quality = I'm ready to review the text. Please provide the text you'd like me to evaluate.
+============================================================
+Log: /home/gongai/.spl/logs/multi_model-ollama-20260319-023456.log

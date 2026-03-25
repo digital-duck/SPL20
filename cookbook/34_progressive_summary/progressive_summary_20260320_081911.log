@@ -1,0 +1,128 @@
+
+```bash
+spl2 run ./34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 text=Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work. audience=executive
+```
+
+```spl2
+-- Recipe 34: Progressive Summarizer
+-- Layered summary: sentence → paragraph → page.
+-- Each layer is a compressed, self-contained summary of the previous layer.
+--
+-- Usage:
+--   spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 \
+--       text="$(cat long_article.txt)"
+--
+--   spl2 run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+--       text="$(cat research_paper.txt)" audience="executive" layers=3
+
+CREATE FUNCTION summary_constraints(layer TEXT)
+RETURNS TEXT AS $$
+SELECT CASE layer
+  WHEN 'sentence'  THEN 'One sentence only. Maximum 25 words. Capture the single most important idea.'
+  WHEN 'paragraph' THEN '3-5 sentences. Cover main points and key supporting evidence. No examples or details.'
+  WHEN 'page'      THEN '2-3 paragraphs. Include context, main argument, evidence, and implications.'
+  ELSE                   'Comprehensive summary with all major points, key evidence, and conclusions.'
+END
+$$;
+
+WORKFLOW progressive_summarizer
+    INPUT: @text TEXT, @audience TEXT DEFAULT 'general', @layers INT DEFAULT 3
+    OUTPUT: @summary_package TEXT
+DO
+    -- Layer 1: One-sentence summary
+    GENERATE summarize(
+        @text,
+        summary_constraints('sentence'),
+        @audience
+    ) INTO @sentence_summary
+
+    -- Layer 2: Paragraph summary (built on layer 1 for coherence)
+    GENERATE expand_summary(
+        @text,
+        @sentence_summary,
+        summary_constraints('paragraph'),
+        @audience
+    ) INTO @paragraph_summary
+
+    -- Layer 3: Page-length summary (built on layer 2)
+    EVALUATE @layers
+        WHEN >= 3 THEN
+            GENERATE expand_summary(
+                @text,
+                @paragraph_summary,
+                summary_constraints('page'),
+                @audience
+            ) INTO @page_summary
+        OTHERWISE
+            @page_summary := ''
+    END
+
+    -- Quality check: does each layer faithfully represent the original?
+    GENERATE verify_summary_fidelity(@text, @sentence_summary, @paragraph_summary) INTO @fidelity_score
+
+    -- Assemble all layers into a structured output
+    GENERATE assemble_summary_package(
+        @sentence_summary,
+        @paragraph_summary,
+        @page_summary,
+        @fidelity_score,
+        @audience
+    ) INTO @summary_package
+
+    COMMIT @summary_package WITH
+        status = 'complete',
+        layers_generated = @layers,
+        audience = @audience,
+        fidelity = @fidelity_score
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Text too long — chunk first then summarize each chunk
+        GENERATE chunk_and_summarize(@text, summary_constraints('paragraph')) INTO @paragraph_summary
+        GENERATE summarize(@paragraph_summary, summary_constraints('sentence'), @audience) INTO @sentence_summary
+        GENERATE assemble_summary_package(@sentence_summary, @paragraph_summary, '', 'n/a', @audience) INTO @summary_package
+        COMMIT @summary_package WITH status = 'complete_chunked'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 1342 in / 607 out
+Latency: 8116ms
+------------------------------------------------------------
+```output
+Thank you for the clarification. It seems that there's been a miscommunication about the inputs and tasks.
+
+To summarize:
+
+1. You provided a passage about artificial intelligence, which I summarized.
+2. You asked me to provide more information or clarify what you'd like me to execute regarding Input 3 ("executive"), but no constraints were given.
+3. You mentioned that you had provided two inputs (Input 2 and Input 4), but only one was responded to.
+
+I'm ready to move forward! Since I still don't have any constraints for Input 3 ("executive"), could you please provide more information on what this task entails? What specific requirements or objectives do you have for this task, and how can I assist you further?
+```
+------------------------------------------------------------
+Variables:
+  @text = Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose d
+  @audience = executive
+  @sentence_summary = It appears that you want me to summarize a passage and then provide an answer based on a set of constraints (which are not provided in your initial input).
+
+However, I can still attempt to summarize t
+  @paragraph_summary = Sure, I can help with summarizing the passage and providing additional assistance.
+
+Summary:
+
+The passage discusses how artificial intelligence (AI) has transformed various industries by automating co
+  @page_summary = 
+  @fidelity_score = It seems that I provided two inputs but only one was responded to. Here's a revised response:
+
+Based on the summary provided, it appears that artificial intelligence has revolutionized various industr
+  @summary_package = Thank you for the clarification. It seems that there's been a miscommunication about the inputs and tasks.
+
+To summarize:
+
+1. You provided a passage about artificial intelligence, which I summarized.
+
+============================================================
+Log: /home/gongai/.spl/logs/progressive_summary-ollama-20260320-081911.log

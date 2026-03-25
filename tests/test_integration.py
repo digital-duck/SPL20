@@ -205,7 +205,7 @@ class TestCrossModule:
                 EVALUATE @draft
                     WHEN 'good' THEN
                         COMMIT @draft
-                    OTHERWISE
+                    ELSE
                         GENERATE rewrite(@draft) INTO @draft
                         COMMIT @draft
                 END

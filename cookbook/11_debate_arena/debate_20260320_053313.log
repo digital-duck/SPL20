@@ -1,0 +1,232 @@
+
+```bash
+spl2 run ./11_debate_arena/debate.spl --adapter ollama -m gemma3 topic=AI should be open-sourced
+```
+
+```sql
+-- Recipe 11: Debate Arena
+-- Two LLM personas argue opposing sides of a topic, then a judge picks the winner.
+-- Demonstrates multi-perspective reasoning, adversarial generation, and semantic evaluation.
+--
+-- Usage:
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m gemma3 topic="AI should be open-sourced"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
+
+WORKFLOW debate_arena
+    INPUT: @topic TEXT
+    OUTPUT: @verdict TEXT
+DO
+    @round := 0
+    @max_rounds := 3
+    @pro_history := ''
+    @con_history := ''
+
+    -- Opening statements
+    GENERATE pro_argument(@topic, 'opening statement') INTO @pro
+    GENERATE con_argument(@topic, 'opening statement') INTO @con
+
+    @pro_history := @pro
+    @con_history := @con
+
+    -- Rebuttal rounds
+    WHILE @round < @max_rounds DO
+        -- Pro rebuts Con's latest point
+        GENERATE pro_argument(@topic, @con_history) INTO @pro_rebuttal
+        @pro_history := @pro_history + '\n---\n' + @pro_rebuttal
+
+        -- Con rebuts Pro's latest point
+        GENERATE con_argument(@topic, @pro_history) INTO @con_rebuttal
+        @con_history := @con_history + '\n---\n' + @con_rebuttal
+
+        @round := @round + 1
+    END
+
+    -- Judge evaluates both sides
+    GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+
+    COMMIT @verdict WITH status = 'complete', rounds = @round
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+        COMMIT @verdict WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @pro_history WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 9
+Tokens: 11975 in / 6017 out
+Latency: 431634ms
+------------------------------------------------------------
+```output
+Here is the complete code:
+
+```python
+class ProArgument:
+    def __init__(self, topic, key_points=None, rebuttals=None):
+        self.topic = topic
+        if key_points is not None and not isinstance(key_points, list):
+            raise ValueError("Key points must be a list")
+        self.key_points = key_points if key_points is not None else []
+        if rebuttals is not None and not isinstance(rebuttals, list):
+            raise ValueError("Rebuttals must be a list")
+        self.rebuttals = rebuttals if rebuttals is not None else []
+
+    def present_argument(self):
+        print(f"Argument in favor of {self.topic}:")
+        
+        ProArgument._present_introduction()
+        
+        ProArgument._present_key_points()
+
+        ProArgument._present_conclusion()
+
+    @staticmethod
+    def _present_introduction():
+        print("\nIntroduction:")
+        print("- Argument in favor of opening AI to the public.")
+
+    @staticmethod
+    def _present_key_points():
+        print("\nKey Points:")
+        for point_number, point in enumerate(self.key_points, start=1):
+            print(f"- Point {point_number}: {point}")
+            if self.rebuttals:
+                ProArgument._present_rebuttal(point_number)
+
+    @staticmethod
+    def _present_conclusion():
+        print("\nConclusion:")
+        print("- Making AI open-sourced is crucial for promoting innovation, transparency, and human-AI collaboration.")
+
+    @staticmethod
+    def get_key_point(point_number):
+        return ProArgument._key_points[point_number - 1]
+
+    @staticmethod
+    def _key_points():
+        return [
+            "Open-sourcing AI promotes collaboration and accelerates research.",
+            "By making AI code available, we can ensure transparency and accountability in AI decision-making."
+        ]
+
+    @staticmethod
+    def _rebuttals():
+        return [
+            "However, some argue that open-sourcing AI could compromise security by exposing sensitive code to potential vulnerabilities.",
+            "Others argue that open-sourcing AI would disrupt the competitive advantage of industries that have invested heavily in proprietary AI technologies."
+        ]
+
+
+class ConArgument:
+    def __init__(self, topic, key_points=None, rebuttals=None):
+        self.topic = topic
+        if key_points is not None and not isinstance(key_points, list):
+            raise ValueError("Key points must be a list")
+        self.key_points = key_points if key_points is not None else []
+        if rebuttals is not None and not isinstance(rebuttals, list):
+            raise ValueError("Rebuttals must be a list")
+        self.rebuttals = rebuttals if rebuttals is not None else []
+
+    def present_argument(self):
+        print(f"Argument against {self.topic}:")
+        
+        ConArgument._present_introduction()
+        
+        ConArgument._present_key_points()
+
+        ConArgument._present_conclusion()
+
+    @staticmethod
+    def _present_introduction():
+        print("\nIntroduction:")
+        print("- Argument against opening AI to the public.")
+
+    def _present_key_points(self):
+        print("\nKey Points:")
+        for point_number, point in enumerate(self.key_points, start=1):
+            print(f"- Point {point_number}: {point}")
+            if self.rebuttals:
+                ConArgument._present_rebuttal(point_number)
+
+    @staticmethod
+    def _present_conclusion():
+        print("\nConclusion:")
+        print("- Making AI not open-sourced is crucial for promoting safety and security.")
+
+    @staticmethod
+    def get_key_point(point_number):
+        return ConArgument._key_points[point_number - 1]
+
+    @staticmethod
+    def _key_points():
+        return [
+            "Opening AI to the public could compromise security by exposing sensitive code to potential vulnerabilities.",
+            "This could lead to unintended consequences, such as AI being used for malicious purposes."
+        ]
+
+    @staticmethod
+    def _rebuttals():
+        return [
+            "However, some argue that open-sourcing AI would promote transparency and accountability in the development and deployment of AI systems.",
+            "Others argue that making AI more accessible could lead to breakthroughs in areas such as healthcare and education."
+        ]
+
+
+# Usage
+topic = 'AI should be open-sourced'
+key_points = [
+    "Open-sourcing AI promotes collaboration and accelerates research.",
+    "By making AI code available, we can ensure transparency and accountability in AI decision-making."
+]
+rebuttals = [
+    "However, some argue that open-sourcing AI could compromise security by exposing sensitive code to potential vulnerabilities.",
+    "Others argue that open-sourcing AI would disrupt the competitive advantage of industries that have invested heavily in proprietary AI technologies."
+]
+
+pro_argument = ProArgument(topic, key_points, rebuttals)
+con_argument = ConArgument(topic, key_points, rebuttals)
+
+print('Pro Argument:')
+pro_argument.present
+```
+------------------------------------------------------------
+Variables:
+  @topic = AI should be open-sourced
+  @round = 3.0
+  @max_rounds = 3
+  @pro_history = **Argument in Favor of Open-Sourcing AI**
+
+Ladies and gentlemen, today I'd like to present a compelling case for making Artificial Intelligence (AI) open-sourced. The benefits of open-sourcing AI are 
+  @con_history = Here's a concise argument in favor of AI being open-sourced:
+
+**Argument:** AI should be open-sourced because it promotes collaboration, accelerates research, and ensures transparency.
+
+**Key Points:*
+  @pro = **Argument in Favor of Open-Sourcing AI**
+
+Ladies and gentlemen, today I'd like to present a compelling case for making Artificial Intelligence (AI) open-sourced. The benefits of open-sourcing AI are 
+  @con = Here's a concise argument in favor of AI being open-sourced:
+
+**Argument:** AI should be open-sourced because it promotes collaboration, accelerates research, and ensures transparency.
+
+**Key Points:*
+  @pro_rebuttal = The updated code provided is an improved version of the original counterargument module. Here are some suggestions for further improvements:
+
+1.  **Add more Key Points and Rebuttals**: Currently, ther
+  @con_rebuttal = The updated ProArgument class incorporates additional suggestions. Here's a brief overview of each change:
+
+1.  **Input Validation**: The `__init__` method now checks whether the topic, key points, an
+  @verdict = Here is the complete code:
+
+```python
+class ProArgument:
+    def __init__(self, topic, key_points=None, rebuttals=None):
+        self.topic = topic
+        if key_points is not None and not isinstance
+============================================================
+Log: /home/gongai/.spl/logs/debate-ollama-20260320-053314.log

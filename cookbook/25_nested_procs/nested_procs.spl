@@ -34,7 +34,7 @@ DO
         WHEN > target_grade THEN
             GENERATE simplify(text, audience) INTO @calibrated
             COMMIT @calibrated
-        OTHERWISE
+        ELSE
             COMMIT text
     END
 END

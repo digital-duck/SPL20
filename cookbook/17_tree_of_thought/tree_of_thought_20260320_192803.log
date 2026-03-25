@@ -1,0 +1,414 @@
+
+```bash
+spl2 run ./17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem=Should we rewrite the legacy system or incrementally refactor?
+```
+
+```spl2
+-- Recipe 17: Tree of Thought
+-- Explores multiple reasoning paths in parallel, evaluates each, and selects the best.
+-- Demonstrates branching exploration, comparative evaluation, and path scoring.
+--
+-- Usage:
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem="How should a startup prioritize between growth and profitability?"
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Design a caching strategy for a high-traffic API"
+--   spl2 run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Should we rewrite the legacy system or incrementally refactor?"
+
+WORKFLOW tree_of_thought
+    INPUT: @problem TEXT
+    OUTPUT: @best_solution TEXT
+DO
+    -- Step 1: Generate multiple initial approaches
+    GENERATE approach_1(@problem) INTO @path_a
+    GENERATE approach_2(@problem) INTO @path_b
+    GENERATE approach_3(@problem) INTO @path_c
+
+    -- Step 2: Develop each approach one level deeper
+    GENERATE develop(@path_a, @problem) INTO @path_a_developed
+    GENERATE develop(@path_b, @problem) INTO @path_b_developed
+    GENERATE develop(@path_c, @problem) INTO @path_c_developed
+
+    -- Step 3: Score each path on multiple criteria
+    GENERATE evaluate_path(@path_a_developed, @problem) INTO @score_a
+    GENERATE evaluate_path(@path_b_developed, @problem) INTO @score_b
+    GENERATE evaluate_path(@path_c_developed, @problem) INTO @score_c
+
+    -- Step 4: Select the best path
+    GENERATE select_best(
+        @path_a_developed, @score_a,
+        @path_b_developed, @score_b,
+        @path_c_developed, @score_c
+    ) INTO @best_path
+
+    -- Step 5: Refine the winning path into a final solution
+    GENERATE refine_solution(@best_path, @problem) INTO @best_solution
+
+    -- Step 6: Verify the solution holds up
+    GENERATE verify(@best_solution, @problem) INTO @verification
+
+    EVALUATE @verification
+        WHEN 'sound' THEN
+            COMMIT @best_solution WITH status = 'complete', paths_explored = 3
+        OTHERWISE
+            -- If verification fails, combine insights from all paths
+            GENERATE synthesize_all(
+                @path_a_developed, @path_b_developed, @path_c_developed, @problem
+            ) INTO @best_solution
+            COMMIT @best_solution WITH status = 'synthesized', paths_explored = 3
+    END
+
+EXCEPTION
+    WHEN BudgetExceeded THEN
+        -- Return whatever path was scored highest so far
+        COMMIT @best_path WITH status = 'budget_limit'
+    WHEN HallucinationDetected THEN
+        RETRY WITH temperature = 0.1
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 13
+Tokens: 6107 in / 4501 out
+Latency: 59226ms
+------------------------------------------------------------
+```output
+Based on your input, I've refined the solution by providing a more detailed plan for both rewriting from scratch and incremental refactoring.
+
+**Rewrite from Scratch:**
+
+1. **Conduct a thorough assessment** of the legacy system's current state to identify areas with high maintenance costs and opportunities for refactoring.
+2. **Prioritize critical issues**: Focus on rewriting or refactoring components that pose significant risks, are prone to errors, or impact user experience.
+3. **Consider a phased approach**: Rewrite specific high-priority components or modules while continuing to support the existing system.
+
+To ensure a successful rewrite:
+
+1. **Develop a detailed project plan**: Outline timelines, resources, and milestones for each phase of the rewrite.
+2. **Establish a transition strategy**: Plan for minimal disruption to users, ensuring a smooth handover of responsibilities from legacy to new systems.
+3. **Invest in training and documentation**: Provide developers with comprehensive training on the new technologies and frameworks being used.
+
+**Incremental Refactoring:**
+
+1. **Analyze high-maintenance areas**: Identify components or modules that require significant updates or bug fixes, and prioritize them for refactoring.
+2. **Focus on modularized architecture**: Break down complex systems into smaller, more manageable modules, allowing for incremental updates without affecting the entire system.
+3. **Implement a gradual rollout strategy**: Refactor and deploy new features incrementally, monitoring user feedback and performance metrics to ensure seamless integration.
+
+To ensure successful refactoring:
+
+1. **Develop a roadmap of planned changes**: Create a clear plan outlining which components will be updated, when, and in what order.
+2. **Collaborate with stakeholders**: Engage with users, developers, and project managers to gather input and feedback on the refactoring process.
+3. **Invest in automation tools**: Leverage automated testing frameworks and continuous integration pipelines to streamline the refactoring process.
+
+**Additional Recommendations:**
+
+1. **Consider a hybrid approach**: Combine elements of both rewriting from scratch and incremental refactoring to create the best possible outcome for your legacy system.
+2. **Monitor progress closely**: Regularly assess the effectiveness of your chosen approach, making adjustments as needed to ensure alignment with project goals and priorities.
+
+Please let me know if you'd like me to elaborate on any aspect of this refined solution or if you have further questions!
+```
+------------------------------------------------------------
+Variables:
+  @problem = Should we rewrite the legacy system or incrementally refactor?
+  @path_a = **Approach 1: Incremental Refactoring**
+
+Considering the complexity of the legacy system and the need for a thorough review of its architecture, I recommend an incremental refactoring approach. This approach involves breaking down the refactoring process into smaller, manageable chunks, while maintaining a balance between modernizing the system and minimizing disruptions to existing functionality.
+
+**Benefits:**
+
+1.  **Reduced Risk**: Incremental refactoring allows us to test and validate changes incrementally, reducing the risk of introducing new issues or disrupting critical business processes.
+2.  **Improved Maintainability**: By breaking down the refactoring process into smaller chunks, we can focus on one aspect at a time, making it easier to maintain and understand the updated codebase.
+3.  **Better Collaboration**: Incremental refactoring enables collaboration among team members, allowing them to review and provide feedback on individual components before moving forward with further changes.
+
+**Step-by-Step Approach:**
+
+1.  Identify Critical Components: Determine which aspects of the legacy system are most critical to maintain or modernize.
+2.  Develop a Refactoring Roadmap: Outline the scope, timeline, and milestones for the refactoring process, ensuring that each phase is thoroughly tested and validated.
+3.  Incremental Refactoring: Apply incremental refactoring techniques, such as code reviews, unit testing, and continuous integration, to each identified component.
+4.  Validate Changes: Conduct thorough validation of each updated component before moving on to the next phase.
+5.  Monitor Progress: Regularly review progress, address issues promptly, and adjust the roadmap as necessary.
+
+**Conclusion:**
+
+By adopting an incremental refactoring approach, we can modernize the legacy system in a controlled, iterative manner, ensuring that changes are thoroughly tested and validated while minimizing disruptions to existing functionality.
+  @path_b = **Approach 2: Incremental Refactoring**
+
+For this task, I recommend taking an incremental refactoring approach. This means breaking down the project into manageable chunks and addressing one aspect at a time.
+
+Here's a step-by-step plan:
+
+1. **Assess the Legacy System**: Evaluate the current state of the legacy system by identifying areas that need improvement, potential pain points, and any critical functions or processes.
+2. **Prioritize Refactorings**: Determine which aspects of the system require immediate attention, such as:
+	* Performance-critical components
+	* Security vulnerabilities
+	* User experience issues
+	* Legacy code with low maintainability
+3. **Decide on Incremental Refactoring**: Refactor these high-priority areas incrementally, focusing on one aspect at a time.
+4. **Use Agile Methodologies**: Implement agile methodologies to facilitate iterative development and continuous improvement, such as:
+	* Scrum or Kanban
+	* Regular code reviews
+	* Continuous testing and integration
+5. **Monitor Progress and Adjust**: Continuously monitor the progress of incremental refactorings, making adjustments and refinements as needed.
+
+Benefits of this approach include:
+
+* Reduced risk: By focusing on one aspect at a time, you minimize the impact on critical functions or processes.
+* Improved maintainability: Incremental refactoring helps to reduce technical debt and increase the overall maintainability of the system.
+* Enhanced user experience: By addressing performance-critical components and security vulnerabilities first, you can improve the overall user experience.
+
+**Risks and Considerations**
+
+While incremental refactoring offers several benefits, there are potential risks to consider:
+
+* **Increased complexity**: Breaking down a large project into smaller, incremental pieces may increase complexity.
+* **Resource allocation**: Refactorings require significant resources (time, money, personnel). Ensure sufficient resources are allocated for this effort.
+
+**Next Steps**
+
+Based on the input provided, I recommend starting with an initial assessment of the legacy system to identify areas that need improvement. From there, you can prioritize refactorings and decide on an incremental refactoring approach.
+
+Please let me know if you would like me to elaborate on any aspect of this plan or if you have further questions!
+  @path_c = A classic decision point in software development!
+
+To help you make a decision, let's consider some factors:
+
+**Rewriting from scratch (Approach 1)**
+
+Pros:
+
+1. **Fresh start**: A new implementation can bring fresh ideas, better design principles, and modern technologies.
+2. **Reduced maintenance costs**: By building a new system, you'll avoid the costs of maintaining an aging legacy system.
+3. **Improved scalability**: A new system can be designed to handle increased traffic and growth more efficiently.
+
+Cons:
+
+1. **High upfront costs**: Rewriting from scratch can be expensive due to the resources required for design, development, testing, and deployment.
+2. **Risk of introducing new issues**: A new system can introduce new bugs or issues that weren't present in the original legacy system.
+3. **Disruption to users**: A complete rewrite requires a significant amount of time and effort from users.
+
+**Incremental refactoring (Approach 2)**
+
+Pros:
+
+1. **Lower upfront costs**: Refactoring is generally less expensive than rewriting an entire system.
+2. **Faster deployment**: Incremental changes can be deployed more quickly, minimizing downtime for users.
+3. **Less disruption to users**: Refactoring allows you to make changes without requiring significant user involvement.
+
+Cons:
+
+1. **Higher maintenance costs in the long run**: Refactoring may not address underlying issues, which can lead to increased maintenance costs over time.
+2. **Difficulty in achieving best practices**: Incremental refactoring can be challenging when trying to apply modern design principles and technologies to an existing system.
+3. **System instability**: Over-refactoring can introduce new issues or destabilize the system.
+
+Now, let's consider your specific situation:
+
+* What is the current state of your legacy system?
+* Are there any critical issues that need to be addressed urgently?
+* Do you have the resources and budget for a complete rewrite?
+* How much disruption are you willing to accept from users?
+
+Based on these factors, I'd suggest taking the following steps:
+
+1. Assess the current state of your legacy system: Identify the most critical issues, areas with the highest maintenance costs, and opportunities for refactoring.
+2. Evaluate the trade-offs: Weigh the pros and cons of rewriting from scratch versus incremental refactoring.
+3. Consider a hybrid approach: If you can't decide between the two approaches, consider a combination of both: rewrite specific high-priority components or modules while maintaining the existing functionality.
+
+Which direction are you leaning?
+  @path_a_developed = Based on the approach outlined in Input 1, I would recommend an incremental refactoring approach over rewriting the legacy system. Here's why:
+
+**Reasons for Incremental Refactoring:**
+
+1.  **Business Continuity**: Rewriting the entire legacy system can be a complex and time-consuming task, potentially disrupting critical business processes and impacting customer satisfaction.
+2.  **Cost Savings**: Incremental refactoring allows us to modernize the system in smaller increments, reducing the overall cost of the project.
+3.  **Faster Time-to-Market**: By breaking down the refactoring process into manageable chunks, we can deliver updates and enhancements more quickly, enabling us to respond to changing business needs.
+
+**When to Rewrite:**
+
+1.  **Significant Changes in Business Requirements**: If there are significant changes in business requirements that cannot be accommodated through incremental refactoring.
+2.  **Critical System Outages**: In cases where the legacy system is experiencing frequent outages or downtime, rewriting the system may be necessary to ensure high availability and reliability.
+
+**Conclusion:**
+
+Based on the benefits of an incremental refactoring approach, I believe it's a more suitable option for modernizing the legacy system. By adopting this approach, we can deliver updates and enhancements in a controlled and iterative manner, ensuring that changes are thoroughly tested and validated while minimizing disruptions to existing functionality.
+  @path_b_developed = Based on the input provided, it seems that you are considering two different approaches for improving the legacy system:
+
+1. **Rewriting the Legacy System**: This approach involves starting from scratch and building a new system to replace the existing one.
+2. **Incremental Refactoring**: This approach involves breaking down the existing system into smaller, manageable pieces and addressing each piece incrementally, rather than rewriting the entire system.
+
+Considering your initial input, I would recommend taking an incremental refactoring approach for several reasons:
+
+* **Reduced Risk**: Incremental refactoring allows you to address high-priority areas first, such as performance-critical components and security vulnerabilities, which minimizes the impact on critical functions or processes.
+* **Improved Maintainability**: By addressing legacy code with low maintainability incrementally, you can reduce technical debt and increase the overall maintainability of the system.
+* **Enhanced User Experience**: Incremental refactoring enables you to improve performance-critical components and security vulnerabilities first, which can lead to an enhanced user experience.
+
+However, I would like to add a few considerations to your initial plan:
+
+* **Clearly define the scope of incremental refactoring**: Make sure to identify which aspects of the system require attention and prioritize them accordingly.
+* **Establish realistic timelines and resource allocation**: Incremental refactoring requires significant resources (time, money, personnel). Ensure that you have sufficient resources allocated for this effort.
+* **Regularly review and adjust your approach**: As you progress with incremental refactoring, regularly review your progress and make adjustments to your approach as needed.
+
+To further elaborate on the next steps, I recommend:
+
+1. Conducting an initial assessment of the legacy system to identify areas that need improvement.
+2. Prioritizing refactorings based on business needs and technical requirements.
+3. Deciding on a specific incremental refactoring approach (e.g., Agile Methodologies like Scrum or Kanban).
+4. Allocating necessary resources for the incremental refactoring effort.
+
+Please let me know if you would like me to elaborate on any aspect of this plan or if you have further questions!
+  @path_c_developed = Based on the factors provided, it seems that there is no clear direction to lean towards. The decision depends on the current state of the legacy system, the urgency of critical issues, available resources and budget for a complete rewrite, and willingness to accept disruption from users.
+
+To make a decision, I would suggest considering the following:
+
+1. **Conduct a thorough assessment** of the legacy system's current state, identifying critical issues, areas with high maintenance costs, and opportunities for refactoring.
+2. **Evaluate the trade-offs** between rewriting from scratch and incremental refactoring, weighing the pros and cons of each approach.
+3. **Consider a hybrid approach**, such as rewriting specific high-priority components or modules while maintaining existing functionality.
+
+There is no one-size-fits-all answer to this decision. It may be helpful to consult with stakeholders, including developers, project managers, and users, to gather more information and insights about the legacy system's current state and potential solutions.
+
+Some questions to consider:
+
+* What are the most critical issues that need to be addressed urgently?
+* Are there any opportunities for refactoring or modernization that could improve the system's performance or scalability without requiring a complete rewrite?
+* Do we have the resources and budget necessary to undertake a complete rewrite, or would incremental refactoring be more feasible?
+
+Ultimately, the decision will depend on the specific circumstances and priorities of the project. It may be helpful to gather more information and data before making a final decision.
+  @score_a = Based on the provided inputs, I recommend an incremental refactoring approach for modernizing the legacy system. Here's a brief evaluation of the reasons why:
+
+**Incremental Refactoring is Preferred:**
+
+1.  **Business Continuity**: By choosing incremental refactoring, we can ensure that critical business processes remain operational while we modernize the system.
+2.  **Cost Savings**: Incremental refactoring allows us to phase in changes over time, reducing the overall cost of the project and minimizing the financial burden on stakeholders.
+3.  **Faster Time-to-Market**: Breaking down the refactoring process into manageable chunks enables us to deliver updates and enhancements more quickly.
+
+**Rewriting is Not Necessary:**
+
+1.  **Significant Changes in Business Requirements**: While it's essential to be aware of changes in business requirements, incremental refactoring can often accommodate these changes through targeted updates.
+2.  **Critical System Outages**: In cases where outages are frequent or critical, rewriting the system may still be necessary to ensure high availability and reliability.
+
+Overall, an incremental refactoring approach offers a more controlled and sustainable way to modernize the legacy system while minimizing disruptions to existing functionality. By adopting this approach, we can deliver updates and enhancements in a phased manner, ensuring thorough testing and validation while meeting changing business needs.
+  @score_b = Based on our initial discussion, I strongly recommend taking an incremental refactoring approach for improving the legacy system. Here's why:
+
+**Benefits of Incremental Refactoring:**
+
+1. **Reduced Risk**: By addressing high-priority areas first, we can minimize the impact on critical functions or processes.
+2. **Improved Maintainability**: Incremental refactoring allows us to reduce technical debt and increase the overall maintainability of the system.
+3. **Enhanced User Experience**: Improving performance-critical components and security vulnerabilities first can lead to a better user experience.
+
+**Additional Considerations:**
+
+1. **Clear Scope Definition**: Let's clearly define which aspects of the system require attention and prioritize them accordingly.
+2. **Realistic Timelines and Resource Allocation**: Incremental refactoring requires significant resources (time, money, personnel). We need to ensure that we have sufficient resources allocated for this effort.
+3. **Regular Review and Adjustment**: As we progress with incremental refactoring, we should regularly review our progress and make adjustments to our approach as needed.
+
+**Next Steps:**
+
+1. Conduct an initial assessment of the legacy system to identify areas that need improvement.
+2. Prioritize refactorings based on business needs and technical requirements.
+3. Decide on a specific incremental refactoring approach (e.g., Agile Methodologies like Scrum or Kanban).
+4. Allocate necessary resources for the incremental refactoring effort.
+
+Please let me know if you'd like me to elaborate on any of these steps or if you have further questions!
+  @score_c = Based on the input provided, it seems that there is still no clear direction towards leaning towards one option over the other. However, here's an attempt to break down the pros and cons of each approach:
+
+**Rewrite from Scratch:**
+
+Pros:
+- Opportunity to modernize the system, potentially leading to improved performance, scalability, and security.
+- A chance to adopt new technologies and frameworks that could improve the overall system.
+
+Cons:
+- High cost due to the need for significant resources, including personnel, time, and budget.
+- Potential disruption to users, as a complete rewrite may require downtime or alternative solutions.
+- Risk of introducing bugs or errors during the rewriting process.
+
+**Incremental Refactoring:**
+
+Pros:
+- Lower cost compared to a full rewrite, as it involves making targeted improvements rather than starting from scratch.
+- Less risk of disrupting users, as changes can be made incrementally without affecting existing functionality.
+- Opportunity to modernize specific components or modules without affecting the entire system.
+
+Cons:
+- May not address underlying issues or improve the overall performance and scalability of the system.
+- Potential for a "patchwork" solution that looks like it needs more work in the future.
+
+Considering the factors mentioned earlier, it seems that a hybrid approach could be an attractive option. Here are some suggestions:
+
+1. **Conduct a thorough assessment** of the legacy system's current state to identify areas with high maintenance costs and opportunities for refactoring.
+2. **Prioritize critical issues** and focus on rewriting or refactoring those components first, while maintaining existing functionality.
+3. **Consider a phased approach**, where you rewrite specific high-priority components or modules while continuing to support the existing system.
+
+Ultimately, the decision will depend on the specific circumstances and priorities of the project. Gathering more information and data before making a final decision is crucial.
+
+To move forward, I would suggest:
+
+1. Consulting with stakeholders, including developers, project managers, and users.
+2. Gathering data and insights about the legacy system's current state and potential solutions.
+3. Evaluating the pros and cons of each approach in detail to make an informed decision that aligns with the project's goals and priorities.
+
+What are your thoughts on this approach?
+  @best_path = Based on the inputs provided, it seems that there is no clear direction towards leaning towards one option over the other. However, here's a summary of the key points:
+
+**Rewrite from Scratch:**
+
+Pros:
+
+* Opportunity to modernize the system
+* Chance to adopt new technologies and frameworks
+* Potential for improved performance, scalability, and security
+
+Cons:
+
+* High cost due to significant resources required
+* Potential disruption to users
+* Risk of introducing bugs or errors during the rewriting process
+
+**Incremental Refactoring:**
+
+Pros:
+
+* Lower cost compared to a full rewrite
+* Less risk of disrupting users
+* Opportunity to modernize specific components or modules without affecting the entire system
+
+Cons:
+
+* May not address underlying issues or improve overall performance and scalability
+* Potential for a "patchwork" solution that looks like it needs more work in the future
+
+Considering the factors mentioned, here are some suggestions:
+
+1. **Conduct a thorough assessment** of the legacy system's current state to identify areas with high maintenance costs and opportunities for refactoring.
+2. **Prioritize critical issues** and focus on rewriting or refactoring those components first, while maintaining existing functionality.
+3. **Consider a phased approach**, where you rewrite specific high-priority components or modules while continuing to support the existing system.
+
+Ultimately, the decision will depend on the specific circumstances and priorities of the project. Gathering more information and data before making a final decision is crucial.
+
+To move forward, I would suggest:
+
+1. Consulting with stakeholders, including developers, project managers, and users.
+2. Gathering data and insights about the legacy system's current state and potential solutions.
+3. Evaluating the pros and cons of each approach in detail to make an informed decision that aligns with the project's goals and priorities.
+
+Please let me know if you would like me to elaborate on any aspect of this plan or if you have further questions!
+  @verification = Based on the refined solution you provided, I would recommend considering a hybrid approach that combines elements of both rewriting from scratch and incremental refactoring. This allows for flexibility and adaptability in addressing the complex needs of your legacy system.
+
+**Hybrid Approach:**
+
+1. **Start with a thorough assessment**: Conduct a comprehensive review of the current state of the legacy system to identify areas requiring attention.
+2. **Prioritize high-risk components**: Focus on rewriting or refactoring critical components that pose significant risks, are prone to errors, or impact user experience.
+3. **Implement incremental updates**: Break down complex systems into smaller modules and implement incremental updates, monitoring user feedback and performance metrics.
+
+**Benefits of a Hybrid Approach:**
+
+1. **Flexibility**: Combines the benefits of rewriting from scratch (e.g., reducing maintenance costs) with incremental refactoring (e.g., minimizing disruption to users).
+2. **Adaptability**: Allows for adjusting the approach as needed, ensuring alignment with project goals and priorities.
+3. **Risk management**: Mitigates risks associated with rewriting a legacy system by incrementally updating critical components.
+
+**Questions to Consider:**
+
+1. What are the most critical areas of the legacy system that require attention?
+2. How can we balance the need for rapid updates with the importance of minimizing disruption to users?
+3. What resources (time, budget, personnel) will be allocated to support this hybrid approach?
+
+Please let me know if you'd like to elaborate on any aspect of this recommendation or if you have further questions!
+============================================================
+Log: /home/gongai/.spl/logs/tree_of_thought-ollama-20260320-192803.log

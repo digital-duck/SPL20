@@ -70,12 +70,15 @@ WORKFLOW meeting_to_actions
             @output_format TEXT DEFAULT 'json'
     OUTPUT: @output TEXT
 DO
+    LOGGING f'Meeting to actions | format={@output_format} filename={@filename}' LEVEL INFO
+
     -- Step 1: Load transcript from file if filename provided (deterministic — no LLM)
     CALL load_transcript(@filename) INTO @file_content
 
     -- Step 2: Extract speaker names for grounding the LLM (deterministic — no LLM)
     CALL extract_speakers(@file_content) INTO @speakers_from_file
     CALL extract_speakers(@transcript)   INTO @speakers_from_inline
+    LOGGING f'Speakers from file: {@speakers_from_file}' LEVEL DEBUG
 
     -- Step 3: Normalise transcript — merge sources, clean formatting, identify speakers
     GENERATE normalize_transcript(
@@ -84,6 +87,7 @@ DO
         @speakers_from_file,
         @speakers_from_inline
     ) INTO @clean_transcript
+    LOGGING 'Transcript normalised' LEVEL DEBUG
 
     -- Step 4: Extract structured action items grounded by schema and known speakers
     GENERATE extract_actions(
@@ -92,6 +96,7 @@ DO
         @speakers_from_file,
         @speakers_from_inline
     ) INTO @structured_json
+    LOGGING 'Action items extracted' LEVEL INFO
 
     -- Step 5: Normalise relative due dates to ISO-8601 (deterministic — no LLM)
     CALL normalize_dates(@structured_json) INTO @structured_json
@@ -107,7 +112,7 @@ DO
         WHEN = 'email' THEN
             GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
             COMMIT @output WITH status = 'complete', format = 'email'
-        OTHERWISE
+        ELSE
             SET @output = @structured_json
             COMMIT @output WITH status = 'complete', format = 'json'
     END

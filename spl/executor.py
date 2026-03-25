@@ -25,9 +25,10 @@ from spl.ast_nodes import (
     BinaryOp, FunctionCall, DottedName, NamedArg,
     WorkflowStatement, ProcedureStatement,
     EvaluateStatement, WhileStatement, DoBlock,
-    AssignmentStatement, GenerateIntoStatement, CommitStatement,
+    LoggingStatement, AssignmentStatement, GenerateIntoStatement, CommitStatement,
     RetryStatement, RaiseStatement, CallStatement, SelectIntoStatement,
     SemanticCondition, ComparisonCondition, Condition, ExceptionHandler,
+    FStringLiteral, ListLiteral,
 )
 from spl.optimizer import ExecutionPlan, ExecutionStep, WorkflowPlan
 from spl.adapters.base import LLMAdapter, GenerationResult
@@ -515,6 +516,8 @@ class Executor:
             pass  # Retry is handled at the exception level
         elif isinstance(stmt, RaiseStatement):
             await self._exec_raise(stmt, state)
+        elif isinstance(stmt, LoggingStatement):
+            self._exec_logging(stmt, state)
         elif isinstance(stmt, CallStatement):
             await self._exec_call(stmt, state)
         elif isinstance(stmt, DoBlock):
@@ -688,13 +691,21 @@ class Executor:
                     _log.debug("EVALUATE semantic '%s' -> %s", sv, matched)
 
             elif isinstance(cond, ComparisonCondition):
-                # Deterministic comparison
-                try:
-                    left_val = float(eval_value)
-                    right_val = float(self._eval_expression(cond.right, state))
-                    matched = self._compare(left_val, cond.operator, right_val)
-                except (ValueError, TypeError):
-                    matched = False
+                # Boolean shorthand: WHEN = TRUE / WHEN = FALSE
+                right_str = self._eval_expression(cond.right, state).lower()
+                if right_str in ("true", "false") and cond.operator == "=":
+                    matched = (eval_value.lower() == right_str)
+                    _log.debug("EVALUATE bool %s = %s -> %s", eval_value, right_str, matched)
+                else:
+                    # Deterministic numeric comparison
+                    try:
+                        left_val = float(eval_value)
+                        right_val = float(right_str)
+                        matched = self._compare(left_val, cond.operator, right_val)
+                    except (ValueError, TypeError):
+                        # String equality fallback
+                        matched = (eval_value == right_str) if cond.operator == "=" else \
+                                  (eval_value != right_str) if cond.operator == "!=" else False
                 _log.debug("EVALUATE %s %s %s -> %s",
                            eval_value[:20], cond.operator,
                            self._eval_expression(cond.right, state), matched)
@@ -704,8 +715,8 @@ class Executor:
                 return
 
         # Otherwise clause
-        if stmt.otherwise_statements:
-            await self._execute_body(stmt.otherwise_statements, state)
+        if stmt.else_statements:
+            await self._execute_body(stmt.else_statements, state)
 
     async def _exec_while(self, stmt: WhileStatement, state: WorkflowState):
         """Execute WHILE condition DO ... END"""
@@ -777,6 +788,33 @@ class Executor:
         exc_cls = EXCEPTION_CLASSES.get(stmt.exception_type, SPLWorkflowError)
         raise exc_cls(stmt.message or stmt.exception_type)
 
+    # Log level ordering for filtering
+    _LOG_LEVELS = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
+    _LOG_LEVEL_MIN: str = "INFO"   # class-level default; override per-instance if needed
+
+    def _exec_logging(self, stmt: LoggingStatement, state: WorkflowState):
+        """Execute LOGGING expr [LEVEL DEBUG|INFO|WARN|ERROR] [TO 'file_path']
+        Suppresses messages below _LOG_LEVEL_MIN.
+        Console output includes level prefix; file output includes ISO timestamp + level.
+        """
+        import sys
+        level = stmt.level.upper()
+        min_level = getattr(self, 'log_level', self._LOG_LEVEL_MIN).upper()
+        if self._LOG_LEVELS.get(level, 1) < self._LOG_LEVELS.get(min_level, 1):
+            return  # suppress below minimum level
+
+        message = self._eval_expression(stmt.expression, state)
+
+        if stmt.destination is None:
+            print(f"[{level}] {message}", file=sys.stdout, flush=True)
+            _log.debug("LOGGING[%s]: %s", level, message)
+        else:
+            import datetime
+            ts = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            with open(stmt.destination, "a", encoding="utf-8") as fh:
+                fh.write(f"[{ts}] [{level}] {message}\n")
+            _log.debug("LOGGING[%s] TO %s: %s", level, stmt.destination, message)
+
     async def _exec_call(self, stmt: CallStatement, state: WorkflowState):
         """Execute CALL procedure(args) INTO @var"""
         import inspect
@@ -794,10 +832,19 @@ class Executor:
             _log.debug("Tool '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
             return
 
-        # 2. SPL PROCEDURE
+        # 2. Built-in function — deterministic, no LLM cost
+        if self.functions.is_builtin(stmt.procedure_name):
+            args_text = [self._eval_expression(a, state) for a in stmt.arguments]
+            result_str = self.functions.call_builtin(stmt.procedure_name, *args_text)
+            if stmt.target_variable:
+                state.set_var(stmt.target_variable, str(result_str))
+            _log.debug("Builtin '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
+            return
+
+        # 3. SPL PROCEDURE
         proc = self.functions.get_procedure(stmt.procedure_name)
         if proc is None:
-            _log.warning("Procedure '%s' not found, using LLM fallback", stmt.procedure_name)
+            _log.warning("Procedure '%s' not found — no tool, no builtin, no procedure; using LLM fallback", stmt.procedure_name)
             # Fallback: use LLM to simulate the procedure
             args_text = [self._eval_expression(a, state) for a in stmt.arguments]
             prompt = f"Execute procedure: {stmt.procedure_name}({', '.join(args_text)})"
@@ -875,15 +922,29 @@ class Executor:
     def _eval_expression(self, expr, state: WorkflowState) -> str:
         """Evaluate an expression to a string value."""
         if isinstance(expr, Literal):
+            if expr.literal_type == "bool":
+                return "true" if expr.value else "false"
             return str(expr.value)
         elif isinstance(expr, ParamRef):
             return state.get_var(expr.name)
         elif isinstance(expr, Identifier):
             return state.get_var(expr.name)
+        elif isinstance(expr, FStringLiteral):
+            import re
+            def _sub(m: re.Match) -> str:
+                return state.get_var(m.group(1))
+            return re.sub(r'\{@(\w+)\}', _sub, expr.template)
+        elif isinstance(expr, ListLiteral):
+            import json
+            elements = [self._eval_expression(e, state) for e in expr.elements]
+            return json.dumps(elements)
         elif isinstance(expr, BinaryOp):
             left = self._eval_expression(expr.left, state)
             right = self._eval_expression(expr.right, state)
-            if expr.op == '+':
+            if expr.op == '||':
+                # Unambiguous string concatenation (Oracle/PostgreSQL style)
+                return left + right
+            elif expr.op == '+':
                 # Try numeric addition, fall back to string concatenation
                 try:
                     result = float(left) + float(right)

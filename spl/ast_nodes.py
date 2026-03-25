@@ -9,6 +9,9 @@ Extends SPL 1.0 AST with nodes for agentic workflow orchestration:
 - AssignmentStatement
 - GenerateInto (GENERATE ... INTO @var)
 - CallStatement (CALL procedure(...))
+- LoggingStatement (LOGGING expr [LEVEL INFO] [TO 'file'])
+- FStringLiteral (f'text {@var} text')
+- ListLiteral ([] or [expr, expr, ...])
 """
 
 from __future__ import annotations
@@ -26,9 +29,9 @@ class Expression:
 
 @dataclass
 class Literal(Expression):
-    """String, integer, or float literal."""
-    value: str | int | float
-    literal_type: str  # "string", "integer", "float"
+    """String, integer, float, or bool literal."""
+    value: str | int | float | bool
+    literal_type: str  # "string", "integer", "float", "bool"
 
 
 @dataclass
@@ -100,6 +103,19 @@ class RagQuery(Expression):
 class MemoryGet(Expression):
     """memory.get("key")."""
     key: str
+
+
+@dataclass
+class FStringLiteral(Expression):
+    """f'text {@var} more text' — interpolated string literal.
+    The template preserves {@varname} placeholders; the executor substitutes values."""
+    template: str
+
+
+@dataclass
+class ListLiteral(Expression):
+    """[] or [expr, expr, ...] — native LIST literal."""
+    elements: list[Expression] = field(default_factory=list)
 
 
 # === Clause Nodes (SPL 1.0 — unchanged) ===
@@ -265,7 +281,7 @@ class EvaluateStatement:
     """EVALUATE <expr> WHEN <condition> THEN <statements> ... END"""
     expression: Expression
     when_clauses: list[WhenClause] = field(default_factory=list)
-    otherwise_statements: list = field(default_factory=list)
+    else_statements: list = field(default_factory=list)
 
 
 @dataclass
@@ -294,6 +310,16 @@ class RaiseStatement:
     """RAISE <exception_type> [message]"""
     exception_type: str
     message: str | None = None
+
+
+@dataclass
+class LoggingStatement:
+    """LOGGING <expr> [LEVEL DEBUG|INFO|WARN|ERROR] [TO 'file_path']
+    Writes a message to the console (default) or an OS file for debugging.
+    Messages below the runtime log level are suppressed."""
+    expression: Expression
+    level: str = "INFO"             # DEBUG, INFO, WARN, ERROR
+    destination: str | None = None  # None → console; string → file path
 
 
 @dataclass
@@ -370,6 +396,7 @@ Statement = Union[
     CommitStatement,
     RetryStatement,
     RaiseStatement,
+    LoggingStatement,
     AssignmentStatement,
     GenerateIntoStatement,
     CallStatement,

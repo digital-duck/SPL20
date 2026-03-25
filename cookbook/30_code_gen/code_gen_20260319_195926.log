@@ -1,0 +1,170 @@
+
+```bash
+spl2 run ./30_code_gen/code_gen.spl --adapter ollama -m gemma3 spec=A function that validates an email address language=Python
+```
+
+```sql
+-- Recipe 30: Code Generator + Tests
+-- Generate a function, then generate its unit tests — in a single workflow.
+-- Demonstrates sequential generation where output of step N is input to step N+1.
+--
+-- Usage:
+--   spl2 run cookbook/30_code_gen/code_gen.spl --adapter ollama -m gemma3 \
+--       spec="A function that validates an email address" language="Python"
+--
+--   spl2 run cookbook/30_code_gen/code_gen.spl --adapter ollama \
+--       spec="Binary search over a sorted list, return index or -1" language="Go" \
+--       test_framework="testing"
+
+CREATE FUNCTION language_conventions(language TEXT)
+RETURNS TEXT AS $$
+SELECT CASE language
+  WHEN 'Python' THEN 'PEP 8 style. Type hints required. Docstring in Google format. No bare except.'
+  WHEN 'Go'     THEN 'Standard Go conventions. Return (value, error). Table-driven tests. No panics in library code.'
+  WHEN 'TypeScript' THEN 'Strict mode. Explicit return types. JSDoc comments. No any type.'
+  WHEN 'Rust'   THEN 'Idiomatic Rust. Result<T, E> for fallible ops. No unwrap() in library code. Doc comments.'
+  ELSE               'Clean, idiomatic code. Clear naming. Minimal dependencies. Well-commented edge cases.'
+END
+$$;
+
+CREATE FUNCTION test_framework_guide(language TEXT, framework TEXT DEFAULT 'default')
+RETURNS TEXT AS $$
+SELECT CASE language || ':' || framework
+  WHEN 'Python:pytest'   THEN 'pytest. Use fixtures. Parametrize for multiple inputs. Assert with descriptive messages.'
+  WHEN 'Python:unittest' THEN 'unittest.TestCase. setUp/tearDown. assertEqual, assertRaises. One assertion per test.'
+  WHEN 'Go:testing'      THEN 'testing package. Table-driven tests with t.Run. t.Errorf not t.Fatalf unless truly fatal.'
+  WHEN 'TypeScript:jest' THEN 'Jest. describe/it blocks. Mocks via jest.fn(). Async tests with async/await.'
+  ELSE                        'Standard test framework for ' || language || '. Cover: happy path, edge cases, error cases.'
+END
+$$;
+
+WORKFLOW code_gen_with_tests
+    INPUT: @spec TEXT, @language TEXT DEFAULT 'Python', @test_framework TEXT DEFAULT 'default'
+    OUTPUT: @final_output TEXT
+DO
+    -- Step 1: Generate the implementation
+    GENERATE implement_function(
+        @spec,
+        @language,
+        language_conventions(@language)
+    ) INTO @implementation
+
+    -- Step 2: Self-review the implementation
+    GENERATE review_implementation(@implementation, @spec, @language) INTO @review_notes
+
+    -- Step 3: Refine if issues found
+    EVALUATE @review_notes
+        WHEN contains('issue') OR contains('error') OR contains('problem') THEN
+            GENERATE fix_implementation(@implementation, @review_notes, @language) INTO @implementation
+        OTHERWISE
+            -- Implementation looks good
+    END
+
+    -- Step 4: Generate unit tests targeting the implementation
+    GENERATE generate_tests(
+        @implementation,
+        @spec,
+        @language,
+        test_framework_guide(@language, @test_framework)
+    ) INTO @tests
+
+    -- Step 5: Verify tests compile/parse (static check)
+    GENERATE verify_test_syntax(@tests, @language) INTO @syntax_ok
+
+    -- Step 6: Assemble final output
+    GENERATE assemble_output(@implementation, @tests, @language) INTO @final_output
+
+    COMMIT @final_output WITH
+        status = 'complete',
+        language = @language,
+        test_framework = @test_framework
+
+EXCEPTION
+    WHEN GenerationError THEN
+        -- Return implementation without tests
+        COMMIT @implementation WITH status = 'implementation_only', reason = 'test_generation_failed'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 6
+Tokens: 2901 in / 2441 out
+Latency: 33954ms
+------------------------------------------------------------
+Committed: import re
+from email_validator import validate_email, EmailNotValidError
+
+def is_valid_email(email):
+    """
+    Validate an email address.
+    
+    Args:
+        email (str): The email address to be validated.
+    
+    Returns:
+        bool: True if the email address is valid, False otherwise.
+    """
+
+    # Check if the input is empty or contains whitespace
+    if not email.strip():
+        return False
+
+    try:
+        # Validate the email address and get the result
+        result = validate_email(email)
+        
+        # If the email address is valid, return True
+        if result.status == 'valid':
+            return True
+        
+        # If the email address is invalid, print an error message and return False
+        else:
+            print(f"Invalid email address: {result.error}")
+            return False
+    
+    except EmailNotValidError as e:
+        # If there's an error during validation, print an error message and return False
+        print(f"Invalid email address: {e}")
+        return False
+
+# Test the function with some examples
+print(is_valid_email("test@example.com"))  # Should return True
+print(is_valid_email("invalid_email"))     # Should return False
+print(is_valid_email(""))                   # Should return False
+print(is_valid_email("\t test@."))         # Should return False
+------------------------------------------------------------
+Variables:
+  @spec = A function that validates an email address
+  @language = Python
+  @implementation = The improved version of the implementation provided fixes several limitations and improves the accuracy of the email validation process. Here are some key points to consider:
+
+1.  **Validation Pattern
+  @review_notes = The given Python implementation of the `is_valid_email` function is mostly correct. However, it has some limitations:
+
+*   The regular expression pattern used only checks for a basic syntax of a valid
+  @tests = import re
+from email_validator import validate_email, EmailNotValidError
+
+def is_valid_email(email):
+    """
+    Validate an email address.
+    
+    Args:
+        email (str): The email address to be 
+  @syntax_ok = To verify the syntax of the provided code, I'll analyze it for any syntax errors or potential improvements.
+
+**Syntax Analysis:**
+
+The code is syntactically correct and should compile without any issu
+  @final_output = import re
+from email_validator import validate_email, EmailNotValidError
+
+def is_valid_email(email):
+    """
+    Validate an email address.
+    
+    Args:
+        email (str): The email address to be 
+============================================================
+Log: /home/gongai/.spl/logs/code_gen-ollama-20260319-195926.log

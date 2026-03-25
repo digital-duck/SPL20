@@ -1,0 +1,137 @@
+
+```bash
+spl2 run ./11_debate_arena/debate.spl --adapter ollama -m gemma3 topic=AI should be open-sourced
+```
+
+```sql
+-- Recipe 11: Debate Arena
+-- Two LLM personas argue opposing sides of a topic, then a judge picks the winner.
+-- Demonstrates multi-perspective reasoning, adversarial generation, and semantic evaluation.
+--
+-- Usage:
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m gemma3 topic="AI should be open-sourced"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
+--   spl2 run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
+
+WORKFLOW debate_arena
+    INPUT: @topic TEXT
+    OUTPUT: @verdict TEXT
+DO
+    @round := 0
+    @max_rounds := 3
+    @pro_history := ''
+    @con_history := ''
+
+    -- Opening statements
+    GENERATE pro_argument(@topic, 'opening statement') INTO @pro
+    GENERATE con_argument(@topic, 'opening statement') INTO @con
+
+    @pro_history := @pro
+    @con_history := @con
+
+    -- Rebuttal rounds
+    WHILE @round < @max_rounds DO
+        -- Pro rebuts Con's latest point
+        GENERATE pro_argument(@topic, @con_history) INTO @pro_rebuttal
+        @pro_history := @pro_history + '\n---\n' + @pro_rebuttal
+
+        -- Con rebuts Pro's latest point
+        GENERATE con_argument(@topic, @pro_history) INTO @con_rebuttal
+        @con_history := @con_history + '\n---\n' + @con_rebuttal
+
+        @round := @round + 1
+    END
+
+    -- Judge evaluates both sides
+    GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+
+    COMMIT @verdict WITH status = 'complete', rounds = @round
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
+        COMMIT @verdict WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @pro_history WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 9
+Tokens: 11063 in / 4681 out
+Latency: 74774ms
+------------------------------------------------------------
+Committed: Based on the input provided, I will present a pro-argument for open-sourcing AI:
+
+**Argument: Open-Sourcing AI is Essential for Promoting Transparency, Collaboration, and Innovation**
+
+Making AI code open-source is essential for promoting transparency, collaboration, accessibility, and innovation in the field. By sharing knowledge and expertise, we can accelerate progress in AI and develop new applications that benefit society as a whole.
+
+**Transparency**: Open-sourcing AI code increases transparency by allowing developers to inspect and verify the underlying algorithms and models used in AI systems. This fosters trust among users, who can then make informed decisions about how their data is being used.
+
+**Collaboration**: Open-sourcing AI enables researchers and developers to collaborate more easily, leading to a faster pace of innovation and discovery. By sharing knowledge and expertise, we can leverage the collective wisdom of the open-source community to drive progress in AI.
+
+**Inclusivity and Accessibility**: Open-source AI projects can be contributed to by individuals from diverse backgrounds and locations, promoting inclusivity and accessibility in AI research and development. This ensures that the benefits of AI are shared equitably and that everyone has access to these technologies.
+
+**Reducing Dependence on Proprietary Solutions**: Providing an open-source alternative reduces reliance on proprietary solutions that may limit adaptation or modification of existing code. This promotes a more level playing field for developers and users, allowing them to choose from a range of options that meet their needs.
+
+**Promoting Fairness and Accountability**: Open-sourcing AI enables the creation of auditable records of how algorithms are developed and used, promoting transparency and accountability in AI decision-making. This ensures that AI systems are fair, unbiased, and transparent.
+
+While some argue that open-sourcing AI code poses risks to intellectual property rights or security, these concerns can be addressed through clear licensing agreements, robust security measures, and community-driven guidelines for collaborative development. By acknowledging these risks and implementing effective safeguards, we can create a more transparent, collaborative, and inclusive ecosystem around AI development.
+
+**Counterargument Response:**
+
+Some may argue that proprietary solutions or government regulation are better approaches to addressing the challenges associated with open-sourcing AI code. However, this response overlooks the potential benefits of transparency, collaboration, and accessibility that come with open-sourcing AI.
+
+Furthermore, while open-sourcing AI code can promote innovation and progress in AI, it is not a panacea for all problems in the field. Other approaches, such as combining proprietary solutions with open-source components or working closely with government regulators, may be more effective in addressing specific challenges or risks associated with AI development.
+
+**Conclusion:**
+
+In conclusion, making AI code open-source is essential for promoting transparency, collaboration, accessibility, and innovation in the field. By sharing knowledge and expertise, we can accelerate progress in AI and develop new applications that benefit society as a whole. While some concerns about intellectual property rights or security may arise, these can be addressed through clear licensing agreements, robust security measures, and community-driven guidelines for collaborative development.
+
+**Supporting Evidence:**
+
+1. **Open-Source Success Stories**: The success of open-source projects such as Linux and TensorFlow demonstrates the value of transparency, collaboration, and accessibility in driving innovation and progress.
+2. **Government Support**: Government support for open-source initiatives, such as the US National Science Foundation's (NSF) Open Source Software Policy, highlights the growing recognition of the importance of transparency, collaboration, and accessibility in AI development.
+3. **Industry Adoption**: The adoption of open-sourced components by major industries, such as finance and healthcare, demonstrates the potential for open-source solutions to drive innovation and progress in these sectors.
+
+By considering these arguments and evidence, we can develop a more nuanced understanding of the benefits and drawbacks of open-sourcing AI code and create a more balanced approach to AI development.
+------------------------------------------------------------
+Variables:
+  @topic = AI should be open-sourced
+  @round = 3.0
+  @max_rounds = 3
+  @pro_history = **The Case for Open-Source AI**
+
+Ladies and gentlemen, today I want to discuss a crucial aspect of Artificial Intelligence (AI) development that has the potential to revolutionize its future. As we co
+  @con_history = **Con Argument: AI Should be Open-Sourced**
+
+**Introduction**
+
+The development and deployment of Artificial Intelligence (AI) systems are increasingly becoming integral to various industries, includin
+  @pro = **The Case for Open-Source AI**
+
+Ladies and gentlemen, today I want to discuss a crucial aspect of Artificial Intelligence (AI) development that has the potential to revolutionize its future. As we co
+  @con = **Con Argument: AI Should be Open-Sourced**
+
+**Introduction**
+
+The development and deployment of Artificial Intelligence (AI) systems are increasingly becoming integral to various industries, includin
+  @pro_rebuttal = Here is an updated version of your con-argument with some additional points:
+
+**Argument: Open-Sourcing AI is Risky for Intellectual Property Rights**
+
+While making AI code open-source may promote tra
+  @con_rebuttal = Based on the input provided, I will present a con-argument for open-sourcing AI:
+
+**Argument: Open-Sourcing AI is Risky for Intellectual Property Rights**
+
+While making AI code open-source may promote
+  @verdict = Based on the input provided, I will present a pro-argument for open-sourcing AI:
+
+**Argument: Open-Sourcing AI is Essential for Promoting Transparency, Collaboration, and Innovation**
+
+Making AI code 
+============================================================
+Log: /home/gongai/.spl/logs/debate-ollama-20260319-183950.log

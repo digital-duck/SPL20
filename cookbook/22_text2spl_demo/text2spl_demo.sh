@@ -11,7 +11,7 @@ set -uo pipefail
 
 ADAPTER="${1:-ollama}"
 MODEL="${2:-gemma3}"
-OUTDIR="cookbook/22_text2spl_demo/generated"
+OUTDIR="22_text2spl_demo/generated"
 mkdir -p "$OUTDIR"
 
 PASS=0

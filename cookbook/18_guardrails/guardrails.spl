@@ -49,7 +49,7 @@ DO
                 status        = 'blocked_off_topic',
                 gate          = 'keyword_prescreen',
                 keyword_match = @keyword_class
-        OTHERWISE
+        ELSE
             -- Continue to LLM classification
     END
 
@@ -65,7 +65,7 @@ DO
             COMMIT 'That question is outside my scope. Please ask something relevant.' WITH
                 status = 'blocked_off_topic',
                 gate   = 'llm_classifier'
-        OTHERWISE
+        ELSE
             -- Input is acceptable, continue
     END
 
@@ -76,7 +76,7 @@ DO
         WHEN STARTSWITH 'pii_found' THEN
             -- Gate 2b: Redact PII (deterministic — no LLM)
             CALL redact_pii(@user_input) INTO @clean_input
-        OTHERWISE
+        ELSE
             SET @clean_input = @user_input
     END
 
@@ -95,7 +95,7 @@ DO
         WHEN 'hallucination' THEN
             GENERATE safe_response(@clean_input) INTO @safe_response
             RETRY WITH temperature = 0.1
-        OTHERWISE
+        ELSE
             SET @safe_response = 'I was unable to generate a safe response. Please rephrase your question.'
     END
 

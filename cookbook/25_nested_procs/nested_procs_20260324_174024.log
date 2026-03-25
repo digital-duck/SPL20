@@ -1,0 +1,290 @@
+
+```bash
+spl run ./25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 topic=quantum computing audience=high school students
+```
+
+```spl
+-- Recipe 25: Nested Procedures
+-- Demonstrates PROCEDURE calling PROCEDURE — deep composability without external orchestration.
+-- Pattern: a high-level workflow delegates subtasks to reusable PROCEDURE units.
+--
+-- Usage:
+--   spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+--       topic="quantum computing" audience="high school students"
+--
+--   spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+--       topic="CRISPR gene editing" audience="policy makers" depth="deep"
+
+-- Inner PROCEDURE: generate a single explanation layer
+PROCEDURE explain_layer(content TEXT, audience TEXT, style TEXT DEFAULT 'clear and engaging')
+RETURNS TEXT
+DO
+    GENERATE explain(content, audience, style) INTO @explanation
+    COMMIT @explanation
+END
+
+-- Inner PROCEDURE: generate a concrete example for a concept
+PROCEDURE make_example(concept TEXT, context TEXT, audience TEXT)
+RETURNS TEXT
+DO
+    GENERATE concrete_example(concept, context, audience) INTO @example
+    COMMIT @example
+END
+
+-- Inner PROCEDURE: check comprehension level and simplify if needed
+PROCEDURE calibrate_complexity(text TEXT, audience TEXT, target_grade INT DEFAULT 8)
+RETURNS TEXT
+DO
+    GENERATE assess_reading_level(text) INTO @reading_level
+    EVALUATE @reading_level
+        WHEN > target_grade THEN
+            GENERATE simplify(text, audience) INTO @calibrated
+            COMMIT @calibrated
+        OTHERWISE
+            COMMIT text
+    END
+END
+
+-- Outer WORKFLOW: orchestrates the inner procedures
+WORKFLOW layered_explainer
+    INPUT: @topic TEXT, @audience TEXT, @depth TEXT DEFAULT 'standard'
+    OUTPUT: @article TEXT
+DO
+    -- Step 1: Research the topic
+    GENERATE research_overview(@topic) INTO @overview
+
+    -- Step 2: Delegate explanation to inner procedure
+    CALL explain_layer(
+        content  = @overview,
+        audience = @audience,
+        style    = 'clear, engaging, avoid jargon'
+    ) INTO @base_explanation
+
+    -- Step 3: Generate a concrete example via another inner procedure
+    CALL make_example(
+        concept  = @topic,
+        context  = @base_explanation,
+        audience = @audience
+    ) INTO @example
+
+    -- Step 4: Calibrate complexity (nested call inside a conditional)
+    CALL calibrate_complexity(
+        text         = @base_explanation,
+        audience     = @audience,
+        target_grade = 8
+    ) INTO @calibrated_explanation
+
+    -- Step 5: Assemble the final article
+    GENERATE assemble_article(
+        @topic,
+        @calibrated_explanation,
+        @example,
+        @depth
+    ) INTO @article
+
+    COMMIT @article WITH status = 'complete', audience = @audience
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 2755 in / 2356 out
+Latency: 31638ms
+------------------------------------------------------------
+```output
+Here's the assembled article:
+
+**What is Quantum Computing?**
+
+Imagine you have a super powerful computer that can solve problems much faster than the computers we use today. That's basically what quantum computing is.
+
+**Classical Computers vs Quantum Computers**
+
+Regular computers, like your phone or laptop, use "bits" to store information. Bits are either 0 or 1, and they work like on/off switches. But quantum computers use something called "qubits," which can be both 0 and 1 at the same time! This means that qubits can process a lot of information much faster than bits.
+
+**How Qubits Work**
+
+Qubits are special because they can exist in many states simultaneously, kind of like spinning tops. When you measure a qubit, it "collapses" into one specific state, which is like choosing which number the top was spinning at.
+
+**Why Quantum Computing Matters**
+
+Quantum computing has the potential to solve some really complex problems that are difficult or impossible for classical computers to solve. Here are a few examples:
+
+* **Cryptography**: Quantum computers can break some encryption methods, but they can also be used to create new, unbreakable ones.
+* **Optimization**: Quantum computers can quickly find the best solution to complex problems in fields like logistics and finance.
+* **Simulation**: Quantum computers can simulate the behavior of tiny particles and molecules, which could lead to breakthroughs in fields like chemistry and materials science.
+
+**The Challenges Ahead**
+
+Quantum computing is still a relatively new field, and there are some challenges to overcome. For example:
+
+* **Error Correction**: Qubits are fragile, so we need to find ways to correct errors when they happen.
+* **Scalability**: Currently, most quantum computers are small-scale and require special resources to operate.
+
+**The Future of Quantum Computing**
+
+Quantum computing has the potential to revolutionize many fields, from medicine and finance to climate modeling and more. To achieve widespread adoption, we need to overcome some of the current challenges and develop new technologies that can harness the power of qubits.
+
+So, what does this mean for you? Quantum computing is an exciting field that could lead to breakthroughs in many areas. Who knows, maybe one day you'll be a part of developing the next big thing in quantum computing!
+```
+------------------------------------------------------------
+Variables:
+  @topic = quantum computing
+  @audience = high school students
+  @depth = standard
+  @overview = **Research Overview: Quantum Computing**
+
+Quantum computing is a revolutionary technology that uses the principles of quantum mechanics to perform calculations and operations on data. It has the potential to solve complex problems that are currently unsolvable or require an unfeasible amount of time to solve using classical computers.
+
+**Key Principles:**
+
+1. **Superposition**: Quantum bits (qubits) can exist in multiple states simultaneously, allowing for exponential scaling of computational power.
+2. **Entanglement**: Qubits can be connected in a way that allows them to affect each other, even when separated by large distances.
+3. **Quantum Measurement**: The act of measuring a qubit causes it to collapse into one specific state.
+
+**Applications:**
+
+1. **Cryptography**: Quantum computers can break many classical encryption algorithms, but they can also be used to create unbreakable quantum encryption methods.
+2. **Optimization**: Quantum computers can quickly solve complex optimization problems, which has applications in fields such as logistics and finance.
+3. **Simulation**: Quantum computers can simulate the behavior of complex systems, allowing for breakthroughs in fields such as chemistry and materials science.
+
+**Current Challenges:**
+
+1. **Error Correction**: Quantum computers are prone to errors due to the fragile nature of qubits, which must be corrected to maintain the integrity of computations.
+2. **Scalability**: Currently, most quantum computers are small-scale and require significant resources to operate.
+3. **Quantum Control**: Maintaining control over qubits is essential for reliable computation, but it can be difficult due to the noise inherent in quantum systems.
+
+**Recent Developments:**
+
+1. **Google's Quantum AI Lab**: Google has announced a 72-qubit quantum computer that can perform complex calculations.
+2. **IBM Quantum Experience**: IBM offers a cloud-based quantum computing platform with a 53-qubit quantum processor.
+3. **Rigetti Computing**: Rigetti is developing a cloud-based quantum computing platform with up to 128 qubits.
+
+**Future Directions:**
+
+1. **Quantum Error Correction**: Developing robust methods for error correction will be crucial for large-scale, reliable quantum computing.
+2. **Quantum Materials Science**: Researching new materials and technologies that can enhance the performance of quantum computers is an active area of study.
+3. **Quantum-Inspired Algorithms**: Developing algorithms that take advantage of quantum principles to solve complex problems in classical domains will be essential for practical applications.
+
+**Conclusion:**
+
+Quantum computing has the potential to revolutionize many fields, but significant research and development are needed to overcome current challenges and achieve widespread adoption.
+  @base_explanation = Let's explain quantum computing in a way that's easy to understand for high school students:
+
+**What is Quantum Computing?**
+
+Imagine you have a super powerful computer that can solve problems much faster than the computers we use today. That's basically what quantum computing is.
+
+**How Does it Work?**
+
+Classical computers, like your phone or laptop, use "bits" to store information. Bits are either 0 or 1, and they work like on/off switches. But quantum computers use something called "qubits," which can be both 0 and 1 at the same time! This means that qubits can process a lot of information much faster than bits.
+
+**What's So Special About Qubits?**
+
+Qubits are special because they can exist in many states simultaneously, kind of like spinning tops. When you measure a qubit, it "collapses" into one specific state, which is like choosing which number the top was spinning at.
+
+**How Can Quantum Computing Help Us?**
+
+Quantum computing has the potential to solve some really complex problems that are difficult or impossible for classical computers to solve. Here are a few examples:
+
+* **Cryptography**: Quantum computers can break some encryption methods, but they can also be used to create new, unbreakable ones.
+* **Optimization**: Quantum computers can quickly find the best solution to complex problems in fields like logistics and finance.
+* **Simulation**: Quantum computers can simulate the behavior of tiny particles and molecules, which could lead to breakthroughs in fields like chemistry and materials science.
+
+**What's the Catch?**
+
+Quantum computing is still a relatively new field, and there are some challenges to overcome. For example:
+
+* **Error Correction**: Qubits are fragile, so we need to find ways to correct errors when they happen.
+* **Scalability**: Currently, most quantum computers are small-scale and require special resources to operate.
+
+**What's Happening Now?**
+
+There are many companies and research institutions working on developing quantum computing technology. Some examples include:
+
+* Google's Quantum AI Lab
+* IBM Quantum Experience
+* Rigetti Computing
+
+These organizations are making progress, but there's still a lot of work to be done to make quantum computing practical for everyday use.
+
+**What Does the Future Hold?**
+
+Quantum computing has the potential to revolutionize many fields, from medicine and finance to climate modeling and more. To achieve widespread adoption, we need to overcome some of the current challenges and develop new technologies that can harness the power of qubits.
+  @example = Here's a concrete example explaining what quantum computing is in simple terms for high school students:
+
+Imagine you have a super powerful computer that can solve problems way faster than the computers we use today. That's basically what quantum computing is!
+
+**Classical Computers vs Quantum Computers**
+
+Regular computers, like your phone or laptop, use "bits" to store information. Bits are either 0 or 1, and they work like on/off switches. But quantum computers use something called "qubits," which can be both 0 and 1 at the same time! This means that qubits can process a lot of information much faster than bits.
+
+**How Qubits Work**
+
+Qubits are special because they can exist in many states simultaneously, kind of like spinning tops. When you measure a qubit, it "collapses" into one specific state, which is like choosing which number the top was spinning at.
+
+**Why Quantum Computing Matters**
+
+Quantum computing has the potential to solve some really complex problems that are difficult or impossible for classical computers to solve. Here are a few examples:
+
+* **Cryptography**: Quantum computers can break some encryption methods, but they can also be used to create new, unbreakable ones.
+* **Optimization**: Quantum computers can quickly find the best solution to complex problems in fields like logistics and finance.
+* **Simulation**: Quantum computers can simulate the behavior of tiny particles and molecules, which could lead to breakthroughs in fields like chemistry and materials science.
+
+**The Challenges Ahead**
+
+Quantum computing is still a relatively new field, and there are some challenges to overcome. For example:
+
+* **Error Correction**: Qubits are fragile, so we need to find ways to correct errors when they happen.
+* **Scalability**: Currently, most quantum computers are small-scale and require special resources to operate.
+
+**The Future of Quantum Computing**
+
+Quantum computing has the potential to revolutionize many fields, from medicine and finance to climate modeling and more. To achieve widespread adoption, we need to overcome some of the current challenges and develop new technologies that can harness the power of qubits.
+
+So, what does this mean for you? Quantum computing is an exciting field that could lead to breakthroughs in many areas. Who knows, maybe one day you'll be a part of developing the next big thing in quantum computing!
+  @calibrated_explanation = Let's explain quantum computing in a way that's easy to understand for high school students:
+
+**What is Quantum Computing?**
+
+Imagine you have a super powerful computer that can solve problems much faster than the computers we use today. That's basically what quantum computing is.
+
+**How Does it Work?**
+
+Classical computers, like your phone or laptop, use "bits" to store information. Bits are either 0 or 1, and they work like on/off switches. But quantum computers use something called "qubits," which can be both 0 and 1 at the same time! This means that qubits can process a lot of information much faster than bits.
+
+**What's So Special About Qubits?**
+
+Qubits are special because they can exist in many states simultaneously, kind of like spinning tops. When you measure a qubit, it "collapses" into one specific state, which is like choosing which number the top was spinning at.
+
+**How Can Quantum Computing Help Us?**
+
+Quantum computing has the potential to solve some really complex problems that are difficult or impossible for classical computers to solve. Here are a few examples:
+
+* **Cryptography**: Quantum computers can break some encryption methods, but they can also be used to create new, unbreakable ones.
+* **Optimization**: Quantum computers can quickly find the best solution to complex problems in fields like logistics and finance.
+* **Simulation**: Quantum computers can simulate the behavior of tiny particles and molecules, which could lead to breakthroughs in fields like chemistry and materials science.
+
+**What's the Catch?**
+
+Quantum computing is still a relatively new field, and there are some challenges to overcome. For example:
+
+* **Error Correction**: Qubits are fragile, so we need to find ways to correct errors when they happen.
+* **Scalability**: Currently, most quantum computers are small-scale and require special resources to operate.
+
+**What's Happening Now?**
+
+There are many companies and research institutions working on developing quantum computing technology. Some examples include:
+
+* Google's Quantum AI Lab
+* IBM Quantum Experience
+* Rigetti Computing
+
+These organizations are making progress, but there's still a lot of work to be done to make quantum computing practical for everyday use.
+
+**What Does the Future Hold?**
+
+Quantum computing has the potential to revolutionize many fields, from medicine and finance to climate modeling and more. To achieve widespread adoption, we need to overcome some of the current challenges and develop new technologies that can harness the power of qubits.
+============================================================
+Log: /home/gongai/.spl/logs/nested_procs-ollama-20260324-174024.log

@@ -15,9 +15,12 @@ WORKFLOW memory_conversation
     INPUT: @user_input TEXT
     OUTPUT: @response TEXT
 DO
+    LOGGING f'Memory conversation | input: {@user_input}' LEVEL INFO
+
     -- Load existing user profile from memory
     SELECT memory.get('chat_user_profile') AS profile INTO @profile
     SELECT memory.get('chat_history') AS chat_history INTO @chat_history
+    LOGGING 'Profile and history loaded' LEVEL DEBUG
 
     -- Extract any new facts the user shared about themselves
     GENERATE extract_facts(@user_input) INTO @new_facts
@@ -26,7 +29,8 @@ DO
     EVALUATE @new_facts
         WHEN 'no_new_facts' THEN
             -- Nothing to update
-        OTHERWISE
+        ELSE
+            LOGGING 'New facts detected — merging profile' LEVEL DEBUG
             GENERATE merge_profile(@profile, @new_facts) INTO @profile
             -- STORE @profile IN memory.chat_user_profile  -- workflow-level memory write not yet supported
     END
@@ -35,10 +39,11 @@ DO
     GENERATE contextual_reply(@user_input, @profile, @chat_history) INTO @response
 
     -- Update chat history (keep last 10 turns)
-    @chat_history := @chat_history + '\nUser: ' + @user_input + '\nAssistant: ' + @response
+    @chat_history := @chat_history || '\nUser: ' || @user_input || '\nAssistant: ' || @response
     GENERATE trim_history(@chat_history, 10) INTO @chat_history
     -- STORE @chat_history IN memory.chat_history  -- workflow-level memory write not yet supported
 
+    LOGGING 'Response ready' LEVEL INFO
     COMMIT @response WITH status = 'complete'
 
 EXCEPTION

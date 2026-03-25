@@ -1,0 +1,192 @@
+
+```bash
+spl2 run ./25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 topic=quantum computing audience=high school students
+```
+
+```sql
+-- Recipe 25: Nested Procedures
+-- Demonstrates PROCEDURE calling PROCEDURE — deep composability without external orchestration.
+-- Pattern: a high-level workflow delegates subtasks to reusable PROCEDURE units.
+--
+-- Usage:
+--   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+--       topic="quantum computing" audience="high school students"
+--
+--   spl2 run cookbook/25_nested_procs/nested_procs.spl --adapter ollama \
+--       topic="CRISPR gene editing" audience="policy makers" depth="deep"
+
+-- Inner PROCEDURE: generate a single explanation layer
+PROCEDURE explain_layer(content TEXT, audience TEXT, style TEXT DEFAULT 'clear and engaging')
+RETURNS TEXT
+DO
+    GENERATE explain(content, audience, style) INTO @explanation
+    COMMIT @explanation
+END
+
+-- Inner PROCEDURE: generate a concrete example for a concept
+PROCEDURE make_example(concept TEXT, context TEXT, audience TEXT)
+RETURNS TEXT
+DO
+    GENERATE concrete_example(concept, context, audience) INTO @example
+    COMMIT @example
+END
+
+-- Inner PROCEDURE: check comprehension level and simplify if needed
+PROCEDURE calibrate_complexity(text TEXT, audience TEXT, target_grade INT DEFAULT 8)
+RETURNS TEXT
+DO
+    GENERATE assess_reading_level(text) INTO @reading_level
+    EVALUATE @reading_level
+        WHEN > target_grade THEN
+            GENERATE simplify(text, audience) INTO @calibrated
+            COMMIT @calibrated
+        OTHERWISE
+            COMMIT text
+    END
+END
+
+-- Outer WORKFLOW: orchestrates the inner procedures
+WORKFLOW layered_explainer
+    INPUT: @topic TEXT, @audience TEXT, @depth TEXT DEFAULT 'standard'
+    OUTPUT: @article TEXT
+DO
+    -- Step 1: Research the topic
+    GENERATE research_overview(@topic) INTO @overview
+
+    -- Step 2: Delegate explanation to inner procedure
+    CALL explain_layer(
+        content  = @overview,
+        audience = @audience,
+        style    = 'clear, engaging, avoid jargon'
+    ) INTO @base_explanation
+
+    -- Step 3: Generate a concrete example via another inner procedure
+    CALL make_example(
+        concept  = @topic,
+        context  = @base_explanation,
+        audience = @audience
+    ) INTO @example
+
+    -- Step 4: Calibrate complexity (nested call inside a conditional)
+    CALL calibrate_complexity(
+        text         = @base_explanation,
+        audience     = @audience,
+        target_grade = 8
+    ) INTO @calibrated_explanation
+
+    -- Step 5: Assemble the final article
+    GENERATE assemble_article(
+        @topic,
+        @calibrated_explanation,
+        @example,
+        @depth
+    ) INTO @article
+
+    COMMIT @article WITH status = 'complete', audience = @audience
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 5
+Tokens: 2769 in / 2987 out
+Latency: 42069ms
+------------------------------------------------------------
+Committed: Here's an assembled article based on the provided inputs:
+
+**Introduction to Quantum Computing**
+
+Imagine a world where computers can solve problems that are currently impossible for them to crack. A world where machines can process vast amounts of information in parallel, making them incredibly fast and efficient.
+
+This is the promise of quantum computing, a new technology that uses the principles of quantum mechanics to perform calculations. But what exactly is quantum computing and how does it work?
+
+**The Basics**
+
+Classical computers use "bits" to store and process information. A bit can be either 0 or 1, like a light switch that's on or off. Quantum computers, on the other hand, use "qubits," which are special particles that can exist in multiple states at once. This means that qubits can process multiple possibilities simultaneously, making them incredibly powerful.
+
+**The Key Principles**
+
+So, how do qubits achieve this incredible power? There are three key principles:
+
+1. **Superposition**: Qubits can exist in multiple states (0 and 1) at the same time.
+2. **Entanglement**: Qubits can become connected, allowing their properties to be correlated regardless of distance.
+3. **Quantum Measurement**: When we measure a qubit, it collapses into one specific state.
+
+**What Are Quantum Computers Used For?**
+
+Quantum computers have the potential to revolutionize many fields, including:
+
+1. **Cryptography and Security**: Quantum computers can break current encryption methods, but they also offer new opportunities for unbreakable encryption.
+2. **Optimization and Simulation**: Quantum computers can solve complex optimization problems and simulate complex systems.
+3. **Machine Learning and Artificial Intelligence**: Quantum computers can accelerate certain machine learning algorithms and improve AI performance.
+
+**The Challenges**
+
+While quantum computing holds a lot of promise, there are still many challenges to overcome, including:
+
+1. **Scalability**: Currently, quantum computers are small-scale and difficult to scale up.
+2. **Noise and Error Correction**: Managing errors caused by qubit interactions with the environment is a significant challenge.
+3. **Standards and Interoperability**: Establishing standards for quantum computing hardware and software is essential for widespread adoption.
+
+**Concrete Example: Introduction to Quantum Computing for High School Students**
+
+Imagine you're a detective trying to solve a complex puzzle. You have a few clues, but they're scattered all over the place, and it's hard to find the connections between them.
+
+Classical computers are like a regular pencil and paper where you try to find patterns among the clues by manually going through each one. However, with quantum computing, we can create a super powerful tool that looks at ALL the clues simultaneously!
+
+**Qubits: The Magic Players**
+
+In classical computers, information is stored in bits (0s and 1s). But in quantum computers, we use special particles called qubits. Qubits are like magic players that can be in multiple states at once! When you put a qubit into one of these states, the other possible states disappear until it's measured.
+
+**Superposition: Being in Multiple Places at Once**
+
+Think of it like your favorite video game character - they can be in two places at once. Qubits work the same way; when they're not being measured, they can exist as multiple states (0 and 1) all together!
+
+**Entanglement: Connected Clues**
+
+Imagine you have a pair of identical socks that are connected by a thread. If one sock does something, like get wet or change color, the other sock instantly changes too - even if it's on the other side of the room. Qubits work similarly; when they're entangled, their properties become linked and can affect each other from anywhere.
+
+**Quantum Measurement: Finding the Clues**
+
+When you measure a qubit, it "remembers" which state it was in and stops being in multiple states at once. This is like finding one of your clues - once you touch it, the puzzle changes!
+
+**What Can Quantum Computers Do?**
+
+With quantum computing's incredible power:
+
+1. **Crack Unbreakable Codes**: We can create unbreakable codes that regular computers can't crack.
+2. **Solve Puzzles Faster**: Qubits can try many answers at once, making them perfect for solving puzzles faster.
+3. **Improve Computer Vision and Gaming**: Quantum computers can process images way faster than regular computers, improving video games and computer vision.
+
+**Challenges Ahead**
+
+1. **Getting Smaller and More Powerful**: Right now, quantum computers are like a super powerful toy that's still too big to play with easily.
+2. **Keeping the Clues from Getting Mixed Up**: It's hard to keep errors from happening when qubits interact with their environment.
+3. **Making Sure Everyone Can Play Nice Together**: Quantum computing needs standards to make sure different tools can talk to each other smoothly.
+
+**In Conclusion**
+
+Quantum computing is
+------------------------------------------------------------
+Variables:
+  @topic = quantum computing
+  @audience = high school students
+  @overview = **Research Overview: Quantum Computing**
+
+Quantum computing is a rapidly evolving field that aims to harness the power of quantum mechanics to solve complex computational problems. This overview provi
+  @base_explanation = **Introduction to Quantum Computing**
+
+Imagine a world where computers can solve problems that are currently impossible for them to crack. A world where machines can process vast amounts of informatio
+  @example = **Concrete Example: Introduction to Quantum Computing for High School Students**
+
+Imagine you're a detective trying to solve a complex puzzle. You have a few clues, but they're scattered all over the 
+  @calibrated_explanation = **Introduction to Quantum Computing**
+
+Imagine a world where computers can solve problems that are currently impossible for them to crack. A world where machines can process vast amounts of informatio
+  @article = Here's an assembled article based on the provided inputs:
+
+**Introduction to Quantum Computing**
+
+Imagine a world where computers can solve problems that are currently impossible for them to crack. A 
+============================================================
+Log: /home/gongai/.spl/logs/nested_procs-ollama-20260319-204628.log

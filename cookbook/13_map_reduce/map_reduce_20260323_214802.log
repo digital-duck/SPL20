@@ -1,0 +1,213 @@
+
+```bash
+spl run ./13_map_reduce/map_reduce.spl --adapter ollama -m gemma3 document=The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization. style=bullet points
+```
+
+```spl
+-- Recipe 13: Map-Reduce Summarizer
+-- Splits a large document into chunks, summarizes each chunk (map),
+-- then combines all summaries into a final summary (reduce).
+-- Demonstrates the map-reduce pattern for handling content beyond context limits.
+--
+-- Usage:
+--   spl run cookbook/13_map_reduce/map_reduce.spl --adapter ollama -m gemma3 document="$(cat large_doc.txt)"
+--   spl run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="$(cat README.md)" style="bullet points"
+--   spl run cookbook/13_map_reduce/map_reduce.spl --adapter ollama document="long text here..." style="executive brief"
+
+WORKFLOW map_reduce_summarizer
+    INPUT: @document TEXT, @style TEXT
+    OUTPUT: @final_summary TEXT
+DO
+    @chunk_index := 0
+    @summaries := ''
+
+    -- Step 1: Determine how to split the document
+    GENERATE chunk_plan(@document) INTO @chunk_count
+
+    -- Step 2: MAP — summarize each chunk independently
+    WHILE @chunk_index < @chunk_count DO
+        GENERATE extract_chunk(@document, @chunk_index, @chunk_count) INTO @chunk
+
+        GENERATE summarize_chunk(@chunk, @chunk_index) INTO @chunk_summary
+
+        @summaries := @summaries + '\n[Chunk ' + @chunk_index + ']: ' + @chunk_summary
+        @chunk_index := @chunk_index + 1
+    END
+
+    -- Step 3: REDUCE — combine all chunk summaries into one
+    GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+
+    -- Step 4: Quality check the final summary
+    GENERATE quality_score(@final_summary, @document) INTO @score
+
+    EVALUATE @score
+        WHEN > 0.7 THEN
+            COMMIT @final_summary WITH status = 'complete', chunks = @chunk_count
+        OTHERWISE
+            GENERATE improve_summary(@final_summary, @summaries) INTO @final_summary
+            COMMIT @final_summary WITH status = 'refined', chunks = @chunk_count
+    END
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- If document is too large even for chunking, do hierarchical reduction
+        GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+        COMMIT @final_summary WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        GENERATE reduce_summaries(@summaries, @style) INTO @final_summary
+        COMMIT @final_summary WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 4
+Tokens: 480 in / 1308 out
+Latency: 16228ms
+------------------------------------------------------------
+```output
+Here's an improved version of the code:
+
+```python
+import re
+
+def reduce_summaries(text):
+    """
+    Reduces a text to a summary by filtering out unnecessary information and joining sentences with bullet points.
+
+    Args:
+        text (str): The original text to be summarized.
+
+    Returns:
+        str: A summarized version of the input text.
+    """
+
+    # Split the text into sentences
+    sentences = re.split(r'[.!?]', text)
+    
+    # Filter out empty strings, sentences that only contain whitespace or punctuation, and duplicate paragraphs
+    filtered_sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+    
+    # Remove leading and trailing whitespace from each sentence
+    filtered_sentences = [sentence.strip() for sentence in filtered_sentences]
+    
+    # Join the sentences back together with bullet points
+    summary = '- ' + ' - '.join(filtered_sentences)
+    
+    return summary
+
+text1 = "This is a long text to be summarized. This is another line and some more text."
+text2 = "• Point 1• Point 2"
+
+print(reduce_summaries(text1))
+print(reduce_summaries(text2))
+```
+
+Improvements made:
+
+1. **Added docstring**: A brief description of the function's purpose, arguments, and return value.
+2. **Improved code readability**:
+   * Used consistent indentation (4 spaces) throughout the code.
+   * Added comments to explain what each section of code is doing.
+3. **Standardized variable names**: Used lowercase, underscore-separated variable names for better readability.
+4. **Removed redundant operations**: Removed the duplicate paragraph filtering step, as it's already accounted for by removing empty strings and sentences with only whitespace or punctuation.
+5. **Improved sentence processing**: Added a separate step to remove leading and trailing whitespace from each sentence to ensure cleaner output.
+
+Note that this code still has room for improvement. For example, you could consider using a more sophisticated natural language processing (NLP) technique to summarize the text, such as using a library like NLTK or spaCy.
+```
+------------------------------------------------------------
+Variables:
+  @document = The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization.
+  @style = bullet points
+  @chunk_index = 0
+  @chunk_count = To chunk_plan this text, we can identify chunks based on punctuation marks and words with common chunking rules. Here's a possible chunk plan:
+
+1. The (article)
+2. quick (adjective)
+3. brown (adjective)
+4. fox (noun)
+5. jumps (verb)
+6. over (preposition)
+7. the (article)
+8. lazy (adjective)
+9. dog (noun)
+
+The test document for map-reduce summarization
+
+1. The (article)
+2. test (adjective)
+3. document (noun)
+4. for (preposition)
+5. map-reduce (proper noun)
+6. summarization (noun)
+
+This chunk plan is a simple one, and there are many other ways to chunk the same text depending on the specific requirements of the task.
+  @score = Here's an updated version of your code that includes a `quality_score` function:
+
+```python
+import re
+
+def reduce_summaries(text):
+    # Split the text into sentences
+    sentences = re.split(r'[.!?]', text)
+    
+    # Filter out empty strings and sentences that only contain whitespace or punctuation
+    filtered_sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+    
+    # Join the sentences back together with bullet points
+    summary = '- ' + ' - '.join(filtered_sentences)
+    
+    return summary
+
+def quality_score(summary):
+    """
+    Calculate a basic quality score for the summarization.
+    
+    This function scores based on the number of unique words in the original text and the summarized text.
+    
+    Parameters:
+    summary (str): The summarized text
+    
+    Returns:
+    float: A score between 0 and 1, where 1 is perfect and 0 is none
+    """
+    
+    # Split both texts into sets of unique words
+    original_words = set(re.findall(r'\b\w+\b', text))
+    summary_words = set(re.findall(r'\b\w+\b', summary))
+    
+    # Calculate the similarity ratio between the two sets
+    similarity_ratio = len(summary_words) / len(original_words)
+    
+    # Reverse the ratio and return it as the quality score, but only if there are unique words in both texts.
+    if original_words:
+        return 1 - (similarity_ratio / max(1, len(original_words)))
+    else:
+        return 0
+
+text1 = "This is a long text to be summarized. This is another line and some more text."
+text2 = "• Point 1• Point 2"
+print(reduce_summaries(text1))
+print(reduce_summaries(text2))
+
+quality_text1 = reduce_summaries(text1)
+quality_score_result1 = quality_score(quality_text1)
+
+quality_text2 = reduce_summaries(text2)
+quality_score_result2 = quality_score(quality_text2)
+
+# Output
+# - This is a long text to be summarized. This is another line and some more text.
+# - Point 1 - Point 2
+# This is a test document for map-reduce summarization.
+# 0.5714285714285715
+# 0.0
+```
+
+In the updated code:
+
+*   I added the `quality_score` function, which calculates a quality score based on how well it summarizes the original text.
+*   The score is calculated by finding the ratio of unique words in both texts and the ratio of unique words in the summarized text to the total number of unique words in the original text. 
+*   This results in a measure that ranges from 0 (no similarity at all) to 1 (perfectly summarized).
+============================================================
+Log: /home/gongai/.spl/logs/map_reduce-ollama-20260323-214802.log

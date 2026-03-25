@@ -1,0 +1,218 @@
+
+```bash
+spl2 run ./12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task=Build a REST API for a todo app
+```
+
+```sql
+-- Recipe 12: Plan and Execute
+-- A planner agent decomposes a complex task into steps, then an executor runs each step.
+-- Demonstrates agentic planning, sequential execution, and progress tracking.
+--
+-- Usage:
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama -m gemma3 task="Build a REST API for a todo app"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Set up a CI/CD pipeline for a Python project"
+--   spl2 run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama task="Migrate a MySQL database to PostgreSQL"
+
+WORKFLOW plan_and_execute
+    INPUT: @task TEXT
+    OUTPUT: @final_report TEXT
+DO
+    @step_index := 0
+    @results := ''
+
+    -- Phase 1: Planning — decompose task into numbered steps
+    GENERATE plan(@task) INTO @plan
+
+    -- Phase 2: Count steps in plan
+    GENERATE count_steps(@plan) INTO @step_count
+
+    -- Phase 3: Execute each step sequentially
+    WHILE @step_index < @step_count DO
+        -- Extract current step from plan
+        GENERATE extract_step(@plan, @step_index) INTO @current_step
+
+        -- Execute the step with context from prior results
+        GENERATE execute_step(@current_step, @results) INTO @step_result
+
+        -- Validate step output
+        GENERATE validate_step(@current_step, @step_result) INTO @validation
+
+        EVALUATE @validation
+            WHEN 'failed' THEN
+                -- Re-plan remaining steps given the failure
+                GENERATE replan(@task, @plan, @step_index, @step_result) INTO @plan
+                GENERATE count_steps(@plan) INTO @step_count
+                @step_index := 0
+                @results := ''
+            OTHERWISE
+                @results := @results + '\n## Step ' + @step_index + '\n' + @step_result
+                @step_index := @step_index + 1
+        END
+    END
+
+    -- Phase 4: Synthesize final report
+    GENERATE synthesize(@task, @results) INTO @final_report
+
+    COMMIT @final_report WITH status = 'complete', steps_executed = @step_index
+
+EXCEPTION
+    WHEN MaxIterationsReached THEN
+        GENERATE synthesize(@task, @results) INTO @final_report
+        COMMIT @final_report WITH status = 'partial'
+    WHEN BudgetExceeded THEN
+        COMMIT @results WITH status = 'budget_limit'
+END
+```
+
+============================================================
+Status: complete
+LLM Calls: 3
+Tokens: 788 in / 1970 out
+Latency: 25356ms
+------------------------------------------------------------
+Committed: **Todo App REST API**
+
+### Overview
+
+This is a simple REST API built using Node.js and Express.js, designed to manage tasks (to-dos) in a todo app. The API allows users to create, read, update, and delete tasks.
+
+### API Endpoints
+
+#### Task Creation
+
+* **POST /tasks**: Create a new task
+	+ Request Body: `taskName` (string)
+	+ Response: Created task with ID and details
+	+ Example: `curl -X POST -H "Content-Type: application/json" -d '{"taskName": "Buy milk"}' http://localhost:3000/tasks`
+
+#### Task Reading
+
+* **GET /tasks**: Retrieve all tasks
+	+ Response: Array of tasks with IDs and details
+	+ Example: `curl http://localhost:3000/tasks`
+* **GET /tasks/:id**: Retrieve a single task by ID
+	+ Response: Task with ID and details
+	+ Example: `curl http://localhost:3000/tasks/1`
+
+#### Task Update
+
+* **PUT /tasks/:id**: Update a task by ID
+	+ Request Body: `taskName` (string)
+	+ Response: Updated task with new ID and details
+	+ Example: `curl -X PUT -H "Content-Type: application/json" -d '{"taskName": "Buy eggs"}' http://localhost:3000/tasks/1`
+
+#### Task Deletion
+
+* **DELETE /tasks/:id**: Delete a task by ID
+	+ Response: No response (204 Not Found)
+	+ Example: `curl -X DELETE http://localhost:3000/tasks/1`
+
+### API Implementation
+
+```javascript
+const express = require('express');
+const app = express();
+const port = 3000;
+const tasks = [];
+
+// Middleware for parsing JSON bodies
+app.use(express.json());
+
+// Create a new task
+app.post('/tasks', (req, res) => {
+    const { taskName } = req.body;
+    if (!taskName) return res.status(400).json({ message: 'Task name is required' });
+
+    tasks.push({ id: Date.now(), taskName });
+    res.json(tasks[tasks.length - 1]);
+});
+
+// Retrieve all tasks
+app.get('/tasks', (req, res) => {
+    res.json(tasks);
+});
+
+// Retrieve a single task by ID
+app.get('/tasks/:id', (req, res) => {
+    const id = req.params.id;
+    const task = tasks.find((task) => task.id === parseInt(id));
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+    res.json(task);
+});
+
+// Update a task by ID
+app.put('/tasks/:id', (req, res) => {
+    const id = req.params.id;
+    const taskIndex = tasks.findIndex((task) => task.id === parseInt(id));
+    if (!taskIndex) return res.status(404).json({ message: 'Task not found' });
+
+    const { taskName } = req.body;
+    if (!taskName) return res.status(400).json({ message: 'Task name is required' });
+
+    tasks[taskIndex].taskName = taskName;
+    res.json(tasks[taskIndex]);
+});
+
+// Delete a task by ID
+app.delete('/tasks/:id', (req, res) => {
+    const id = req.params.id;
+    const taskIndex = tasks.findIndex((task) => task.id === parseInt(id));
+    if (!taskIndex) return res.status(404).json({ message: 'Task not found' });
+
+    tasks.splice(taskIndex, 1);
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+});
+```
+
+### Example Use Cases
+
+* Create a new task:
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"taskName": "Buy eggs"}' http://localhost:3000/tasks
+```
+Response: `{ id: 1643723401223, taskName: 'Buy eggs' }`
+
+* Retrieve all tasks:
+```bash
+curl http://localhost:3000/tasks
+```
+Response: `[ { id: 1643723401223, taskName: 'Buy eggs' }, { id: 1643723401234, taskName: 'Buy milk' } ]`
+
+* Update a task:
+```bash
+curl -X PUT -H "Content-Type: application/json" -d '{"taskName": "Buy bread"}' http://localhost:3000/tasks/1
+```
+Response: `{ id: 1643723401223, taskName: 'Buy bread' }`
+
+* Delete a task:
+```bash
+curl -X DELETE http://localhost:3000/tasks/1
+```
+
+------------------------------------------------------------
+Variables:
+  @task = Build a REST API for a todo app
+  @step_index = 0
+  @results = 
+  @plan = **Todo App REST API Plan**
+
+**Overview**
+------------
+
+Our goal is to design and develop a simple REST API for a Todo app that allows users to create, read, update, and delete (CRUD) tasks.
+
+**API End
+  @step_count = Here is an example of how you can implement the `count_steps` function in JavaScript, along with a brief description of how it would be used in the context of the Todo App REST API:
+
+**Function Implem
+  @final_report = **Todo App REST API**
+
+### Overview
+
+This is a simple REST API built using Node.js and Express.js, designed to manage tasks (to-dos) in a todo app. The API allows users to create, read, update, and de
+============================================================
+Log: /home/gongai/.spl/logs/plan_execute-ollama-20260319-203829.log
