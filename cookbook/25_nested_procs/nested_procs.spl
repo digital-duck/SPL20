@@ -41,7 +41,9 @@ END
 
 -- Outer WORKFLOW: orchestrates the inner procedures
 WORKFLOW layered_explainer
-    INPUT: @topic TEXT, @audience TEXT, @depth TEXT DEFAULT 'standard'
+    INPUT:  @topic    TEXT,
+            @audience TEXT,
+            @depth    TEXT DEFAULT 'standard'
     OUTPUT: @article TEXT
 DO
     -- Step 1: Research the topic

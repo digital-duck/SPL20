@@ -20,7 +20,8 @@
 --       topic="quantum computing" format="bullet points" perspective="global"
 
 CREATE FUNCTION news_format_guide(format TEXT DEFAULT 'structured')
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 SELECT CASE format
   WHEN 'executive brief'  THEN 'Concise executive summary. Lead with the most significant development. 2-3 sentences per item. Close with a one-line strategic implication.'
   WHEN 'bullet points'    THEN 'Bulleted list. One headline per bullet. Sub-bullets for key facts. No more than 3 sub-bullets per headline.'
@@ -30,7 +31,8 @@ END
 $$;
 
 CREATE FUNCTION perspective_guide(perspective TEXT DEFAULT 'balanced')
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 SELECT CASE perspective
   WHEN 'technical'   THEN 'Focus on technical developments, research breakthroughs, and engineering milestones. Prioritize substance over narrative.'
   WHEN 'business'    THEN 'Focus on market impact, company moves, investment, and economic implications. Prioritize commercial significance.'
@@ -40,7 +42,8 @@ SELECT CASE perspective
 END
 $$;
 
-CREATE FUNCTION generate_headlines(topic TEXT, max_headlines TEXT, date TEXT, perspective TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION generate_headlines(topic TEXT, max_headlines TEXT, date TEXT, perspective TEXT) RETURNS TEXT
+AS $$
 You are a news editor with broad knowledge. Generate the top {max_headlines} headlines about "{topic}" as of {date}.
 
 Coverage perspective: {perspective}
@@ -50,7 +53,8 @@ Output a numbered list of headlines only — no summaries yet, just plain text h
 2. Second headline here
 $$;
 
-CREATE FUNCTION expand_headlines(headlines TEXT, topic TEXT, perspective TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION expand_headlines(headlines TEXT, topic TEXT, perspective TEXT) RETURNS TEXT
+AS $$
 You are a news analyst. Expand each headline in this list with a 2-3 sentence factual summary.
 
 Topic area: {topic}
@@ -64,7 +68,8 @@ For each headline, write:
 Summary: [2-3 sentences of key facts, context, and significance]
 $$;
 
-CREATE FUNCTION evaluate_coverage(expanded TEXT, topic TEXT, perspective TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION evaluate_coverage(expanded TEXT, topic TEXT, perspective TEXT) RETURNS TEXT
+AS $$
 You are a news editor evaluating coverage quality. Assess how well these summaries cover the major angles for "{topic}".
 
 Perspective: {perspective}
@@ -81,7 +86,8 @@ Reply with ONLY a decimal score between 0.0 and 1.0 representing coverage comple
 Score only, no explanation.
 $$;
 
-CREATE FUNCTION fill_coverage_gaps(expanded TEXT, topic TEXT, coverage_score TEXT, perspective TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION fill_coverage_gaps(expanded TEXT, topic TEXT, coverage_score TEXT, perspective TEXT) RETURNS TEXT
+AS $$
 You are a news editor filling coverage gaps. The current digest scored {coverage_score} on coverage.
 
 Topic: {topic}
@@ -94,7 +100,8 @@ Add 2-3 additional headlines with summaries covering angles that are missing or 
 Return the FULL list (original + additions) in the same format.
 $$;
 
-CREATE FUNCTION format_digest(expanded TEXT, topic TEXT, date TEXT, format_guide TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION format_digest(expanded TEXT, topic TEXT, date TEXT, format_guide TEXT) RETURNS TEXT
+AS $$
 You are a news editor formatting a daily digest.
 
 Topic: {topic}

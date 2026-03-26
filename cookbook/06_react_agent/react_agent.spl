@@ -10,7 +10,8 @@
 --       country="France"
 
 -- Tight prompt for search_population: return only the number, no narration.
-CREATE FUNCTION search_population(country TEXT, year INT) RETURNS TEXT AS $$
+CREATE FUNCTION search_population(country TEXT, year INT) RETURNS TEXT 
+AS $$
 Use WebSearch to find the total population of {country} for the year {year}.
 
 Return ONLY the population as a plain integer with no commas, spaces, or text.
@@ -30,7 +31,9 @@ END
 -- CALL routes to Python directly — deterministic, zero LLM cost.
 
 -- Tight prompt for growth_report: plain narrative, no tool use, no file writes.
-CREATE FUNCTION growth_report(country TEXT, year_prev TEXT, pop_prev TEXT, year_curr TEXT, pop_curr TEXT, growth_rate TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION growth_report(country TEXT, year_prev TEXT, pop_prev TEXT, year_curr TEXT, pop_curr TEXT, growth_rate TEXT) 
+RETURNS TEXT 
+AS $$
 Write a concise 2-3 sentence population growth report for {country}.
 
 Data:

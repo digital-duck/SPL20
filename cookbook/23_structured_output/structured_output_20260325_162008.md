@@ -17,7 +17,8 @@ spl run ./23_structured_output/structured_output.spl --adapter ollama -m gemma3 
 
 -- Define the extraction schema
 CREATE FUNCTION extract_entity_schema()
-RETURNS JSON AS $$
+RETURNS JSON 
+AS $$
 {
   "type": "object",
   "properties": {

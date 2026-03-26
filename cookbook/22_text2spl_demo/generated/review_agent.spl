@@ -15,14 +15,18 @@ DO
   COMMIT @final;
 
 CREATE FUNCTION rewrite(text TEXT, style TEXT)
-RETURNS TEXT AS $$
-  CASE style
+RETURNS TEXT
+AS $$  
+
+CASE style
     WHEN 'improved' THEN text || ' improved'
     WHEN 'standardized' THEN text || ' standardized'
     ELSE text
   END;
 $$;
 
-CREATE FUNCTION sentiment(text TEXT) RETURNS NUMBER AS $$
-  SELECT sum(1) WHERE text LIKE '%good%' OR text LIKE '%great%'
+CREATE FUNCTION sentiment(text TEXT) RETURNS NUMBER
+AS $$  
+
+SELECT sum(1) WHERE text LIKE '%good%' OR text LIKE '%great%'
 $$;

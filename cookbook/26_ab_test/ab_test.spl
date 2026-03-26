@@ -25,7 +25,8 @@
 
 -- Scoring rubric as a reusable function
 CREATE FUNCTION scoring_rubric()
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 Rate the response on a scale of 0–10 for each criterion:
 1. Clarity (0-10): Is it easy to understand?
 2. Completeness (0-10): Does it fully address the task?

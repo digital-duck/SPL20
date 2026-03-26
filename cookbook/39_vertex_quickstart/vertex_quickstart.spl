@@ -26,7 +26,8 @@ CREATE FUNCTION compare_tiers(
     model_pro   TEXT, answer_pro   TEXT,
     model_flash TEXT, answer_flash TEXT,
     model_lite  TEXT, answer_lite  TEXT
-) RETURNS TEXT AS $$
+) RETURNS TEXT
+AS $$
 You are evaluating three Gemini model tiers on Vertex AI for the same prompt.
 
 Prompt: "{prompt}"

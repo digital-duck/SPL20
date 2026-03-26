@@ -41,7 +41,9 @@
 -- ── System context functions (zero LLM cost) ─────────────────────────────────
 
 CREATE FUNCTION spl_syntax_guide()
-RETURNS TEXT AS $$
+RETURNS TEXT 
+AS $$
+
 SPL 2.0 Workflow Syntax Reference:
 
 WORKFLOW name
@@ -55,7 +57,10 @@ DO
     GENERATE step_name(arg1, arg2, context_function()) INTO @variable
 
     -- Reusable system context (injected as LLM system prompt):
-    CREATE FUNCTION context_name() RETURNS TEXT AS $$ ... $$;
+    CREATE FUNCTION context_name() RETURNS TEXT 
+    AS $$ 
+        ... 
+    $$;
 
     -- Conditional branching:
     EVALUATE @variable
@@ -80,7 +85,8 @@ Key rules:
 $$;
 
 CREATE FUNCTION tools_py_guide()
-RETURNS TEXT AS $$
+RETURNS TEXT 
+AS $$
 SPL 2.0 tools.py Pattern:
 
 from spl.tools import spl_tool
@@ -103,7 +109,8 @@ Rules:
 $$;
 
 CREATE FUNCTION recipe_quality_rubric()
-RETURNS TEXT AS $$
+RETURNS TEXT 
+AS $$
 A well-formed SPL recipe has ALL of the following:
 
 1. WORKFLOW file (.spl):

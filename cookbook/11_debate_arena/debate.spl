@@ -7,7 +7,8 @@
 --   spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
 --   spl run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
 
-CREATE FUNCTION pro_argument(topic TEXT, previous TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION pro_argument(topic TEXT, previous TEXT) RETURNS TEXT
+AS $$
 You are a skilled debate champion arguing STRONGLY IN FAVOR of the following motion:
 
 Motion: "{topic}"
@@ -20,7 +21,8 @@ directly address and counter your opponent's points. Be concise (3-5 paragraphs)
 Do NOT offer balanced views — you are arguing one side.
 $$;
 
-CREATE FUNCTION con_argument(topic TEXT, previous TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION con_argument(topic TEXT, previous TEXT) RETURNS TEXT
+AS $$
 You are a skilled debate champion arguing STRONGLY AGAINST the following motion:
 
 Motion: "{topic}"
@@ -33,7 +35,8 @@ directly address and counter your opponent's points. Be concise (3-5 paragraphs)
 Do NOT offer balanced views — you are arguing one side.
 $$;
 
-CREATE FUNCTION judge_debate(topic TEXT, pro_history TEXT, con_history TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION judge_debate(topic TEXT, pro_history TEXT, con_history TEXT) RETURNS TEXT
+AS $$
 You are an impartial debate judge evaluating the following debate.
 
 Motion: "{topic}"

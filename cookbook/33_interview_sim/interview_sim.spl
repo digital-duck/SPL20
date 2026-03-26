@@ -33,7 +33,8 @@
 -- ── Persona functions (zero LLM cost — injected as system context) ──────────
 
 CREATE FUNCTION interviewer_persona(role TEXT, focus TEXT, difficulty TEXT DEFAULT 'medium')
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 You are an experienced technical interviewer at a top tech company.
 Role being interviewed for: {role}
 Focus area for this session: {focus}
@@ -48,7 +49,8 @@ Rules:
 $$;
 
 CREATE FUNCTION candidate_persona(role TEXT, experience TEXT DEFAULT '5 years')
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 You are a job candidate interviewing for: {role}
 You have {experience} of relevant experience.
 
@@ -60,7 +62,8 @@ Rules:
 $$;
 
 CREATE FUNCTION evaluation_rubric()
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 Evaluate the candidate answer on four dimensions (each 0-10):
 1. accuracy     — Is the answer technically correct and free of errors?
 2. depth        — Does the candidate go beyond the surface level?

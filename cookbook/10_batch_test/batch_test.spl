@@ -16,7 +16,8 @@ CREATE FUNCTION summarize_results(
     r1_name TEXT, r1_m1 TEXT, r1_m2 TEXT,
     r2_name TEXT, r2_m1 TEXT, r2_m2 TEXT,
     r3_name TEXT, r3_m1 TEXT, r3_m2 TEXT
-) RETURNS TEXT AS $$
+) RETURNS TEXT
+AS $$
 You are a test reporter. Review the outputs below and produce a concise pass/fail report.
 
 A result is PASS if the output is a non-empty, coherent response.

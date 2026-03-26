@@ -11,7 +11,8 @@
 --       domain="product" confidence_threshold=0.75
 
 CREATE FUNCTION hypothesis_framework()
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 Scientific hypothesis format:
 - Null hypothesis (H0): The effect does not exist / is due to chance
 - Alternative hypothesis (H1): The proposed causal or correlational claim
@@ -20,7 +21,8 @@ Scientific hypothesis format:
 $$;
 
 CREATE FUNCTION evidence_schema()
-RETURNS JSON AS $$
+RETURNS JSON
+AS $$
 {
   "type": "object",
   "properties": {

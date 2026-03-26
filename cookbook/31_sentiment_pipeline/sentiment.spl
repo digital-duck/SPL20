@@ -26,7 +26,8 @@
 -- ── Schema (zero LLM cost — injected as grounding context) ─────────────────
 
 CREATE FUNCTION sentiment_schema()
-RETURNS JSON AS $$
+RETURNS JSON
+AS $$
 {
   "type": "array",
   "description": "One entry per input item, in the same order as the input list.",

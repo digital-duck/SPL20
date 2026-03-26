@@ -24,7 +24,8 @@
 -- ── Helper functions (evaluated locally, zero LLM cost) ────────────────────
 
 CREATE FUNCTION support_categories()
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 Ticket categories and their routing:
 - billing:      finance team, SLA 4h,  high priority
                 Covers: duplicate charges, wrong amounts, refund requests, invoice issues
@@ -43,7 +44,8 @@ Ticket categories and their routing:
 $$;
 
 CREATE FUNCTION response_tone_guide(tone TEXT DEFAULT 'professional')
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 SELECT CASE tone
   WHEN 'empathetic' THEN 'Warm and understanding. Acknowledge frustration. Use "I understand" and "I am sorry". Avoid jargon. Refer to the customer by first name.'
   WHEN 'formal'     THEN 'Professional and precise. Use formal language. Reference ticket numbers and order IDs explicitly. State next steps clearly.'
@@ -53,7 +55,8 @@ END
 $$;
 
 CREATE FUNCTION order_context_prompt(order_context TEXT)
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 SELECT CASE
   WHEN order_context = 'No order number found in this ticket.'
     THEN 'No order number was referenced — respond based on the ticket text alone.'

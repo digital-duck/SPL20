@@ -23,7 +23,8 @@ CREATE FUNCTION compare_models(
     model_1 TEXT, answer_1 TEXT,
     model_2 TEXT, answer_2 TEXT,
     model_3 TEXT, answer_3 TEXT
-) RETURNS TEXT AS $$
+) RETURNS TEXT
+AS $$
 You are a neutral evaluator comparing responses from three AWS Bedrock models.
 
 Prompt given to all models: "{prompt}"

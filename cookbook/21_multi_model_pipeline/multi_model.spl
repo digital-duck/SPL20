@@ -6,13 +6,17 @@
 -- Usage:
 --   spl run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
 
-CREATE FUNCTION research(topic TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION research(topic TEXT) RETURNS TEXT 
+AS $$
+
 You are a research specialist.
 Provide key facts, statistics, and recent developments about: {topic}
 Focus on factual accuracy. Be thorough but concise.
 $$;
 
-CREATE FUNCTION analyze(facts TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION analyze(facts TEXT) RETURNS TEXT 
+AS $$
+
 You are a data analyst.
 Analyze the following research and identify the 3 most significant insights:
 
@@ -21,7 +25,9 @@ Analyze the following research and identify the 3 most significant insights:
 For each insight, explain why it matters and rate its significance (1-10).
 $$;
 
-CREATE FUNCTION write_summary(analysis TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION write_summary(analysis TEXT) RETURNS TEXT 
+AS $$
+
 You are a professional writer.
 Write a clear, engaging 2-paragraph summary based on this analysis:
 
@@ -31,7 +37,9 @@ The first paragraph should present the key findings.
 The second paragraph should discuss implications and outlook.
 $$;
 
-CREATE FUNCTION quality_check(text TEXT) RETURNS TEXT AS $$
+CREATE FUNCTION quality_check(text TEXT) RETURNS TEXT 
+AS $$
+
 You are a quality reviewer.
 Rate the following text on a scale of 0.0 to 1.0 for:
 - Clarity
@@ -46,6 +54,7 @@ $$;
 WORKFLOW multi_model_pipeline
   INPUT:
     @topic TEXT,
+    @max_iterations INT DEFAULT 3,
     @log_dir TEXT DEFAULT 'cookbook/21_multi_model_pipeline/logs'
   OUTPUT: @final TEXT
 DO
@@ -70,7 +79,7 @@ DO
   @iteration := 0
   @quality := 0
 
-  WHILE @iteration < 3 DO
+  WHILE @iteration < @max_iterations DO
     LOGGING f'Quality check | iteration={@iteration}' LEVEL DEBUG
     GENERATE quality_check(@draft) INTO @quality
     LOGGING f'Quality score: {@quality}' LEVEL DEBUG

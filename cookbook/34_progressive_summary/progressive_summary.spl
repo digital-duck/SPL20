@@ -10,7 +10,8 @@
 --       text="$(cat research_paper.txt)" audience="executive" layers=3
 
 CREATE FUNCTION summary_constraints(layer TEXT)
-RETURNS TEXT AS $$
+RETURNS TEXT
+AS $$
 SELECT CASE layer
   WHEN 'sentence'  THEN 'One sentence only. Maximum 25 words. Capture the single most important idea.'
   WHEN 'paragraph' THEN '3-5 sentences. Cover main points and key supporting evidence. No examples or details.'

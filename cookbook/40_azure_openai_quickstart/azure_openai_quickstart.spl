@@ -25,7 +25,8 @@ CREATE FUNCTION compare_deployments(
     deployment_1 TEXT, answer_1 TEXT,
     deployment_2 TEXT, answer_2 TEXT,
     deployment_3 TEXT, answer_3 TEXT
-) RETURNS TEXT AS $$
+) RETURNS TEXT
+AS $$
 You are evaluating three Azure OpenAI deployments on the same prompt.
 
 Prompt: "{prompt}"

@@ -10,7 +10,8 @@
 --       text="$(cat invoice.txt)" format="invoice"
 
 CREATE FUNCTION extraction_schema(format TEXT DEFAULT 'general')
-RETURNS JSON AS $$
+RETURNS JSON
+AS $$
 SELECT CASE format
   WHEN 'invoice' THEN '{
     "type": "object",
