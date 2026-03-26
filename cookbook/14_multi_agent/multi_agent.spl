@@ -7,6 +7,11 @@
 --   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
 --   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
 --   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
+--
+-- Logs written to @log_dir (default: cookbook/14_multi_agent/logs):
+--   research.md   — facts and key themes from Researcher agent
+--   analysis.md   — trends, risks, and opportunities from Analyst agent
+--   report.md     — final polished report from Writer agent
 
 -- Agent 1: Researcher — gathers key facts and sources
 PROCEDURE researcher(topic TEXT) RETURNS TEXT
@@ -38,7 +43,9 @@ END
 
 -- Orchestrator workflow
 WORKFLOW multi_agent_report
-    INPUT: @topic TEXT
+    INPUT: 
+        @topic TEXT,
+        @log_dir TEXT DEFAULT 'cookbook/14_multi_agent/logs'
     OUTPUT: @report TEXT
 DO
     LOGGING f'Multi-agent report | topic={@topic}' LEVEL INFO
@@ -46,10 +53,16 @@ DO
     -- Delegate to specialized agents
     LOGGING 'Agent 1: Researcher ...' LEVEL DEBUG
     CALL researcher(@topic) INTO @research
+    LOGGING f'Research:\n{@research}' LEVEL DEBUG
+    CALL write_file(f'{@log_dir}/research.md', @research) INTO @_
     LOGGING 'Agent 2: Analyst ...' LEVEL DEBUG
     CALL analyst(@research, @topic) INTO @analysis
+    LOGGING f'Analysis:\n{@analysis}' LEVEL DEBUG
+    CALL write_file(f'{@log_dir}/analysis.md', @analysis) INTO @_
     LOGGING 'Agent 3: Writer ...' LEVEL DEBUG
     CALL writer(@research, @analysis, @topic) INTO @report
+    LOGGING f'Report:\n{@report}' LEVEL DEBUG
+    CALL write_file(f'{@log_dir}/report.md', @report) INTO @_
 
     LOGGING 'Report complete' LEVEL INFO
     COMMIT @report WITH status = 'complete'
@@ -58,5 +71,5 @@ EXCEPTION
     WHEN BudgetExceeded THEN
         COMMIT @research WITH status = 'partial_research_only'
     WHEN HallucinationDetected THEN
-        RETRY WITH temperature = 0.1
+        RETRY WITH temperature = 0.1 LIMIT 3
 END

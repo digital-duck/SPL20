@@ -1,13 +1,13 @@
-"""FAISS + SQLite vector store for SPL 2.0 RAG support.
+"""FAISS vector store for SPL 2.0 RAG support — backed by dd-vectordb + dd-embed.
 
-Stores document embeddings in a FAISS index and metadata in a SQLite database.
+  dd-vectordb  — vector storage and similarity search (FAISSVectorDB)
+  dd-embed     — text embedding (SentenceTransformerAdapter by default)
 
-Embedding priority:
-  1. sentence-transformers (semantic, recommended) — pip install sentence-transformers
-  2. Character-level hash (fallback, no external deps, poor semantic quality)
+The embedding model is locked per index (vector_config.json) so the same
+model is always used for a given store — mixing models corrupts retrieval.
 
-The embedding model used is persisted in the store's config table so the same
-model is always used for a given index (mixing models corrupts retrieval).
+Install:
+    pip install "dd-vectordb[faiss]" "dd-embed[sentence-transformers]"
 """
 
 from __future__ import annotations
@@ -15,294 +15,165 @@ from __future__ import annotations
 import json
 import logging
 import os
-import sqlite3
 from datetime import datetime, timezone
-from typing import Callable
 
 _log = logging.getLogger("spl.storage.vector")
 
-try:
-    import numpy as _numpy  # noqa: F401
-    _NP_AVAILABLE = True
-except ImportError:
-    _NP_AVAILABLE = False
-
-try:
-    import faiss as _faiss  # noqa: F401
-    _FAISS_AVAILABLE = True
-except ImportError:
-    _FAISS_AVAILABLE = False
-
-
-def _np():
-    """Return numpy — guaranteed non-None after VectorStore.__init__ guard."""
-    import numpy
-    return numpy
-
-
-def _fi():
-    """Return faiss — guaranteed non-None after VectorStore.__init__ guard."""
-    import faiss
-    return faiss
-
-# Module-level cache: model_name → SentenceTransformer instance
-_ST_MODEL_CACHE: dict[str, object] = {}
-
-DEFAULT_ST_MODEL = "all-MiniLM-L6-v2"  # 384-dim, fast, high quality
-
-
-def _load_sentence_transformer(model_name: str):
-    """Load (and cache) a SentenceTransformer model, always on CPU."""
-    if model_name not in _ST_MODEL_CACHE:
-        import warnings
-        from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
-        _log.info("Loading sentence-transformers model: %s (device=cpu)", model_name)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            _ST_MODEL_CACHE[model_name] = SentenceTransformer(model_name, device="cpu")
-    return _ST_MODEL_CACHE[model_name]
-
-
-def _make_st_embedding_fn(model_name: str) -> Callable[[str], object]:
-    """Return an embedding function backed by a SentenceTransformer model."""
-    def embed(text: str):
-        model = _load_sentence_transformer(model_name)
-        return model.encode(text, normalize_embeddings=True)
-    return embed
-
-
-def _char_hash_embedding(text: str, dim: int = 384):
-    """Character-level hash embedding: deterministic fallback, no external deps."""
-    np = _np()
-    vec = np.zeros(dim, dtype=np.float32)
-    for i, ch in enumerate(text):
-        idx = (hash(ch) + i * 31) % dim
-        vec[idx] += float(ord(ch))
-    norm = np.linalg.norm(vec)
-    if norm > 0:
-        vec /= norm
-    return vec
-
-
-def _sentence_transformers_available() -> bool:
-    try:
-        import sentence_transformers  # noqa: F401
-        return True
-    except ImportError:
-        return False
-
-
-def _resolve_embedding(model_name: str | None, dim: int) -> tuple[Callable, str, int]:
-    """Return (embedding_fn, model_label, actual_dim).
-
-    If model_name is 'char_hash' or sentence-transformers is unavailable,
-    falls back to the char-hash function.
-    """
-    if model_name and model_name != "char_hash" and _sentence_transformers_available():
-        fn = _make_st_embedding_fn(model_name)
-        # Infer dim from a test encode
-        test_vec = _np().asarray(fn("test"), dtype=_np().float32)
-        return fn, model_name, int(test_vec.shape[0])
-    # Fallback
-    if model_name and model_name != "char_hash":
-        _log.warning(
-            "sentence-transformers not installed; falling back to char_hash embedding. "
-            "Install with: pip install sentence-transformers"
-        )
-    return (lambda t: _char_hash_embedding(t, dim)), "char_hash", dim
+DEFAULT_EMBED_PROVIDER = "sentence_transformers"
+DEFAULT_EMBED_MODEL    = "all-MiniLM-L6-v2"   # 384-dim, fast, high quality
+DEFAULT_EMBED_DIM      = 384
 
 
 class VectorStore:
-    """FAISS-backed vector store with SQLite metadata.
+    """dd-vectordb (FAISSVectorDB) + dd-embed backed vector store.
+
+    Public API is identical to the previous FAISS+SQLite implementation so all
+    existing callers (executor, CLI) work without changes.
 
     Parameters
     ----------
     storage_dir : str
-        Directory for persisting index and metadata files.
+        Directory for persisting the FAISS index and config file.
     embedding_model : str | None
-        Sentence-transformers model name (e.g. ``"all-MiniLM-L6-v2"``).
-        Pass ``"char_hash"`` to force the legacy fallback.
-        Defaults to ``all-MiniLM-L6-v2`` when sentence-transformers is installed,
-        otherwise falls back to char_hash automatically.
+        dd-embed model name (e.g. ``"all-MiniLM-L6-v2"``).
+        If omitted, defaults to ``all-MiniLM-L6-v2``.
+    embed_provider : str
+        dd-embed provider name (default ``"sentence_transformers"``).
+        Override to use ``"ollama"``, ``"openai"``, etc.
+    embedding_dim : int
+        Legacy backward-compat parameter; ignored when the store already
+        exists (dimension is read from the saved index).
+    embedding_fn : callable | None
+        Legacy backward-compat parameter; ignored (use embed_provider).
     """
 
     def __init__(
         self,
         storage_dir: str = ".spl",
         embedding_model: str | None = None,
-        # Legacy parameter kept for backwards compat — ignored when embedding_model is set
-        embedding_dim: int = 384,
-        embedding_fn: Callable | None = None,
+        embed_provider: str = DEFAULT_EMBED_PROVIDER,
+        # Legacy params kept for backward compat — ignored when embed_provider is used
+        embedding_dim: int = DEFAULT_EMBED_DIM,
+        embedding_fn=None,
     ):
-        if not _FAISS_AVAILABLE:
-            raise ImportError(
-                "faiss is required for VectorStore: pip install faiss-cpu"
-            )
-        if not _NP_AVAILABLE:
-            raise ImportError(
-                "numpy is required for VectorStore: pip install numpy"
-            )
-        self.storage_dir = storage_dir
-        self._index_path = os.path.join(storage_dir, "vectors.faiss")
-        self._meta_path = os.path.join(storage_dir, "vectors_meta.db")
         os.makedirs(storage_dir, exist_ok=True)
+        self.storage_dir     = storage_dir
+        self._index_path     = os.path.join(storage_dir, "vectors.faiss")
+        self._config_path    = os.path.join(storage_dir, "vector_config.json")
+        self._embed_adapter  = None   # lazy-loaded on first embed call
 
-        # Initialise SQLite (schema + config table)
-        self._conn = sqlite3.connect(self._meta_path)
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS documents (
-                id       INTEGER PRIMARY KEY AUTOINCREMENT,
-                text     TEXT NOT NULL,
-                metadata TEXT NOT NULL DEFAULT '{}',
-                embedding_model TEXT NOT NULL DEFAULT 'char_hash',
-                tokens   INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS config (
-                key   TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            );
-            """
-        )
-        self._conn.commit()
-
-        # Resolve which embedding to use
-        if embedding_fn is not None:
-            # Caller-supplied function (legacy path)
-            self.embedding_fn = embedding_fn
-            self._model_name = "custom"
-            self._embedding_dim = embedding_dim
+        # Model locking — honour what the existing store was built with
+        stored_cfg = self._load_config()
+        stored_model = stored_cfg.get("embedding_model")
+        if stored_model:
+            if embedding_model and embedding_model != stored_model:
+                _log.warning(
+                    "Requested model %r but store was built with %r; "
+                    "using stored model. Delete the index to switch models.",
+                    embedding_model, stored_model,
+                )
+            self._model_name     = stored_model
+            self._provider       = stored_cfg.get("embed_provider", embed_provider)
+            self._embedding_dim  = int(stored_cfg.get("embedding_dim", DEFAULT_EMBED_DIM))
         else:
-            stored_model = self._get_config("embedding_model")
-            if stored_model:
-                # Existing store — must use the same model
-                requested = embedding_model or DEFAULT_ST_MODEL
-                if embedding_model and embedding_model != stored_model:
-                    _log.warning(
-                        "Requested model %r but store was built with %r; "
-                        "using stored model. Reset the store to switch models.",
-                        embedding_model, stored_model,
-                    )
-                self.embedding_fn, self._model_name, self._embedding_dim = \
-                    _resolve_embedding(stored_model, embedding_dim)
-            else:
-                # New store — choose model
-                requested = embedding_model or DEFAULT_ST_MODEL
-                self.embedding_fn, self._model_name, self._embedding_dim = \
-                    _resolve_embedding(requested, embedding_dim)
-                self._set_config("embedding_model", self._model_name)
+            self._model_name     = embedding_model or DEFAULT_EMBED_MODEL
+            self._provider       = embed_provider
+            self._embedding_dim  = embedding_dim
 
-        _log.info("VectorStore embedding: %s (dim=%d)", self._model_name, self._embedding_dim)
-
-        # Initialise FAISS index
-        fi = _fi()
+        # Load existing index or create a fresh one
+        from dd_vectordb.adapters.faiss_db import FAISSVectorDB
         if os.path.exists(self._index_path):
-            self._index = fi.read_index(self._index_path)
+            self._db = FAISSVectorDB.load(self._index_path)
+            _log.info(
+                "VectorStore loaded: provider=%s model=%s dim=%d docs=%d",
+                self._provider, self._model_name,
+                self._db._dimension, self._db.count(),
+            )
         else:
-            self._index = fi.IndexFlatIP(self._embedding_dim)  # inner-product (cosine for normalised vecs)
+            # Probe the actual dimension from the embedding model if unknown
+            if not stored_cfg:
+                self._embedding_dim = self._probe_dim()
+            self._db = FAISSVectorDB(dimension=self._embedding_dim, metric="cosine")
+            self._save_config()
+            _log.info(
+                "VectorStore created: provider=%s model=%s dim=%d",
+                self._provider, self._model_name, self._embedding_dim,
+            )
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     def add(self, text: str, metadata: dict | None = None) -> int:
-        """Embed *text*, store in FAISS + SQLite, and return the document id."""
-        np = _np()
-        vec = np.asarray(self.embedding_fn(text), dtype=np.float32).reshape(1, -1)
-        self._index.add(vec)  # type: ignore[arg-type]
-
-        now = datetime.now(timezone.utc).isoformat()
-        cur = self._conn.execute(
-            "INSERT INTO documents (text, metadata, embedding_model, tokens, created_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (text, json.dumps(metadata or {}), self._model_name, len(text.split()), now),
-        )
-        self._conn.commit()
-        self._persist_index()
-        return cur.lastrowid or 0
+        """Embed *text*, store in the FAISS index, and return the document count."""
+        from dd_vectordb.models import Document
+        import hashlib
+        vec = self._embed(text)
+        doc_id = hashlib.sha1(text.encode()).hexdigest()[:16]
+        self._db.add_documents([
+            Document(id=doc_id, text=text, embedding=vec.tolist(), metadata=metadata or {})
+        ])
+        self._db.save(self._index_path)
+        return self._db.count()
 
     def add_batch(self, texts: list[str], metadatas: list[dict] | None = None) -> list[int]:
-        """Bulk-add multiple documents. Returns list of doc ids."""
+        """Bulk-add multiple documents. Returns list of sequential position numbers."""
+        from dd_vectordb.models import Document
+        import hashlib
         if metadatas is None:
             metadatas = [{}] * len(texts)
         if len(metadatas) != len(texts):
             raise ValueError("texts and metadatas must have the same length")
-
-        np = _np()
-        vecs = np.vstack(
-            [np.asarray(self.embedding_fn(t), dtype=np.float32).reshape(1, -1) for t in texts]
-        )
-        self._index.add(vecs)  # type: ignore[arg-type]
-
-        now = datetime.now(timezone.utc).isoformat()
-        doc_ids: list[int] = []
-        for text, meta in zip(texts, metadatas):
-            cur = self._conn.execute(
-                "INSERT INTO documents (text, metadata, embedding_model, tokens, created_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (text, json.dumps(meta), self._model_name, len(text.split()), now),
+        vecs = self._embed_batch(texts)
+        docs = [
+            Document(
+                id=hashlib.sha1(t.encode()).hexdigest()[:16],
+                text=t,
+                embedding=vecs[i].tolist(),
+                metadata=metadatas[i],
             )
-            doc_ids.append(int(cur.lastrowid or 0))
-        self._conn.commit()
-        self._persist_index()
-        return doc_ids
+            for i, t in enumerate(texts)
+        ]
+        self._db.add_documents(docs)
+        self._db.save(self._index_path)
+        total = self._db.count()
+        return list(range(total - len(texts) + 1, total + 1))
 
     def query(self, text: str, top_k: int = 5) -> list[dict]:
         """Search for the *top_k* most similar documents.
 
         Returns a list of dicts with keys: id, text, metadata, tokens, score.
-        Scores are cosine similarities (higher = more similar) for sentence-transformer
-        embeddings, L2 distances (lower = more similar) for char_hash.
+        Scores are cosine similarities (higher = more similar).
         """
-        if self._index.ntotal == 0:
+        if self._db.count() == 0:
             return []
-
-        np = _np()
-        vec = np.asarray(self.embedding_fn(text), dtype=np.float32).reshape(1, -1)
-        k = min(top_k, self._index.ntotal)
-        scores, indices = self._index.search(vec, k)  # type: ignore[arg-type]
-
-        results: list[dict] = []
-        for score, idx in zip(scores[0], indices[0]):
-            if idx < 0:
-                continue
-            # FAISS uses 0-based insertion order; use OFFSET for non-sequential ids.
-            row = self._conn.execute(
-                "SELECT id, text, metadata, tokens FROM documents ORDER BY id LIMIT 1 OFFSET ?",
-                (int(idx),),
-            ).fetchone()
-            if row is None:
-                continue
-            results.append(
-                {
-                    "id": row[0],
-                    "text": row[1],
-                    "metadata": json.loads(row[2]),
-                    "tokens": row[3],
-                    "score": float(score),
-                }
-            )
-        # For cosine (IndexFlatIP), higher score = better. Already sorted descending by FAISS.
-        return results
+        vec = self._embed(text)
+        results = self._db.search(vec.tolist(), k=top_k)
+        return [
+            {
+                "id":       r.document.id,
+                "text":     r.document.text,
+                "metadata": r.document.metadata,
+                "tokens":   len(r.document.text.split()),
+                "score":    r.score,
+            }
+            for r in results
+        ]
 
     def count(self) -> int:
         """Return the number of stored documents."""
-        return self._index.ntotal
+        return self._db.count()
 
-    def delete(self, doc_id: int) -> bool:
-        """Remove a document's metadata. Note: FAISS IndexFlatIP does not support
-        in-place removal; the vector remains in the index but will be unreachable
-        after the metadata row is deleted."""
-        cur = self._conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
-        self._conn.commit()
-        return cur.rowcount > 0
+    def delete(self, doc_id) -> bool:
+        """Remove a document by its ID. Returns True if a document was removed."""
+        removed = self._db.delete([str(doc_id)])
+        if removed:
+            self._db.save(self._index_path)
+        return removed > 0
 
     def close(self):
-        """Persist index and close the database connection."""
-        self._persist_index()
-        self._conn.close()
+        """Persist the index to disk."""
+        self._db.save(self._index_path)
 
     @property
     def model_name(self) -> str:
@@ -312,17 +183,56 @@ class VectorStore:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _persist_index(self):
-        _fi().write_index(self._index, self._index_path)
+    def _get_adapter(self):
+        """Lazily initialise the dd-embed adapter."""
+        if self._embed_adapter is None:
+            from dd_embed import get_adapter
+            self._embed_adapter = get_adapter(self._provider, model_name=self._model_name)
+            _log.debug("dd-embed adapter ready: %s / %s", self._provider, self._model_name)
+        return self._embed_adapter
 
-    def _get_config(self, key: str) -> str | None:
-        row = self._conn.execute(
-            "SELECT value FROM config WHERE key = ?", (key,)
-        ).fetchone()
-        return row[0] if row else None
+    def _embed(self, text: str):
+        """Embed a single text; returns 1-D float32 numpy array."""
+        import numpy as np
+        result = self._get_adapter().embed([text])
+        if not result.success:
+            raise RuntimeError(f"dd-embed error: {result.error}")
+        vec = np.asarray(result.embeddings[0], dtype=np.float32)
+        # Update stored dim if this is the first embed on a fresh store
+        if self._embedding_dim != vec.shape[0]:
+            self._embedding_dim = int(vec.shape[0])
+            self._save_config()
+        return vec
 
-    def _set_config(self, key: str, value: str) -> None:
-        self._conn.execute(
-            "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", (key, value)
-        )
-        self._conn.commit()
+    def _embed_batch(self, texts: list[str]):
+        """Embed a list of texts; returns 2-D float32 numpy array (n, dim)."""
+        import numpy as np
+        result = self._get_adapter().embed(texts)
+        if not result.success:
+            raise RuntimeError(f"dd-embed batch error: {result.error}")
+        return np.asarray(result.embeddings, dtype=np.float32)
+
+    def _probe_dim(self) -> int:
+        """Embed a throwaway string to discover the model's output dimension."""
+        try:
+            result = self._get_adapter().embed(["probe"])
+            if result.success:
+                return int(result.embeddings.shape[1])
+        except Exception:
+            pass
+        return DEFAULT_EMBED_DIM
+
+    def _load_config(self) -> dict:
+        if os.path.exists(self._config_path):
+            with open(self._config_path, encoding="utf-8") as f:
+                return json.load(f)
+        return {}
+
+    def _save_config(self) -> None:
+        with open(self._config_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "embedding_model": self._model_name,
+                "embed_provider":  self._provider,
+                "embedding_dim":   self._embedding_dim,
+                "created_at":      datetime.now(timezone.utc).isoformat(),
+            }, f, indent=2)

@@ -20,7 +20,7 @@ Categories
   JSON              : json_get, json_set, json_keys, json_length, json_pretty
   Date / time       : now_iso, date_format_val, date_diff_days
   Hashing           : md5_hash, sha256_hash
-  List / split      : list_get, list_length, list_join, list_contains
+  List / split      : list_get, list_length, list_join, list_contains, trim_turns
 
 All tools accept and return strings (SPL's universal scalar type).
 Numeric tools accept numeric strings and return numeric strings so they
@@ -482,3 +482,19 @@ def list_contains(value: str, item: str, delimiter: str = ",") -> str:
     """LIST_CONTAINS(value, item, delimiter) — 'true' if item is in delimited list."""
     parts = [p.strip() for p in str(value).split(str(delimiter))]
     return "true" if str(item).strip() in parts else "false"
+
+
+@spl_tool
+def trim_turns(history: str, max_turns: str) -> str:
+    r"""TRIM_TURNS(history, max_turns) — keep the last N User/Assistant turn pairs.
+
+    Expects history in the format: \nUser: <text>\nAssistant: <text>\nUser: ...
+    Returns trimmed history in the same format (zero LLM cost, deterministic).
+    """
+    n = max(1, int(str(max_turns).strip() or "10"))
+    parts = str(history).split("\nUser: ")
+    turns = [p for p in parts if p.strip()]
+    last_n = turns[-n:] if len(turns) > n else turns
+    if not last_n:
+        return ""
+    return "\nUser: " + "\nUser: ".join(last_n)

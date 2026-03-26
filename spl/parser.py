@@ -15,8 +15,9 @@ from spl.ast_nodes import (
     WorkflowStatement, ProcedureStatement, DoBlock, ExceptionHandler,
     EvaluateStatement, WhenClause, SemanticCondition, ComparisonCondition,
     WhileStatement, CommitStatement, RetryStatement, RaiseStatement,
-    LoggingStatement, AssignmentStatement, GenerateIntoStatement, CallStatement,
-    SelectIntoStatement, FStringLiteral, ListLiteral,
+    LoggingStatement, AssignmentStatement, StoreStatement, GenerateIntoStatement,
+    CallStatement, SelectIntoStatement, FStringLiteral, ListLiteral,
+    StorageSpec, StorageSubscript, StorageAssignStatement,
 )
 
 
@@ -96,6 +97,10 @@ class Parser:
         # SELECT ... INTO @var (inside workflows)
         if self._check(TokenType.SELECT):
             return self._parse_select_into_statement()
+
+        # STORE @var IN memory.<key>
+        if self._check(TokenType.STORE):
+            return self._parse_store_statement()
 
         # Assignment: @var := expr
         if self._check(TokenType.AT):
@@ -765,9 +770,21 @@ class Parser:
 
         # Optional type
         # Type annotation — BOOL, TEXT, NUMBER, LIST all arrive as IDENTIFIER
-        # since none of them are reserved keywords
+        # since none of them are reserved keywords.
+        # STORAGE(backend, path) is a compound type handled specially.
         if self._check(TokenType.IDENTIFIER):
-            param_type = self._advance().value
+            if self._current().value.upper() == "STORAGE":
+                self._advance()  # consume STORAGE
+                param_type = "STORAGE"
+                if self._check(TokenType.LPAREN):
+                    self._advance()  # consume (
+                    backend = self._expect(TokenType.IDENTIFIER).value
+                    self._expect(TokenType.COMMA)
+                    path = self._expect(TokenType.STRING).value
+                    self._expect(TokenType.RPAREN)
+                    default_value = StorageSpec(backend=backend, path=path)
+            else:
+                param_type = self._advance().value
 
         # Optional DEFAULT
         if self._check(TokenType.DEFAULT):
@@ -1140,13 +1157,39 @@ class Parser:
         value = self._parse_expression()
         return AssignmentStatement(variable=var_name, expression=value)
 
-    def _parse_assignment_statement(self) -> AssignmentStatement:
-        """Parse @var := expr"""
+    def _parse_store_statement(self) -> StoreStatement:
+        """Parse STORE @var IN memory.<key>"""
+        self._expect(TokenType.STORE)
         self._expect(TokenType.AT)
         var_name = self._expect_identifier_or_keyword().value
+        self._expect(TokenType.IN)
+        mem_tok = self._expect(TokenType.IDENTIFIER)
+        if mem_tok.value.lower() != "memory":
+            raise ParseError(
+                f"Expected 'memory' after STORE @var IN, got '{mem_tok.value}'", mem_tok
+            )
+        self._expect(TokenType.DOT)
+        key = self._expect_identifier_or_keyword().value
+        return StoreStatement(variable=var_name, key=key)
+
+    def _parse_assignment_statement(self):
+        """Parse @var := expr  OR  @var['key'] := expr (storage write)."""
+        self._expect(TokenType.AT)
+        var_name = self._expect_identifier_or_keyword().value
+
+        # Storage subscript assignment: @memory['key'] := expr
+        if self._check(TokenType.LBRACKET):
+            self._advance()  # consume [
+            key_expr = self._parse_expression()
+            self._expect(TokenType.RBRACKET)
+            self._expect(TokenType.ASSIGN)
+            value_expr = self._parse_expression()
+            return StorageAssignStatement(
+                storage_var=var_name, key=key_expr, value=value_expr
+            )
+
         self._expect(TokenType.ASSIGN)
         expression = self._parse_expression()
-
         return AssignmentStatement(variable=var_name, expression=expression)
 
     # ================================================================
@@ -1317,13 +1360,14 @@ class Parser:
         if tok.type == TokenType.AT:
             self._advance()
             name = self._expect_identifier_or_keyword().value
-            param = ParamRef(name=name)
             if self._check(TokenType.LBRACKET):
                 self._advance()  # consume [
-                index_expr = self._parse_expression()
+                key_expr = self._parse_expression()
                 self._expect(TokenType.RBRACKET)
-                return FunctionCall(name="GET", arguments=[param, index_expr])
-            return param
+                # StorageSubscript dispatches at runtime: storage lookup if the
+                # variable is a STORAGE connection, otherwise list/dict indexing.
+                return StorageSubscript(storage_var=name, key=key_expr)
+            return ParamRef(name=name)
 
         # F-string literal: f'text {@var} text'
         if tok.type == TokenType.FSTRING:

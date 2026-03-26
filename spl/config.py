@@ -22,6 +22,9 @@ DEFAULTS: dict = {
     "storage_dir": ".spl",
     "log_level": "info",
     "log_console": False,
+    # ── safety caps (prevent runaway LLM loops from draining provider budget) ──
+    "max_llm_calls": 25,       # max LLM calls per workflow execution
+    "max_total_tokens": 100_000,  # max combined input+output tokens per workflow
     # ── text2spl compiler ─────────────────────────────────────────────────────
     # Separate adapter/model from the runtime adapter used by `spl run`.
     # During development, claude_cli + claude-sonnet-4-6 is the recommended

@@ -5,65 +5,24 @@ DO
   @quality := 0.0;
   @current := @draft;
   WHILE @quality < 0.8 DO
-    GENERATE rewrite(@current, style='improved') INTO @temp;
-    COMMIT @temp;
-    GENERATE classify(@temp) INTO @label;
-    IF @label = 'long' THEN
-      @quality := 0.8;
-    ELSEIF @label != 'long' THEN
-      @quality := 0.5;
+    GENERATE rewrite(@current, style='improved') INTO @current;
+    GENERATE sentiment(@current) INTO @quality;
+    IF @quality = 0.8 THEN
+      BREAK;
     END;
   END;
   @final := @current;
   COMMIT @final;
 
-CREATE FUNCTION evaluate_quality(quality REAL)
-RETURNS BOOLEAN AS $$
-  quality >= 0.8
-$$;
-
-CREATE FUNCTION generate_rewrite(input TEXT, style TEXT)
+CREATE FUNCTION rewrite(text TEXT, style TEXT)
 RETURNS TEXT AS $$
   CASE style
-    WHEN 'improved' THEN replace(input, 'bad word', 'good word')
-    ELSE input
+    WHEN 'improved' THEN text || ' improved'
+    WHEN 'standardized' THEN text || ' standardized'
+    ELSE text
   END;
 $$;
 
-CREATE FUNCTION rewrite(input TEXT, style TEXT)
-RETURNS TEXT AS $$
-  GENERATE generate_rewrite(input, style) INTO @temp;
-  COMMIT @temp;
+CREATE FUNCTION sentiment(text TEXT) RETURNS NUMBER AS $$
+  SELECT sum(1) WHERE text LIKE '%good%' OR text LIKE '%great%'
 $$;
-
-CREATE FUNCTION classify(input TEXT)
-RETURNS TEXT AS $$
-  CASE length(input)
-    WHEN > 100 THEN 'long'
-    ELSE 'short'
-  END;
-$$;
-
-CREATE FUNCTION sentiment(input TEXT)
-RETURNS REAL AS $$
-  summarize(input);
-$$;
-
-DO
-  DO
-    GENERATE rewrite(@current, style='improved') INTO @temp;
-    COMMIT @temp;
-    GENERATE classify(@temp) INTO @label;
-    IF @label = 'long' THEN
-      @quality := 0.8;
-    ELSEIF @label != 'long' THEN
-      @quality := 0.5;
-    END;
-  EXCEPTION
-    WHEN HallucinationDetected THEN
-      @quality := 0.2;
-      COMMIT @current;
-    WHEN ModelOverloaded THEN
-      RETRY;
-  END;
-END;

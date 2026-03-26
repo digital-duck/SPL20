@@ -64,8 +64,8 @@ Status: `✓` done · `-` parser/runtime pending · `todo` not yet written
 |---|--------|--------|-------------|--------|
 | 11 | Debate Arena | `debate.spl` | Adversarial debate between two LLM personas with a judge | ✓ |
 | 12 | Plan and Execute | `plan_execute.spl` | Planner decomposes task into steps, executor runs each one | ✓ |
-| 13 | Map-Reduce | `map_reduce.spl` | Split large docs into chunks, summarize each, combine results | - |
-| 14 | Multi-Agent | `multi_agent.spl` | Researcher → Analyst → Writer collaboration via PROCEDURE | - |
+| 13 | Map-Reduce | `map_reduce.spl` | Split large docs into chunks, summarize each, combine results | ✓ |
+| 14 | Multi-Agent | `multi_agent.spl` | Researcher → Analyst → Writer collaboration via PROCEDURE | ✓ |
 | 15 | Code Review | `code_review.spl` | Multi-pass review: security, performance, style, bugs | ✓ |
 | 16 | Reflection | `reflection.spl` | Meta-cognitive loop: solve → reflect → correct until confident | ✓ |
 | 17 | Tree of Thought | `tree_of_thought.spl` | Explore multiple reasoning paths, score and pick the best | ✓ |

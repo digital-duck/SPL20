@@ -1,12 +1,17 @@
-"""Code-RAG store for text2SPL generation.
+"""Code-RAG store for text2SPL generation — backed by dd-vectordb + dd-embed.
 
-Indexes (description, SPL source) pairs in a ChromaDB collection so that
-text2SPL can retrieve semantically similar examples at compile time instead
-of relying on a small set of hand-written examples.
+  dd-vectordb  — vector storage via ChromaVectorDB (persistent Chroma collection)
+  dd-embed     — description embedding (SentenceTransformerAdapter, all-MiniLM-L6-v2)
+
+Indexes (description, SPL source) pairs so that text2SPL can retrieve
+semantically similar examples at compile time.
 
 Sources of pairs:
   - Cookbook recipes (indexed once via `spl code-rag index`)
   - Every validated `spl text2spl` invocation (auto-captured when enabled)
+
+Install:
+    pip install "dd-vectordb[chroma]" "dd-embed[sentence-transformers]"
 
 Usage:
     store = CodeRAGStore()
@@ -18,6 +23,7 @@ Usage:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from datetime import datetime, timezone
@@ -25,31 +31,19 @@ from pathlib import Path
 
 _log = logging.getLogger("spl.code_rag")
 
-try:
-    import chromadb
-    from chromadb.config import Settings
-    _CHROMA_AVAILABLE = True
-except ImportError:
-    _CHROMA_AVAILABLE = False
-
-
-def _require_chroma() -> None:
-    if not _CHROMA_AVAILABLE:
-        raise ImportError(
-            "chromadb is required for Code-RAG: pip install chromadb"
-        )
+_EMBED_PROVIDER = "sentence_transformers"
+_EMBED_MODEL    = "all-MiniLM-L6-v2"
 
 
 class CodeRAGStore:
-    """ChromaDB-backed store for (description, SPL source) pairs.
+    """dd-vectordb (ChromaVectorDB) + dd-embed backed store for (description, SPL source) pairs.
 
     Parameters
     ----------
     storage_dir : str
-        Directory for the ChromaDB persistent database.
+        Directory for the persistent Chroma database.
     collection_name : str
-        ChromaDB collection name. Separate collections allow future
-        isolation (e.g. per-project or per-language-version).
+        Chroma collection name. Separate collections allow per-project isolation.
     """
 
     COLLECTION_NAME = "spl_code_rag"
@@ -59,17 +53,17 @@ class CodeRAGStore:
         storage_dir: str = ".spl/code_rag",
         collection_name: str = COLLECTION_NAME,
     ) -> None:
-        _require_chroma()
+        from dd_vectordb.adapters.chroma_db import ChromaVectorDB
+        from dd_embed import get_adapter
+
         Path(storage_dir).mkdir(parents=True, exist_ok=True)
-        self._client = chromadb.PersistentClient(
-            path=storage_dir,
-            settings=Settings(anonymized_telemetry=False),
+        self._db = ChromaVectorDB(
+            collection_name=collection_name,
+            persist_directory=storage_dir,
+            metric="cosine",
         )
-        self._col = self._client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine"},
-        )
-        _log.debug("CodeRAGStore ready: %s  docs=%d", storage_dir, self._col.count())
+        self._embedder = get_adapter(_EMBED_PROVIDER, model_name=_EMBED_MODEL)
+        _log.debug("CodeRAGStore ready: %s  docs=%d", storage_dir, self._db.count())
 
     # ------------------------------------------------------------------
     # Indexing
@@ -84,56 +78,58 @@ class CodeRAGStore:
 
         Each recipe contributes one (description, SPL source) pair.
         Recipes without a readable .spl file are skipped.
-
         Returns the number of pairs newly added (duplicates are skipped).
         """
+        from dd_vectordb.models import Document
+
         cookbook = Path(cookbook_dir)
         catalog_path = catalog_path or str(cookbook / "cookbook_catalog.json")
 
         with open(catalog_path, encoding="utf-8") as f:
             catalog = json.load(f)
 
-        added = 0
+        to_add: list[Document] = []
         for recipe in catalog.get("recipes", []):
-            rid = recipe.get("id", "??")
-            name = recipe.get("name", "")
+            rid         = recipe.get("id", "??")
+            name        = recipe.get("name", "")
             description = recipe.get("description", "")
-            category = recipe.get("category", "")
-            recipe_dir = recipe.get("dir", "")
+            category    = recipe.get("category", "")
+            recipe_dir  = recipe.get("dir", "")
 
             if not description or not recipe_dir:
                 continue
 
-            # Find the .spl file in the recipe directory
             spl_files = list((cookbook / recipe_dir).glob("*.spl"))
             if not spl_files:
                 _log.debug("Recipe %s (%s): no .spl file found, skipping", rid, name)
                 continue
 
-            spl_source = spl_files[0].read_text(encoding="utf-8").strip()
             doc_id = f"cookbook_{rid}"
-
             if self._exists(doc_id):
                 _log.debug("Recipe %s already indexed, skipping", rid)
                 continue
 
-            self._col.add(
-                ids=[doc_id],
-                documents=[description],
-                metadatas=[{
+            spl_source = spl_files[0].read_text(encoding="utf-8").strip()
+            embedding  = self._embed(description)
+            to_add.append(Document(
+                id=doc_id,
+                text=description,
+                embedding=embedding,
+                metadata={
                     "spl_source": spl_source,
-                    "name": name,
-                    "category": category,
-                    "source": "cookbook",
-                    "recipe_id": rid,
+                    "name":       name,
+                    "category":   category,
+                    "source":     "cookbook",
+                    "recipe_id":  rid,
                     "indexed_at": _now(),
-                }],
-            )
-            added += 1
-            _log.debug("Indexed recipe %s: %s", rid, name)
+                },
+            ))
 
-        _log.info("index_recipes: added %d new pairs (total=%d)", added, self._col.count())
-        return added
+        if to_add:
+            self._db.add_documents(to_add)
+
+        _log.info("index_recipes: added %d new pairs (total=%d)", len(to_add), self._db.count())
+        return len(to_add)
 
     def add_pair(
         self,
@@ -142,35 +138,31 @@ class CodeRAGStore:
         metadata: dict | None = None,
         doc_id: str | None = None,
     ) -> str:
-        """Add a validated (description, SPL source) pair to the store.
+        """Add a validated (description, SPL source) pair.
 
         Called automatically after each successful `spl text2spl` invocation
-        when auto_capture is enabled.
-
-        Returns the doc_id used.
+        when auto_capture is enabled. Returns the doc_id used.
         """
+        from dd_vectordb.models import Document
+
         if not description.strip() or not spl_source.strip():
             raise ValueError("Both description and spl_source must be non-empty")
 
+        if doc_id is None:
+            doc_id = "user_" + hashlib.sha1(description.encode()).hexdigest()[:12]
+
         meta = {
             "spl_source": spl_source.strip(),
-            "source": "user",
+            "source":     "user",
             "indexed_at": _now(),
         }
         if metadata:
             meta.update(metadata)
 
-        # Generate a stable ID from description hash if not provided
-        if doc_id is None:
-            import hashlib
-            doc_id = "user_" + hashlib.sha1(description.encode()).hexdigest()[:12]
-
-        # Upsert: overwrite if same description was captured before
-        self._col.upsert(
-            ids=[doc_id],
-            documents=[description],
-            metadatas=[meta],
-        )
+        embedding = self._embed(description)
+        self._db.add_documents([
+            Document(id=doc_id, text=description, embedding=embedding, metadata=meta)
+        ])
         _log.debug("add_pair: %s (id=%s)", description[:60], doc_id)
         return doc_id
 
@@ -184,32 +176,22 @@ class CodeRAGStore:
         Returns a list of dicts with keys:
             description, spl_source, name, category, source, score
         """
-        if self._col.count() == 0:
+        if self._db.count() == 0:
             return []
 
-        k = min(top_k, self._col.count())
-        results = self._col.query(
-            query_texts=[description],
-            n_results=k,
-            include=["documents", "metadatas", "distances"],
-        )
-
-        hits = []
-        docs      = results.get("documents", [[]])[0]
-        metadatas = results.get("metadatas", [[]])[0]
-        distances = results.get("distances", [[]])[0]
-
-        for doc, meta, dist in zip(docs, metadatas, distances):
-            hits.append({
-                "description": doc,
-                "spl_source":  meta.get("spl_source", ""),
-                "name":        meta.get("name", ""),
-                "category":    meta.get("category", ""),
-                "source":      meta.get("source", ""),
-                "score":       float(dist),   # cosine distance (lower = more similar)
-            })
-
-        return hits
+        embedding = self._embed(description)
+        results   = self._db.search(embedding, k=min(top_k, self._db.count()))
+        return [
+            {
+                "description": r.document.text,
+                "spl_source":  r.document.metadata.get("spl_source", ""),
+                "name":        r.document.metadata.get("name", ""),
+                "category":    r.document.metadata.get("category", ""),
+                "source":      r.document.metadata.get("source", ""),
+                "score":       r.score,
+            }
+            for r in results
+        ]
 
     # ------------------------------------------------------------------
     # Inspection & export
@@ -217,29 +199,29 @@ class CodeRAGStore:
 
     def count(self) -> int:
         """Return the total number of indexed pairs."""
-        return self._col.count()
+        return self._db.count()
 
     def export_jsonl(self, output_path: str) -> int:
         """Export all pairs as JSONL for fine-tuning.
 
-        Each line is a JSON object: {"description": "...", "spl_source": "..."}
+        Each line: {"description": "...", "spl_source": "...", "name": "...", ...}
         Returns the number of records exported.
         """
-        results = self._col.get(include=["documents", "metadatas"])
-        docs      = results.get("documents") or []
-        metadatas = results.get("metadatas") or []
+        # Access the underlying Chroma collection to retrieve all documents
+        raw = self._db._collection.get(include=["documents", "metadatas"])
+        docs      = raw.get("documents") or []
+        metadatas = raw.get("metadatas") or []
 
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
-
         with out.open("w", encoding="utf-8") as f:
             for doc, meta in zip(docs, metadatas):
                 record = {
                     "description": doc,
-                    "spl_source": meta.get("spl_source", ""),
-                    "name": meta.get("name", ""),
-                    "category": meta.get("category", ""),
-                    "source": meta.get("source", ""),
+                    "spl_source":  meta.get("spl_source", ""),
+                    "name":        meta.get("name", ""),
+                    "category":    meta.get("category", ""),
+                    "source":      meta.get("source", ""),
                 }
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -247,12 +229,19 @@ class CodeRAGStore:
         return len(docs)
 
     # ------------------------------------------------------------------
-    # Internal
+    # Internal helpers
     # ------------------------------------------------------------------
 
+    def _embed(self, text: str) -> list[float]:
+        """Embed a single text; returns a flat list of floats."""
+        result = self._embedder.embed([text])
+        if not result.success:
+            raise RuntimeError(f"dd-embed error: {result.error}")
+        return result.embeddings[0].tolist()
+
     def _exists(self, doc_id: str) -> bool:
-        result = self._col.get(ids=[doc_id], include=[])
-        return len(result.get("ids", [])) > 0
+        results = self._db.get_by_ids([doc_id])
+        return results[0] is not None
 
 
 def _now() -> str:

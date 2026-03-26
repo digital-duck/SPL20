@@ -94,7 +94,7 @@ DO
             CALL redact_pii(@raw_response) INTO @safe_response
         WHEN 'hallucination' THEN
             GENERATE safe_response(@clean_input) INTO @safe_response
-            RETRY WITH temperature = 0.1
+            RETRY WITH temperature = 0.1 LIMIT 3
         ELSE
             SET @safe_response = 'I was unable to generate a safe response. Please rephrase your question.'
     END

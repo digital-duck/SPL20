@@ -11,11 +11,11 @@
 WORKFLOW reflection_agent
     INPUT:
         @problem TEXT,
+        @max_reflections Number DEFAULT 3,
         @log_dir TEXT DEFAULT 'cookbook/16_reflection/logs'
     OUTPUT: @answer TEXT
 DO
     @iteration := 0
-    @max_reflections := 3
     @confidence := 0
 
     LOGGING f'Reflection agent started | max_reflections={@max_reflections}' LEVEL INFO

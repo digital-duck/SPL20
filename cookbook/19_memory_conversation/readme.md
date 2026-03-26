@@ -4,7 +4,7 @@ A conversational agent that loads a persistent user profile and chat history fro
 
 ## Setup
 
-No setup required — the memory store is created automatically under `.spl/memory.db`.
+No setup required — the memory store is created automatically under `cookbook/.spl/memory.db` (relative to the project root where `spl run` is invoked).
 
 ## Parameters
 
@@ -45,4 +45,4 @@ spl memory delete chat_history
 
 ## Note
 
-Workflow-level `memory.set` is not yet implemented — facts are extracted and merged in-memory within the workflow but not persisted back automatically. Use `spl memory set` to seed the store manually if needed.
+Memory persistence is fully implemented via the `STORE @var IN memory.<key>` statement. After each turn, the updated profile and chat history are written back to `cookbook/.spl/memory.db` and loaded on the next run.

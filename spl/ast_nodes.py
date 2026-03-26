@@ -10,8 +10,12 @@ Extends SPL 1.0 AST with nodes for agentic workflow orchestration:
 - GenerateInto (GENERATE ... INTO @var)
 - CallStatement (CALL procedure(...))
 - LoggingStatement (LOGGING expr [LEVEL INFO] [TO 'file'])
+- StoreStatement (STORE @var IN memory.<key>)
 - FStringLiteral (f'text {@var} text')
 - ListLiteral ([] or [expr, expr, ...])
+- StorageSpec (STORAGE(backend, path) — typed INPUT param for dd-db backends)
+- StorageSubscript (@memory['key'] — read from a STORAGE-typed variable)
+- StorageAssignStatement (@memory['key'] := expr — write to a STORAGE-typed variable)
 """
 
 from __future__ import annotations
@@ -330,6 +334,13 @@ class AssignmentStatement:
 
 
 @dataclass
+class StoreStatement:
+    """STORE @var IN memory.<key>"""
+    variable: str
+    key: str
+
+
+@dataclass
 class GenerateIntoStatement:
     """GENERATE function(args) WITH options INTO @var"""
     generate_clause: GenerateClause
@@ -342,6 +353,40 @@ class CallStatement:
     procedure_name: str
     arguments: list[Expression] = field(default_factory=list)
     target_variable: str | None = None
+
+
+@dataclass
+class StorageSpec(Expression):
+    """STORAGE(backend, path) — storage backend specification.
+
+    Used as the default_value of a STORAGE-typed workflow INPUT parameter:
+
+        @memory STORAGE(sqlite, '.spl/memory.db')
+
+    backend : str  — 'sqlite', 'duckdb', 'postgres'
+    path    : str  — file path or connection URL
+    """
+    backend: str
+    path: str
+
+
+@dataclass
+class StorageSubscript(Expression):
+    """@memory['key'] — read a value from a STORAGE-typed variable.
+
+    At execution time the runtime calls StorageConnection.get(key).
+    Falls back to list/dict indexing if the variable is not a storage connection.
+    """
+    storage_var: str
+    key: Expression
+
+
+@dataclass
+class StorageAssignStatement:
+    """@memory['key'] := expr — write a value to a STORAGE-typed variable."""
+    storage_var: str
+    key: Expression
+    value: Expression
 
 
 @dataclass
@@ -398,9 +443,11 @@ Statement = Union[
     RaiseStatement,
     LoggingStatement,
     AssignmentStatement,
+    StoreStatement,
     GenerateIntoStatement,
     CallStatement,
     SelectIntoStatement,
+    StorageAssignStatement,
 ]
 
 

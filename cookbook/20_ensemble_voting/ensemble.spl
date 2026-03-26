@@ -64,5 +64,5 @@ EXCEPTION
         ) INTO @final_answer
         COMMIT @final_answer WITH status = 'partial', candidates = 3
     WHEN HallucinationDetected THEN
-        RETRY WITH temperature = 0.1
+        RETRY WITH temperature = 0.1 LIMIT 3
 END

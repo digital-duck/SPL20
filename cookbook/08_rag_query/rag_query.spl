@@ -2,8 +2,8 @@
 -- Retrieval-augmented generation over indexed documents.
 --
 -- Setup:
---   pip install numpy faiss-cpu
---   spl rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
+--   pip install "dd-vectordb[faiss]" "dd-embed[sentence-transformers]"
+--   spl doc-rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
 --
 -- Usage:
 --   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="Where did Wen grow up?"

@@ -25,15 +25,17 @@ from spl.ast_nodes import (
     BinaryOp, FunctionCall, DottedName, NamedArg,
     WorkflowStatement, ProcedureStatement,
     EvaluateStatement, WhileStatement, DoBlock,
-    LoggingStatement, AssignmentStatement, GenerateIntoStatement, CommitStatement,
-    RetryStatement, RaiseStatement, CallStatement, SelectIntoStatement,
+    LoggingStatement, AssignmentStatement, StoreStatement, GenerateIntoStatement,
+    CommitStatement, RetryStatement, RaiseStatement, CallStatement, SelectIntoStatement,
     SemanticCondition, ComparisonCondition, Condition, ExceptionHandler,
     FStringLiteral, ListLiteral,
+    StorageSpec, StorageSubscript, StorageAssignStatement,
 )
 from spl.optimizer import ExecutionPlan, ExecutionStep, WorkflowPlan
 from spl.adapters.base import LLMAdapter, GenerationResult
 from spl.adapters import get_adapter
 from spl.storage.memory import MemoryStore
+from spl.storage.storage_conn import StorageConnection
 from spl.storage import get_vector_store
 from spl.token_counter import TokenCounter
 from spl.functions import FunctionRegistry
@@ -127,6 +129,7 @@ class WorkflowState:
 
     def __init__(self, params: dict[str, str] | None = None):
         self.variables: dict[str, str] = {}
+        self.storage: dict[str, StorageConnection] = {}   # STORAGE-typed vars
         self.committed: bool = False
         self.committed_value: str | None = None
         self.committed_options: dict[str, str] = {}
@@ -146,6 +149,12 @@ class WorkflowState:
     def get_var(self, name: str) -> str:
         return self.variables.get(name, "")
 
+    def set_storage(self, name: str, conn: StorageConnection):
+        self.storage[name] = conn
+
+    def get_storage(self, name: str) -> StorageConnection | None:
+        return self.storage.get(name)
+
     def record_llm_call(self, result: GenerationResult):
         self.total_llm_calls += 1
         self.total_input_tokens += result.input_tokens
@@ -163,6 +172,10 @@ class Executor:
 
     DEFAULT_MAX_ITERATIONS = 100
 
+    # Default safety caps — override via config or constructor args
+    DEFAULT_MAX_LLM_CALLS   = 25
+    DEFAULT_MAX_TOTAL_TOKENS = 100_000
+
     def __init__(
         self,
         adapter_name: str = "echo",
@@ -171,19 +184,45 @@ class Executor:
         storage_dir: str = ".spl",
         cache_enabled: bool = False,
         cache_ttl: int = 3600,
+        max_llm_calls: int = DEFAULT_MAX_LLM_CALLS,
+        max_total_tokens: int = DEFAULT_MAX_TOTAL_TOKENS,
     ):
         self.adapter = adapter or get_adapter(adapter_name, **(adapter_kwargs or {}))
         self._storage_dir_base = storage_dir
         self.memory = MemoryStore(f"{storage_dir}/memory.db")
         self.functions = FunctionRegistry()
+        # Auto-load all @spl_tool functions from the standard library
+        from spl.tools import get_global_tools
+        for _tool_name, _tool_fn in get_global_tools().items():
+            self.functions.register_tool(_tool_name, _tool_fn)
         self.cache_enabled = cache_enabled
         self.cache_ttl = cache_ttl
         self._vector_store = None
+        self.max_llm_calls = max_llm_calls
+        self.max_total_tokens = max_total_tokens
 
     def register_tool(self, name: str, fn) -> "Executor":
         """Register a Python callable as a CALL-able tool. Returns self for chaining."""
         self.functions.register_tool(name, fn)
         return self
+
+    def _check_budget(self, state: WorkflowState) -> None:
+        """Raise BudgetExceeded if this workflow has hit the configured safety caps.
+
+        Called before every adapter.generate() call so the limit is enforced
+        *before* the next billable request is sent to the provider.
+        """
+        if state.total_llm_calls >= self.max_llm_calls:
+            raise BudgetExceeded(
+                f"LLM call limit reached ({state.total_llm_calls}/{self.max_llm_calls}). "
+                f"Increase max_llm_calls in config if intentional."
+            )
+        total_tokens = state.total_input_tokens + state.total_output_tokens
+        if total_tokens >= self.max_total_tokens:
+            raise BudgetExceeded(
+                f"Token limit reached ({total_tokens:,}/{self.max_total_tokens:,}). "
+                f"Increase max_total_tokens in config if intentional."
+            )
 
     @property
     def vector_store(self):
@@ -464,9 +503,19 @@ class Executor:
         state = WorkflowState(params)
         start = time.perf_counter()
 
-        # Initialize input variables: explicit params override defaults
+        # Initialize input variables: explicit params override defaults.
+        # STORAGE-typed params become StorageConnection objects, not strings.
         for inp in stmt.inputs:
-            if params and inp.name in params:
+            if inp.param_type and inp.param_type.upper() == "STORAGE":
+                spec = inp.default_value  # StorageSpec from the param declaration
+                if not isinstance(spec, StorageSpec):
+                    continue
+                # Caller can override the path by passing the param name as a string
+                path = str(params[inp.name]) if (params and inp.name in params) else spec.path
+                conn = StorageConnection(spec.backend, path)
+                state.set_storage(inp.name, conn)
+                _log.debug("STORAGE %s: %s backend at %s", inp.name, spec.backend, path)
+            elif params and inp.name in params:
                 state.set_var(inp.name, str(params[inp.name]))
             elif inp.default_value is not None:
                 state.set_var(inp.name, self._eval_expression(inp.default_value, state))
@@ -478,6 +527,10 @@ class Executor:
             handled = await self._handle_exception(e, stmt.exception_handlers, state)
             if not handled:
                 raise
+        finally:
+            # Close any STORAGE connections opened for this workflow
+            for conn in state.storage.values():
+                conn.close()
 
         total_latency = (time.perf_counter() - start) * 1000
 
@@ -518,6 +571,10 @@ class Executor:
             await self._exec_raise(stmt, state)
         elif isinstance(stmt, LoggingStatement):
             self._exec_logging(stmt, state)
+        elif isinstance(stmt, StoreStatement):
+            self._exec_store(stmt, state)
+        elif isinstance(stmt, StorageAssignStatement):
+            self._exec_storage_assign(stmt, state)
         elif isinstance(stmt, CallStatement):
             await self._exec_call(stmt, state)
         elif isinstance(stmt, DoBlock):
@@ -554,18 +611,25 @@ class Executor:
             expr = item.expression if hasattr(item, 'expression') else None
             val = ""
             if expr is not None:
-                if isinstance(expr, DottedName):
+                if isinstance(expr, MemoryGet):
+                    # Direct memory lookup — not a CTE reference
+                    val = self.memory.get(expr.key) or ""
+                elif isinstance(expr, DottedName):
                     # e.g. response_1.answer -> cte_results["response_1.answer"]
                     # fall back to bare cte name if field-qualified key not found
                     val = cte_results.get(
                         expr.full_name,
                         cte_results.get(expr.full_name.split(".")[0], ""),
                     )
-                else:
+                elif cte_results:
+                    # CTE-based lookup: evaluate expression as key into cte_results
                     expr_str = self._eval_expression(expr, state)
                     val = cte_results.get(expr_str, "")
-            # Direct lookup by alias as last resort
-            if not val and alias:
+                else:
+                    # No CTEs — evaluate expression directly as a value
+                    val = self._eval_expression(expr, state)
+            # Direct lookup by alias as last resort (CTE context only)
+            if not val and alias and cte_results:
                 val = cte_results.get(str(alias), "")
             selected.append(val)
 
@@ -597,6 +661,7 @@ class Executor:
             model = state.get_var(model[1:])
 
         _log.info("CTE GENERATE %s (model=%s)", gen.function_name, model or "default")
+        self._check_budget(state)
         gen_result = await self.adapter.generate(
             prompt=prompt_text,
             model=model,
@@ -638,6 +703,7 @@ class Executor:
         if model.startswith('@'):
             model = state.get_var(model[1:])
 
+        self._check_budget(state)
         gen_result = await self.adapter.generate(
             prompt=prompt,
             model=model,
@@ -681,6 +747,7 @@ class Executor:
                         f"Text: {eval_value}\n\n"
                         f"Answer with only 'yes' or 'no'."
                     )
+                    self._check_budget(state)
                     judge_result = await self.adapter.generate(
                         prompt=judge_prompt,
                         max_tokens=10,
@@ -750,6 +817,7 @@ class Executor:
                     f"Is the condition '{cond.semantic_value}' still true?\n"
                     f"Answer with only 'yes' or 'no'."
                 )
+                self._check_budget(state)
                 judge_result = await self.adapter.generate(
                     prompt=judge_prompt,
                     max_tokens=10, temperature=0.0,
@@ -815,6 +883,23 @@ class Executor:
                 fh.write(f"[{ts}] [{level}] {message}\n")
             _log.debug("LOGGING[%s] TO %s: %s", level, stmt.destination, message)
 
+    def _exec_store(self, stmt: StoreStatement, state: WorkflowState):
+        """Execute STORE @var IN memory.<key> — persist variable to the memory store."""
+        value = state.variables.get(stmt.variable, "")
+        self.memory.set(stmt.key, str(value))
+        _log.debug("STORE %s -> memory.%s (%d chars)", stmt.variable, stmt.key, len(str(value)))
+
+    def _exec_storage_assign(self, stmt: StorageAssignStatement, state: WorkflowState):
+        """Execute @memory['key'] := expr — write to a STORAGE-typed variable."""
+        conn = state.get_storage(stmt.storage_var)
+        if conn is None:
+            _log.warning("STORAGE assign: %r is not a STORAGE-typed variable", stmt.storage_var)
+            return
+        key = self._eval_expression(stmt.key, state)
+        value = self._eval_expression(stmt.value, state)
+        conn.set(str(key), str(value))
+        _log.debug("STORAGE %s['%s'] := (%d chars)", stmt.storage_var, key, len(str(value)))
+
     async def _exec_call(self, stmt: CallStatement, state: WorkflowState):
         """Execute CALL procedure(args) INTO @var"""
         import inspect
@@ -848,6 +933,7 @@ class Executor:
             # Fallback: use LLM to simulate the procedure
             args_text = [self._eval_expression(a, state) for a in stmt.arguments]
             prompt = f"Execute procedure: {stmt.procedure_name}({', '.join(args_text)})"
+            self._check_budget(state)
             result = await self.adapter.generate(prompt=prompt, max_tokens=1000)
             state.record_llm_call(result)
             if stmt.target_variable:
@@ -962,6 +1048,19 @@ class Executor:
                 args = [self._eval_expression(a, state) for a in expr.arguments]
                 return self.functions.call_builtin(expr.name, *args)
             return f"[{expr.name}(...)]"
+        elif isinstance(expr, MemoryGet):
+            return self.memory.get(expr.key) or ""
+        elif isinstance(expr, StorageSubscript):
+            # @memory['key'] — route to StorageConnection if the var is STORAGE-typed,
+            # otherwise fall back to built-in GET (list/dict indexing).
+            conn = state.get_storage(expr.storage_var) if state else None
+            if conn is not None:
+                key = self._eval_expression(expr.key, state)
+                return conn.get(str(key))
+            # Fallback: list/dict indexing via the GET built-in
+            var_val = state.get_var(expr.storage_var) if state else ""
+            idx = self._eval_expression(expr.key, state)
+            return self.functions.call_builtin("GET", var_val, idx) if self.functions.is_builtin("GET") else ""
         elif isinstance(expr, DottedName):
             return state.get_var(expr.full_name)
         elif isinstance(expr, NamedArg):

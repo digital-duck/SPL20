@@ -276,7 +276,8 @@ Lexer --> Parser --> Analyzer --> Optimizer --> Executor
 - Optional: `openai` (for OpenAI and Azure OpenAI adapters)
 - Optional: `google-genai` (for Google Gemini and Vertex AI adapters)
 - Optional: `boto3` (for AWS Bedrock adapter)
-- Optional: `numpy`, `faiss-cpu` (for RAG vector store)
+- Optional: `dd-vectordb[faiss]`, `dd-embed[sentence-transformers]` (for `spl doc-rag` vector store)
+- Optional: `dd-vectordb[chroma]`, `dd-embed[sentence-transformers]` (for `spl code-rag` example store)
 - Optional: `tiktoken` (for accurate OpenAI token counting)
 
 ## License

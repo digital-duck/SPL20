@@ -380,6 +380,8 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
         analysis = Analyzer().analyze(ast)
 
         cache_ttl = _cfg_default("cache_ttl", 3600)
+        max_llm_calls   = int(_cfg_default("max_llm_calls",   Executor.DEFAULT_MAX_LLM_CALLS))
+        max_total_tokens = int(_cfg_default("max_total_tokens", Executor.DEFAULT_MAX_TOTAL_TOKENS))
         adapter_kwargs = {}
         if allowed_tools:
             adapter_kwargs["allowed_tools"] = [t.strip() for t in allowed_tools.split(",")]
@@ -391,6 +393,8 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
             storage_dir=storage_dir,
             cache_enabled=cache,
             cache_ttl=cache_ttl,
+            max_llm_calls=max_llm_calls,
+            max_total_tokens=max_total_tokens,
         )
         if tools_module:
             from spl.tools import load_tools_module
@@ -666,15 +670,50 @@ def cache_clear(storage_dir: str | None, expired_only: bool) -> None:
 
 @cli.group("memory")
 def cmd_memory() -> None:
-    """Manage the SPL persistent memory store (.spl/memory.db)."""
+    """Manage the SPL persistent memory store.
+
+    \b
+    Default store : .spl/memory.db  (project-level, from config storage_dir)
+    User-level    : --storage-dir ~/.spl
+    Custom path   : --db path/to/my.db
+    """
+
+
+def _memory_store(storage_dir: str | None, db: str | None):
+    """Resolve the memory store path and return an open StorageConnection + resolved path.
+
+    Uses StorageConnection (table: spl_kv) so that `spl memory` commands read
+    the same data written by STORAGE-typed workflow inputs.
+    """
+    from spl.storage.storage_conn import StorageConnection
+    if db:
+        path = os.path.expanduser(db)
+    else:
+        sd = os.path.expanduser(storage_dir or _cfg_default("storage_dir", "~/.spl"))
+        path = os.path.join(sd, "memory.db")
+    return StorageConnection("sqlite", path), path
+
+
+_STORAGE_OPTS = [
+    click.option("--storage-dir", default=None,
+                 help="Directory containing memory.db (default from config)."),
+    click.option("--db", default=None,
+                 help="Direct path to a memory.db file (overrides --storage-dir)."),
+]
+
+
+def _add_storage_opts(fn):
+    for opt in reversed(_STORAGE_OPTS):
+        fn = opt(fn)
+    return fn
 
 
 @cmd_memory.command("list")
-@click.option("--storage-dir", default=".spl", show_default=True)
-def memory_list(storage_dir: str) -> None:
+@_add_storage_opts
+def memory_list(storage_dir: str | None, db: str | None) -> None:
     """List all memory keys."""
-    from spl.storage.memory import MemoryStore
-    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
+    store, path = _memory_store(storage_dir, db)
+    click.echo(f"# {path}")
     keys = store.list_keys()
     if not keys:
         click.echo("(empty)")
@@ -688,11 +727,10 @@ def memory_list(storage_dir: str) -> None:
 
 @cmd_memory.command("get")
 @click.argument("key")
-@click.option("--storage-dir", default=".spl", show_default=True)
-def memory_get(key: str, storage_dir: str) -> None:
+@_add_storage_opts
+def memory_get(key: str, storage_dir: str | None, db: str | None) -> None:
     """Print the value stored under KEY."""
-    from spl.storage.memory import MemoryStore
-    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
+    store, _ = _memory_store(storage_dir, db)
     value = store.get(key)
     store.close()
     if value is not None:
@@ -704,11 +742,10 @@ def memory_get(key: str, storage_dir: str) -> None:
 @cmd_memory.command("set")
 @click.argument("key")
 @click.argument("value")
-@click.option("--storage-dir", default=".spl", show_default=True)
-def memory_set(key: str, value: str, storage_dir: str) -> None:
+@_add_storage_opts
+def memory_set(key: str, value: str, storage_dir: str | None, db: str | None) -> None:
     """Store VALUE under KEY."""
-    from spl.storage.memory import MemoryStore
-    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
+    store, _ = _memory_store(storage_dir, db)
     store.set(key, value)
     store.close()
     click.echo(f"Set: {key}")
@@ -716,11 +753,10 @@ def memory_set(key: str, value: str, storage_dir: str) -> None:
 
 @cmd_memory.command("delete")
 @click.argument("key")
-@click.option("--storage-dir", default=".spl", show_default=True)
-def memory_delete(key: str, storage_dir: str) -> None:
+@_add_storage_opts
+def memory_delete(key: str, storage_dir: str | None, db: str | None) -> None:
     """Delete KEY from the memory store."""
-    from spl.storage.memory import MemoryStore
-    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
+    store, _ = _memory_store(storage_dir, db)
     deleted = store.delete(key)
     store.close()
     if deleted:

@@ -27,7 +27,7 @@ EXCEPTION
     COMMIT @result WITH status = 'conservative'
 
   WHEN ContextLengthExceeded THEN
-    RETRY WITH temperature = 0.1
+    RETRY WITH temperature = 0.1 LIMIT 3
 
   WHEN RefusalToAnswer THEN
     COMMIT @prompt WITH status = 'refused'
