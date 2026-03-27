@@ -12,8 +12,8 @@ requires-python = ">=3.11"
 dependencies = [
     "click>=8.0",
     "httpx",
-    "dd-config",
-    "dd-logging",
+    "dd-config>=0.1.0",
+    "dd-logging>=0.1.1",
     "pyyaml",
     "streamlit>=1.35",
     "pandas>=2.0",
