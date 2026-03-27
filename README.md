@@ -50,6 +50,13 @@ Latency: 440ms
 
 **Same `.spl` file, any backend** — swap `--adapter ollama` to `openrouter`, `claude_cli`, `bedrock`, `vertex`, `azure_openai`, or `momagrid` without changing a single line of SPL code. That's the power of declarative.
 
+```bash
+# Same recipe, three different backends — zero .spl changes
+spl run examples/hello_world.spl --adapter ollama     -m llama3.2  user_input="hello" lang="French"
+spl run examples/hello_world.spl --adapter momagrid   -m llama3.2  user_input="hello" lang="French"
+spl run examples/hello_world.spl --adapter anthropic  -m claude-sonnet-4-6  user_input="hello" lang="French"
+```
+
 ## Quick Start
 
 ```bash
@@ -232,10 +239,59 @@ Available LLM adapters (13):
 | `deepseek` | DeepSeek chat & reasoning models | `pip install httpx`, set `DEEPSEEK_API_KEY` |
 | `qwen` | Qwen models via Alibaba DashScope | `pip install httpx`, set `DASHSCOPE_API_KEY` |
 | `openrouter` | 100+ models via OpenRouter.ai | `pip install httpx`, set `OPENROUTER_API_KEY` |
-| `momagrid` | Decentralized AI inference grid | `pip install httpx`, set `MOMAGRID_HUB_URL` |
+| `momagrid` | Decentralized AI inference grid (LAN or cloud) | `pip install httpx`, set `MOMAGRID_HUB_URL` |
 | `bedrock` | **AWS** — Claude, Nova, Llama via Bedrock Converse API | `pip install boto3`, AWS credentials |
 | `vertex` | **GCP** — Gemini models via Vertex AI | `pip install google-genai`, ADC + `GOOGLE_CLOUD_PROJECT` |
 | `azure_openai` | **Azure** — GPT/o-series via Azure OpenAI Service | `pip install openai`, `AZURE_OPENAI_ENDPOINT` + key |
+
+## Momagrid — Decentralized Grid Inference
+
+The `momagrid` adapter routes SPL inference tasks to a [momagrid](https://github.com/digital-duck/momagrid) hub, which dispatches them across a LAN grid of GPU nodes. No `.spl` changes required — just switch the adapter.
+
+### Setup
+
+```bash
+pip install httpx
+
+# Point SPL at your hub (hub machine's LAN IP + port)
+export MOMAGRID_HUB_URL=http://192.168.1.10:9000
+
+# Or set it in ~/.igrid/config.yaml via the mg CLI:
+# mg config --set hub.urls=http://192.168.1.10:9000
+```
+
+### Run a single recipe
+
+```bash
+spl run cookbook/01_hello_world/hello.spl --adapter momagrid -m llama3.2
+```
+
+### Run the cookbook — parallel mode for multi-agent load balancing
+
+`run_all.py` uses Click subcommands. When `--adapter momagrid` is set, recipes are submitted **concurrently** so the hub dispatcher sees multiple tasks in the queue simultaneously and spreads work across all registered agents:
+
+```bash
+cd ~/projects/digital-duck/SPL20
+
+# Run all active recipes in parallel on the momagrid hub
+python cookbook/run_all.py run --adapter momagrid --model llama3.2
+
+# Limit parallel workers (default: one per recipe)
+python cookbook/run_all.py run --adapter momagrid --workers 4
+
+# Run a subset of recipes in parallel
+python cookbook/run_all.py run --adapter momagrid --ids 01-10,13
+
+# List available recipes
+python cookbook/run_all.py list
+python cookbook/run_all.py list --category agentic
+
+# Browse catalog
+python cookbook/run_all.py catalog
+python cookbook/run_all.py catalog --status new
+```
+
+> **Why parallel?** Sequential task submission (one at a time) means the dispatcher always sees a single task in the queue. With multiple equally-ranked agents (same tier, same load), the same agent wins every dispatch cycle — no distribution occurs. Parallel mode fills the queue so the load-balancer can spread tasks across all nodes.
 
 ## Architecture
 

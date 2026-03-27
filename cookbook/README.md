@@ -15,18 +15,62 @@ ollama pull gemma3               # at least one model
 ollama serve                     # start ollama (if not running)
 ```
 
-## Run All
+## Batch Runner — `run_all.py`
+
+`run_all.py` uses a Click CLI with three subcommands: `run`, `list`, `catalog`.
+
+### Run recipes
 
 ```bash
+cd ~/projects/digital-duck/SPL20
 
-python cookbook/run_all.py 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md 
+# Run all active recipes (sequential, ollama adapter)
+python cookbook/run_all.py run 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md
 
-# retry failed recipes
-python cookbook/run_all.py --ids "04,10, 23-35" 2>&1 | tee cookbook/out/run_all_failed-$(date +%Y%m%d_%H%M%S).md 
+# Override adapter and model
+python cookbook/run_all.py run --adapter ollama --model gemma3
 
-python cookbook/run_all.py --ids "04,10, 25,26, 29,30, 32,33" 2>&1 | tee cookbook/out/run_all_failed-$(date +%Y%m%d_%H%M%S).md 
+# Run specific recipes or ranges
+python cookbook/run_all.py run --ids "04,10,23-35"
+python cookbook/run_all.py run --ids "04,10,25,26,29,30,32,33"
 
+# Run recipes in a category
+python cookbook/run_all.py run --category agentic
+```
 
+### Run on momagrid (parallel mode)
+
+When `--adapter momagrid` is set, all recipes are submitted **concurrently** so the hub
+dispatcher sees multiple tasks in the queue at once and distributes work across GPU nodes:
+
+```bash
+export MOMAGRID_HUB_URL=http://192.168.1.10:9000
+
+# All active recipes in parallel
+python cookbook/run_all.py run --adapter momagrid --model llama3.2
+
+# Limit concurrency (default: one worker per recipe)
+python cookbook/run_all.py run --adapter momagrid --model llama3.2 --workers 4
+
+# Subset in parallel
+python cookbook/run_all.py run --adapter momagrid --ids "01-10,13"
+```
+
+In parallel mode, each recipe logs to its own file under `<recipe_dir>/`. Completion
+messages print as recipes finish; a summary table appears at the end.
+
+### Browse recipes
+
+```bash
+# Brief list
+python cookbook/run_all.py list
+python cookbook/run_all.py list --category agentic
+python cookbook/run_all.py list --status new
+
+# Full catalog table
+python cookbook/run_all.py catalog
+python cookbook/run_all.py catalog --category reasoning
+python cookbook/run_all.py catalog --status approved
 ```
 
 ## Code-RAG
