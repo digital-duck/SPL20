@@ -1,8 +1,7 @@
-This step involves selecting a suitable Python framework to build a REST API, defining its architecture and structure. The chosen framework will influence the overall project organization and implementation details.
+This step lays the foundation for a scalable and maintainable REST API by defining well-defined API endpoints and data models. It ensures that users can interact with the system in a predictable and efficient manner. The resulting files provide a clear understanding of the API's capabilities.
 
 Created files:
-- app.py
-- routes.py
-- models.py
-- config.py
-- requirements.txt
+
+* `endpoints.md`
+* `data_models.json`
+* `api_schema.yaml`

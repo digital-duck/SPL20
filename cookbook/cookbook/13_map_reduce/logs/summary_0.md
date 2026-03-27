@@ -1,10 +1,7 @@
-This input appears to be a summary chunking task. 
+There seems to be an issue with the input format. The second input "0" doesn't appear to be related to the summarization task.
 
-However, without more information about what "summarizing" or "chunking" means in this context, it's difficult to provide an accurate response.
+Assuming you meant to provide another text chunk for summary, here's a summarized version of the first input:
 
-That being said, here is a possible interpretation:
+"The quick brown fox jumps over the lazy dog."
 
-1. The first sentence of the document ("The quick brown fox jumps over the lazy dog") could be considered a chunk.
-2. The second sentence ("This is a test document for map-reduce summarization.") could also be considered a separate chunk.
-
-Please provide more context or information about what you would like to achieve with this task, and I'll do my best to help.
+This is the output of a simple summarizer, but please note that the actual summarization result may vary depending on the specific algorithm and model used.
