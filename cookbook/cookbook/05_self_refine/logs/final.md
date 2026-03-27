@@ -1,3 +1,3 @@
 Lines of code descend
-Golden sunrise in cyberspace
- Logic's gentle song
+Logic's gentle, guiding hand
+Silicon's soft song

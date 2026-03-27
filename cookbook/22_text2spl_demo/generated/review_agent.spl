@@ -1,26 +1,50 @@
-WORKFLOW refine_text
-  INPUT @draft TEXT
+WORKFLOW review_agent
+  INPUT @draft TEXT, @quality REAL
   OUTPUT @final TEXT
 DO
-  DO
-    GENERATE rewrite(@draft, style='improved') INTO @temp;
-    GENERATE sentiment(@temp) INTO @quality;
-    IF @quality < 0.8 THEN
-      BREAK;
-    END;
-  EXCEPTION
-    WHEN HallucinationDetected THEN
-      @final := 'unknown';
-      COMMIT @final;
-    WHEN ContextLengthExceeded THEN
-      RETRY;
+  @current := @draft;
+  WHILE @quality < 0.8 DO
+    GENERATE rewrite(@current) INTO @temp;
+    GENERATE sentiment(@temp) INTO @new_quality;
+    IF @new_quality > @quality THEN
+      @quality := @new_quality;
+      @current := @temp;
+    ENDIF;
   END;
-  GENERATE summarize(@temp) INTO @summary;
-  IF @quality < 0.8 AND @summary LIKE '%needs improvement%' THEN
-    GENERATE rewrite(@temp, style='refined') INTO @temp_refined;
-    GENERATE sentiment(@temp_refined) INTO @quality;
-    IF @quality <= 0.8 THEN BREAK; 
-  END;
-  @final := @temp_refined;
+  @final := @current;
   COMMIT @final;
-END;
+
+CREATE FUNCTION rewrite(text TEXT)
+RETURNS TEXT AS $$
+  # Simple rewriting function: replace one word with a synonym
+  text := text || ' ';
+  FOR word IN SELECT * FROM extract_entities(text) DO
+    GENERATE get_synonym(word, style='improved') INTO temp;
+    text := text || temp;
+  END;
+  return text;
+$$;
+
+CREATE FUNCTION sentiment(text TEXT)
+RETURNS REAL AS $$
+  # Simple sentiment analysis function: count positive words
+  let pos_words = SELECT * FROM extract_entities(text) WHERE entity_type = 'positive';
+  return length(pos_words) / length(extract_entities(text));
+$$;
+
+CREATE FUNCTION get_synonym(word TEXT, style TEXT)
+RETURNS TEXT AS $$
+  # Simple synonym retrieval function: use WordNet API
+  if style = 'formal' then return word; else return get_synonym(word, 'informal'); end;
+$$;
+
+CREATE FUNCTION extract_entities(text TEXT)
+RETURNS LIST AS $$
+  # Simple entity extraction function: use regular expressions
+  let entities = SELECT * FROM text WHERE match('http|www');
+  return entities;
+$$;
+
+CREATE PROCEDURE IF (condition REAL) THEN
+  -- body statements
+ENDIF;

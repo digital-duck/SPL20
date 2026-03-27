@@ -1,129 +1,79 @@
 **URL Shortener System Design**
 
+Here's a high-level design for a URL shortener system:
+
 ### Overview
 
-A URL shortener is a web service that takes a long, cumbersome URL and converts it into a shorter, more manageable version. This system will provide users with a unique shortened URL for their original link.
+The URL shortener system will take a long URL as input, store it in a database, and return a shortened version of the URL. The system will also keep track of the number of clicks on each shortened URL.
 
-### Requirements
+### Components
 
-* The system must be able to handle an arbitrary number of users and URLs.
-* The system must be able to generate short, unique URLs for each submitted link.
-* The system must be able to redirect users back to the original URL when they click on the shortened version.
+1. **Frontend**:
+	* Handles user requests to shorten URLs
+	* Generates shortened URLs based on a hash algorithm (e.g., SHA-256)
+	* Returns the shortened URL and its associated metadata (e.g., original URL, click count) in JSON format
+2. **Backend**:
+	* Stores the mapping between shortened URLs and their corresponding long URLs in a database (e.g., Redis or MySQL)
+	* Keeps track of the click count for each shortened URL
+3. **Database**:
+	* Stores the mapping between shortened URLs and long URLs
+4. **Hash Algorithm**:
+	* Used to generate unique shortened URLs
 
-### System Components
+### Design Pattern: API Gateway with Service-Oriented Architecture (SOA)
 
-1. **Database**: A database will be used to store information about all the URLs that have been submitted and their corresponding shortened URLs. We'll use a combination of MySQL or PostgreSQL for this purpose.
-2. **URL Shortener Service**: A service will handle the following tasks:
-	* Generate a shortened URL from an original link.
-	* Store the original link in the database with its corresponding shortened URL.
-	* Redirect users back to the original link when they click on the shortened version.
-3. **Frontend Interface**: A user-friendly interface will be created for users to submit URLs and access their shortened versions.
+The system will use an API gateway to handle incoming requests, which will delegate tasks to various services:
 
-### System Flow
+1. **URL Shortener Service**: Handles requests to shorten URLs and generates shortened URLs.
+2. **Database Service**: Stores and retrieves data from the database.
 
-1. User submits a long, cumbersome URL through the frontend interface.
-2. The URL shortener service generates a unique shortened URL and stores it in the database along with the original link.
-3. When a user clicks on the shortened URL, the system redirects them to the original URL stored in the database.
+### Database Schema
 
-### System Design
+The database schema will consist of two tables:
 
-#### Database Schema
-```sql
-CREATE TABLE urls (
-  id INT PRIMARY KEY,
-  original_url VARCHAR(255) NOT NULL,
-  shortened_url VARCHAR(10) NOT NULL UNIQUE
-);
+**urls**
 
-CREATE TABLE url_logs (
-  id INT PRIMARY KEY,
-  user_id INT,
-  original_url_id INT,
-  FOREIGN KEY (original_url_id) REFERENCES urls(id)
-);
-```
+* id (primary key)
+* original_url
+* shortened_url
+* click_count
+* created_at
+* updated_at
 
-#### URL Shortener Service
-```python
-import sqlite3
+**clicks**
 
-class UrlShortenerService:
-    def __init__(self, db_name):
-        self.conn = sqlite3.connect(db_name)
-        self.cursor = self.conn.cursor()
+* id (primary key)
+* shortened_url_id (foreign key referencing the urls table)
+* click_timestamp
+* ip_address
 
-    def generate_shortened_url(self, original_url):
-        # Generate a shortened URL (e.g., 5 characters long)
-        import random
-        shortened_url = ''.join(random.choice('0123456789') for _ in range(5))
-        return shortened_url
+### API Endpoints
 
-    def store_url(self, original_url):
-        self.cursor.execute("INSERT INTO urls (original_url, shortened_url) VALUES (?, ?)", (original_url, self.generate_shortened_url(original_url)))
-        self.conn.commit()
+The system will have two API endpoints:
 
-    def redirect_to_original(self, shortened_url):
-        # Find the corresponding original URL in the database
-        self.cursor.execute("SELECT original_url FROM urls WHERE shortened_url = ?", (shortened_url,))
-        result = self.cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            return None
+1. **/shorten**: Accepts a long URL as input, generates a shortened URL, and returns it in JSON format.
+2. **/click**: Takes a shortened URL as input, increments its click count, and updates the associated metadata.
 
-    def close_connection(self):
-        self.conn.close()
-```
+### Code Example (Node.js and Express)
 
-#### Frontend Interface
-```html
-<!-- index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Shortener</title>
-</head>
-<body>
-    <h1>URL Shortener</h1>
-    <form id="url-form">
-        <input type="text" id="original-url" placeholder="Enter a URL">
-        <button id="submit-btn">Submit</button>
-    </form>
-
-    <div id="shortened-url-container"></div>
-
-    <script src="script.js"></script>
-</body>
-</html>
-```
-
+Here's an example implementation using Node.js and Express:
 ```javascript
-// script.js
-const form = document.getElementById('url-form');
-const shortenedUrlContainer = document.getElementById('shortened-url-container');
+const express = require('express');
+const app = express();
+const urlShortenerService = require('./url-shortener-service');
+const dbService = require('./db-service');
 
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const originalUrl = document.getElementById('original-url').value;
-    const urlShortenerService = new UrlShortenerService('urls.db');
-    urlShortenerService.store_url(originalUrl);
-    shortenedUrlContainer.innerHTML += `<p><a href="${urlShortenerService.redirect_to_original(originalUrl)}">${urlShortenerService.generate_shortened_url(originalUrl)}</a></p>`;
+app.post('/shorten', async (req, res) => {
+  const originalUrl = req.body.url;
+  const shortenedUrl = urlShortenerService.generateShortenedUrl(originalUrl);
+  await dbService.storeUrl(shortenedUrl, originalUrl);
+  return res.json({ shortened_url: shortenedUrl });
+});
+
+app.get('/click', async (req, res) => {
+  const shortenedUrl = req.query.url;
+  const clickCount = await dbService.incrementClickCount(shortenedUrl);
+  return res.json({ click_count: clickCount });
 });
 ```
-
-### Testing
-
-To test the system, you can use tools like Postman or cURL to send HTTP requests to the system's endpoint. For example:
-
-*   **GET /shorten**: Send a GET request to `http://localhost:8080/shorten` with an empty body.
-*   **POST /urls**: Send a POST request to `http://localhost:8080/urls` with a JSON payload containing the original URL, like this:
-
-    ```json
-{
-  "original_url": "https://example.com/long/url"
-}
-```
-
-###
+This is a high-level design, and there are many details to consider when implementing the system. However, this should give you a good starting point for designing your own URL shortener system.

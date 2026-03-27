@@ -1,0 +1,99 @@
+
+```bash
+spl run ./34_progressive_summary/progressive_summary.spl --adapter momagrid text=Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work. audience=executive
+```
+
+```spl
+-- Recipe 34: Progressive Summarizer
+-- Layered summary: sentence → paragraph → page.
+-- Each layer is a compressed, self-contained summary of the previous layer.
+--
+-- Usage:
+--   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 \
+--       text="$(cat long_article.txt)"
+--
+--   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \
+--       text="$(cat research_paper.txt)" audience="executive" layers=3
+
+CREATE FUNCTION summary_constraints(layer TEXT)
+RETURNS TEXT
+AS $$
+SELECT CASE layer
+  WHEN 'sentence'  THEN 'One sentence only. Maximum 25 words. Capture the single most important idea.'
+  WHEN 'paragraph' THEN '3-5 sentences. Cover main points and key supporting evidence. No examples or details.'
+  WHEN 'page'      THEN '2-3 paragraphs. Include context, main argument, evidence, and implications.'
+  ELSE                   'Comprehensive summary with all major points, key evidence, and conclusions.'
+END
+$$;
+
+WORKFLOW progressive_summarizer
+    INPUT:
+        @text TEXT,
+        @audience TEXT DEFAULT 'general',
+        @layers INT DEFAULT 3
+    OUTPUT: @summary_package TEXT
+DO
+    LOGGING f'Progressive summary | audience={@audience} layers={@layers}' LEVEL INFO
+
+    -- Layer 1: One-sentence summary
+    GENERATE summarize(
+        @text,
+        summary_constraints('sentence'),
+        @audience
+    ) INTO @sentence_summary
+    LOGGING f'Layer 1 done | sentence summary ready' LEVEL DEBUG
+
+    -- Layer 2: Paragraph summary (built on layer 1 for coherence)
+    GENERATE expand_summary(
+        @text,
+        @sentence_summary,
+        summary_constraints('paragraph'),
+        @audience
+    ) INTO @paragraph_summary
+    LOGGING f'Layer 2 done | paragraph summary ready' LEVEL DEBUG
+
+    -- Layer 3: Page-length summary (built on layer 2)
+    EVALUATE @layers
+        WHEN >= 3 THEN
+            GENERATE expand_summary(
+                @text,
+                @paragraph_summary,
+                summary_constraints('page'),
+                @audience
+            ) INTO @page_summary
+            LOGGING 'Layer 3 done | page summary ready' LEVEL DEBUG
+        ELSE
+            @page_summary := ''
+    END
+
+    -- Quality check: does each layer faithfully represent the original?
+    GENERATE verify_summary_fidelity(@text, @sentence_summary, @paragraph_summary) INTO @fidelity_score
+    LOGGING f'Fidelity score: {@fidelity_score}' LEVEL INFO
+
+    -- Assemble all layers into a structured output
+    GENERATE assemble_summary_package(
+        @sentence_summary,
+        @paragraph_summary,
+        @page_summary,
+        @fidelity_score,
+        @audience
+    ) INTO @summary_package
+
+    COMMIT @summary_package WITH
+        status = 'complete',
+        layers_generated = @layers,
+        audience = @audience,
+        fidelity = @fidelity_score
+
+EXCEPTION
+    WHEN ContextLengthExceeded THEN
+        -- Text too long — chunk first then summarize each chunk
+        GENERATE chunk_and_summarize(@text, summary_constraints('paragraph')) INTO @paragraph_summary
+        GENERATE summarize(@paragraph_summary, summary_constraints('sentence'), @audience) INTO @sentence_summary
+        GENERATE assemble_summary_package(@sentence_summary, @paragraph_summary, '', 'n/a', @audience) INTO @summary_package
+        COMMIT @summary_package WITH status = 'complete_chunked'
+END
+```
+
+[INFO] Progressive summary | audience=executive layers=3
+Error: Cannot connect to Momagrid hub at http://localhost:9000. Make sure the hub is running: mg hub --listen :9000
