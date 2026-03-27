@@ -1,7 +1,7 @@
-Since you haven't provided any specific parameters or context, I'll assume that the task is to summarize the input text into a shorter form.
+Summarizing the input text:
 
-Here's my attempt:
+"The quick brown fox jumps over the lazy dog" can be summarized as: "Fox jumps over dog"
 
-"The quick brown fox jumps over the lazy dog."
+There are no additional inputs in this case, so the output will just be the summary. 
 
-This is already a short summary of the original text.
+Output: Fox jumps over dog

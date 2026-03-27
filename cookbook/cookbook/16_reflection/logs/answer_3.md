@@ -1,108 +1,130 @@
-# URL Shortener System Design
+**URL Shortener System Design**
 
-## Overview
+The URL shortener system is designed to shorten long URLs and redirect users to the original URL when they click on the shortened version. Here's an overview of the system components, architecture, and design considerations:
 
-A URL shortener is a service that takes a long URL and returns a shortened version of it. The shortened URL points back to the original URL. This design provides a scalable, secure, and user-friendly URL shortening service.
+**Components:**
 
-### Components
+1.  **Frontend Interface**: A user-facing web interface that allows users to submit their desired URL.
+2.  **URL Shortener Service**: A service responsible for generating unique shortened URLs, storing them in a database, and redirecting users to the original URL.
+3.  **Database**: A NoSQL database (e.g., MongoDB) used to store information about all submitted URLs and their corresponding shortened URLs.
 
-1.  **Distributed Database**: Stores information about each URL, including the original URL and its corresponding short code.
-2.  **URL Shortening Service**: Generates short codes and stores them in the distributed database.
-3.  **Load Balancer**: Distributes incoming requests across multiple servers to ensure efficient performance and reduce single-point failures.
-4.  **Frontend**: Handles user requests to shorten URLs and provides the shortened URL.
+**Architecture:**
 
-## Distributed Database Schema
+1.  The user submits a long, cumbersome URL through the frontend interface.
+2.  The URL shortener service generates a unique shortened URL using a cryptographically secure pseudorandom number generator (CSPRNG).
+3.  The system stores the original link in the database along with its corresponding shortened URL.
+4.  When a user clicks on the shortened URL, the system redirects them to the original URL stored in the database.
 
-The distributed database schema should store the following information for each URL:
+**Design Considerations:**
 
-| Field Name | Data Type | Description |
-| --- | --- | --- |
-| `id` | `int` | Unique identifier for the URL. |
-| `original_url` | `varchar(255)` | The original long URL. |
-| `short_code` | `varchar(10)` | A unique short code corresponding to the original URL. |
+1.  **Security**: Ensure that the system uses HTTPS encryption and implements security measures to prevent unauthorized access or malware injection.
+2.  **Scalability**: Design the system to scale horizontally using a distributed database and load balancer.
+3.  **High Availability**: Implement monitoring and logging capabilities to ensure that the system remains available and functional even in the event of failures or maintenance.
+4.  **User Experience**: Ensure that the frontend interface is user-friendly, intuitive, and provides clear feedback to users.
 
-## Load Balancer Configuration
+**System Flow:**
 
-The load balancer configuration should distribute incoming requests across multiple servers as follows:
+```markdown
++---------------+
+| Frontend Interface |
++---------------+
+        |
+        | (submit URL)
+        v
++---------------+
+| URL Shortener Service |
++---------------+
+        |
+        | (generate shortened URL)
+        v
++---------------+
+| Database       |
++---------------+
+        |
+        | (store original link and shortened URL)
+        v
++---------------+
+| Redirect Service|
++---------------+
+        |
+        | (redirect to original URL)
+        v
+```
 
-1.  **IP Hash**: Use IP hashing to ensure that incoming requests from a specific IP address are always routed to the same server.
-2.  **Round-Robin**: Implement round-robin routing to ensure that the load balancer distributes incoming requests evenly across all servers.
+**Database Schema:**
 
-## URL Shortening Service
+```json
+// urls collection
+{
+    "_id": ObjectId,
+    "original_url": String,
+    "shortened_url": String
+}
+```
 
-### Algorithm
+**URL Shortener Service:**
 
-1.  Generate a random short code of 6 characters (e.g., `ABC123`) for each new URL.
-2.  Insert a record into the distributed database with the short code and the original URL.
+1.  Generate a shortened URL using a CSPRNG (e.g., `uuid.uuid4()`).
+2.  Store the original link in the database along with its corresponding shortened URL.
+3.  Redirect users back to the original link when they click on the shortened version.
 
-### Code Snippet (Python)
+**Frontend Interface:**
+
+1.  Handle user input for the desired URL.
+2.  Call the URL shortener service's `shorten_url` method to generate a shortened URL.
+3.  Display the shortened URL to the user.
+
+By following this design, you can create a secure, scalable, and user-friendly URL shortener system that meets the needs of your users.
+
+Here's an example implementation in Python:
 
 ```python
-import hashlib
-from flask import Flask, request, jsonify
+import uuid
+from pymongo import MongoClient
 
-app = Flask(__name__)
+class UrlShortenerService:
+    def __init__(self, db_name):
+        self.client = MongoClient(db_name)
+        self.db = self.client["url_shortener"]
+        self.collection = self.db["urls"]
 
-# Distributed database configuration
-db_config = {
-    "Server 1": {"host": "192.168.1.100", "port": 5432},
-    "Server 2": {"host": "192.168.1.101", "port": 5433},
-}
+    def generate_shortened_url(self, original_url):
+        # Generate a shortened URL using a CSPRNG
+        return str(uuid.uuid4())[:6]
 
-def generate_short_code(original_url):
-    """Generate a random short code using SHA-256 hash of the original URL"""
-    return hashlib.sha256(original_url.encode()).hexdigest()[:6]
+    def store_url(self, original_url):
+        # Store the original link in the database along with its corresponding shortened URL
+        shortened_url = self.generate_shortened_url(original_url)
+        self.collection.insert_one({"original_url": original_url, "shortened_url": shortened_url})
 
-@app.route('/shorten', methods=['POST'])
-def shorten_url():
-    original_url = request.json['original_url']
-    if not original_url:
-        return jsonify({'error': 'Original URL is required'}), 400
+    def redirect_to_original(self, shortened_url):
+        # Find the corresponding original URL in the database
+        for doc in self.collection.find({"shortened_url": shortened_url}):
+            return doc["original_url"]
+        return None
 
-    short_code = generate_short_code(original_url)
-    # Insert record into distributed database
-    db_config[request.remote_addr]['db'].insert_one({
-        "id": len(db_config[request.remote_addr]['db']),
-        "original_url": original_url,
-        "short_code": short_code,
-    })
-    return jsonify({'short_code': f'/{short_code}'})
+class FrontendInterface:
+    def __init__(self, url_shortener_service):
+        self.url_shortener_service = url_shortener_service
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    def handle_request(self, original_url):
+        # Call the URL shortener service's `shorten_url` method to generate a shortened URL
+        shortened_url = self.url_shortener_service.generate_shortened_url(original_url)
+        return f"Shortened URL: {shortened_url}"
+
+class Monitor:
+    def __init__(self, url_shortener_service):
+        self.url_shortener_service = url_shortener_service
+
+    # ...
+
+# Example usage:
+
+url_shortener_service = UrlShortenerService("mongodb://localhost:27017")
+frontend_interface = FrontendInterface(url_shortener_service)
+
+user_input = "https://example.com/long/url"
+print(frontend_interface.handle_request(user_input))
 ```
 
-## Frontend Implementation (JavaScript)
-
-### Code Snippet
-
-```javascript
-const urlShortenerService = new URLShortener();
-
-function shortenUrl(url) {
-    const shortCode = urlShortenerService.shortenUrl(url);
-    // Return the shortened URL to the user
-    return shortCode;
-}
-
-// Example usage:
-const originalUrl = "https://www.example.com/very-long-url";
-const shortenedUrl = shortenUrl(originalUrl);
-console.log(shortenedUrl); // Output: /ABCDEFG123
-```
-
-## Security Considerations
-
-1.  **Validate User Input**: Ensure that the input URL is valid and not malicious.
-2.  **Use HTTPS**: Use HTTPS to encrypt data in transit.
-3.  **Implement Rate Limiting**: Implement rate limiting to prevent abuse.
-
-### Security Measures
-
-*   IP Blocking: To prevent abuse, we can implement IP blocking by storing information about each IP address that has accessed the shortened URL.
-*   User Authentication: We should consider implementing user authentication for users who want to share their own short codes with others.
-*   CAPTCHA Verification: For users who access our API frequently, we can require them to solve a CAPTCHA challenge.
-
-### Conclusion
-
-This design provides a scalable and secure URL shortening service. By distributing the database across multiple servers, we improve scalability and reliability. Implementing rate limiting and IP blocking ensures that the system is protected from abuse.
+This implementation provides a

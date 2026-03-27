@@ -6,43 +6,21 @@ DO
     GENERATE rewrite(@draft, style='improved') INTO @temp;
     GENERATE sentiment(@temp) INTO @quality;
     IF @quality < 0.8 THEN
-      GENERATE critique(@temp) INTO @critique;
-      @refine := @temp;
-    ELSE
-      @final := @temp;
-      COMMIT @final;
-    END; -- Removed endif statement
+      BREAK;
+    END;
   EXCEPTION
     WHEN HallucinationDetected THEN
-      @draft := 'unknown';
-      COMMIT @draft;
+      @final := 'unknown';
+      COMMIT @final;
     WHEN ContextLengthExceeded THEN
-      GENERATE truncate(@draft, length=200) INTO @temp;
-      GENERATE sentiment(@temp) INTO @quality;
-      IF @quality < 0.8 THEN
-        GENERATE critique(@temp) INTO @critique;
-        @refine := @temp;
-      ELSE
-        @final := @temp;
-        COMMIT @final;
-      END; -- Removed endif statement
-    WHEN ModelOverloaded THEN
       RETRY;
   END;
-
-CREATE FUNCTION rewrite(text TEXT, style TEXT)
-RETURNS TEXT AS $$
-  CASE style
-    WHEN 'improved' THEN text || '.'
-    WHEN 'standardized' THEN text || ','
-    ELSE text
+  GENERATE summarize(@temp) INTO @summary;
+  IF @quality < 0.8 AND @summary LIKE '%needs improvement%' THEN
+    GENERATE rewrite(@temp, style='refined') INTO @temp_refined;
+    GENERATE sentiment(@temp_refined) INTO @quality;
+    IF @quality <= 0.8 THEN BREAK; 
   END;
-$$;
-
-CREATE FUNCTION critique(text TEXT) RETURNS TEXT AS $$
-  CASE
-    WHEN text LIKE '%ungrammatical%' THEN 'ungrammatical sentence detected'
-    WHEN text LIKE '%unclear%' THEN 'sentence is unclear'
-    ELSE 'good sentence'
-  END;
-$$;
+  @final := @temp_refined;
+  COMMIT @final;
+END;

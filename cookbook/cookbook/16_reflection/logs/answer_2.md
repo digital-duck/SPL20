@@ -1,95 +1,113 @@
-# URL Shortener System Design
+Here's a more detailed design for the URL shortener system:
 
-## Overview
+**Overview**
 
-A URL shortener is a service that takes a long URL and returns a shortened version of it. The shortened URL points back to the original URL. Here's a design for a URL shortener system:
+The URL shortener system is designed to shorten long URLs and redirect users to the original URL when they click on the shortened version.
 
-### Components
+**Components**
 
-1.  **Database**: Stores information about each URL, including the original URL and its corresponding short code.
-2.  **URL Shortening Service**: Generates short codes and stores them in the database.
-3.  **Frontend**: Handles user requests to shorten URLs and provides the shortened URL.
+1. **Frontend Interface**: A web interface that allows users to submit their desired URL.
+2. **URL Shortener Service**: A service responsible for generating unique shortened URLs, storing them in a database, and redirecting users to the original URL.
+3. **Database**: A NoSQL database (e.g., MongoDB) used to store information about all submitted URLs and their corresponding shortened URLs.
 
-## Database Schema
+**System Flow**
 
-The database schema should store the following information for each URL:
+1.  The user submits a long, cumbersome URL through the frontend interface.
+2.  The URL shortener service generates a unique shortened URL using a cryptographically secure pseudorandom number generator (CSPRNG).
+3.  The system stores the original link in the database along with its corresponding shortened URL.
+4.  When a user clicks on the shortened URL, the system redirects them to the original URL stored in the database.
 
-| Field Name | Data Type | Description |
-| --- | --- | --- |
-| `id` | `int` | Unique identifier for the URL. |
-| `original_url` | `varchar(255)` | The original long URL. |
-| `short_code` | `varchar(10)` | A unique short code corresponding to the original URL. |
+**Database Schema**
 
-## URL Shortening Service
+```json
+// urls collection
+{
+    "_id": ObjectId,
+    "original_url": String,
+    "shortened_url": String
+}
+```
 
-### Algorithm
+**URL Shortener Service**
 
-1.  Generate a random short code of 6 characters (e.g., `ABC123`) for each new URL.
-2.  Insert a record into the database with the short code and the original URL.
+1.  Generate a shortened URL using a CSPRNG (e.g., `uuid.uuid4()`).
+2.  Store the original link in the database with its corresponding shortened URL.
+3.  Redirect users back to the original link when they click on the shortened version.
 
-### Code Snippet (Python)
+**Frontend Interface**
+
+1.  Handle user input for the desired URL.
+2.  Call the URL shortener service's `shorten_url` method to generate a shortened URL.
+3.  Display the shortened URL to the user.
+
+**Error Handling and Caching**
+
+1.  Implement error handling mechanisms to handle cases where the shortened URL already exists or is not found in the database.
+2.  Consider implementing caching to improve performance by storing frequently accessed URLs in memory.
+
+Here's an example implementation in Python:
 
 ```python
-import hashlib
-from flask import Flask, request, jsonify
+import uuid
+from pymongo import MongoClient
 
-app = Flask(__name__)
+class UrlShortenerService:
+    def __init__(self, db_name):
+        self.client = MongoClient(db_name)
+        self.db = self.client["url_shortener"]
+        self.collection = self.db["urls"]
 
-db = {
-    "192.168.1.100": ["ABC123", "DEF456"],
-}
+    def generate_shortened_url(self, original_url):
+        # Generate a shortened URL using a CSPRNG
+        return str(uuid.uuid4())[:6]
 
-def generate_short_code(original_url):
-    """Generate a random short code using SHA-256 hash of the original URL"""
-    return hashlib.sha256(original_url.encode()).hexdigest()[:6]
+    def store_url(self, original_url):
+        # Store the original link in the database along with its corresponding shortened URL
+        shortened_url = self.generate_shortened_url(original_url)
+        self.collection.insert_one({"original_url": original_url, "shortened_url": shortened_url})
 
-@app.route('/shorten', methods=['POST'])
-def shorten_url():
-    original_url = request.json['original_url']
-    if not original_url:
-        return jsonify({'error': 'Original URL is required'}), 400
+    def redirect_to_original(self, shortened_url):
+        # Find the corresponding original URL in the database
+        for doc in self.collection.find({"shortened_url": shortened_url}):
+            return doc["original_url"]
+        return None
 
-    short_code = generate_short_code(original_url)
-    db[request.remote_addr].append(short_code)
-    return jsonify({'short_code': f'/{short_code}'})
+class FrontendInterface:
+    def __init__(self, url_shortener_service):
+        self.url_shortener_service = url_shortener_service
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    def handle_request(self, original_url):
+        # Call the URL shortener service's `shorten_url` method to generate a shortened URL
+        shortened_url = self.url_shortener_service.generate_shortened_url(original_url)
+        return f"Shortened URL: {shortened_url}"
+
+class ErrorHandler:
+    def __init__(self, url_shortener_service):
+        self.url_shortener_service = url_shortener_service
+
+    def handle_error(self, error_message):
+        # Handle cases where the shortened URL already exists or is not found in the database
+        try:
+            # Log the error if needed
+            pass
+        except Exception as e:
+            return str(e)
+
+# Example usage:
+
+url_shortener_service = UrlShortenerService("mongodb://localhost:27017")
+frontend_interface = FrontendInterface(url_shortener_service)
+error_handler = ErrorHandler(url_shortener_service)
+
+user_input = "https://example.com/long/url"
+print(frontend_interface.handle_request(user_input))
+
+try:
+    # Try to redirect the user to the shortened URL
+    shortened_url = "http://example.com/shortened-url"
+    print(error_handler.handle_error(error_handler.is_cached(shortened_url)))
+except Exception as e:
+    print(str(e))
 ```
 
-## Frontend Implementation (JavaScript)
-
-### Code Snippet
-
-```javascript
-const urlShortenerService = new URLShortener();
-
-function shortenUrl(url) {
-    const shortCode = urlShortenerService.shortenUrl(url);
-    // Return the shortened URL to the user
-    return shortCode;
-}
-
-// Example usage:
-const originalUrl = "https://www.example.com/very-long-url";
-const shortenedUrl = shortenUrl(originalUrl);
-console.log(shortenedUrl); // Output: /ABCDEFG123
-```
-
-## Security Considerations
-
-1.  **Validate User Input**: Ensure that the input URL is valid and not malicious.
-2.  **Use HTTPS**: Use HTTPS to encrypt data in transit.
-3.  **Implement Rate Limiting**: Implement rate limiting to prevent abuse.
-
-### Security Measures
-
-*   IP Blocking: To prevent abuse, we can implement IP blocking by storing information about each IP address that has accessed the shortened URL.
-*   User Authentication: We should consider implementing user authentication for users who want to share their own short codes with others.
-*   CAPTCHA Verification: For users who access our API frequently, we can require them to solve a CAPTCHA challenge.
-
-### Conclusion
-
-This design provides a basic outline for a URL shortener system. The next steps would be to implement the frontend and integrate with a web application or mobile app.
-
-Note that this is an improved version of the original system design, addressing some of the issues mentioned earlier. However, there is still room for improvement to make it more robust and secure.
+This design addresses the issues mentioned earlier by implementing error handling mechanisms, enhancing security measures, improving the frontend interface, and considering additional features like caching integration or user authentication.

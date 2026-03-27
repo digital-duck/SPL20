@@ -1,18 +1,51 @@
 PROMPT classify_intent
-SELECT @input AS text LIMIT 100 TOKENS,
-       'user intent' AS category
-GENERATE classify(text, category) WITH OUTPUT BUDGET 500 TOKENS INTO @result;
+SELECT @input AS text LIMIT 1000 TOKENS
+GENERATE classify(text) INTO @intent;
+GENERATE extract_entities(@text) INTO @entities;
+GENERATE summarize(@text) INTO @summary;
+GENERATE intent_to_text(@intent, @entities, @summary) WITH OUTPUT BUDGET 500 TOKENS
+STORE RESULT IN memory.intent;
 
-WORKFLOW route_handler
+WORKFLOW route_intent
   INPUT @input TEXT
-  OUTPUT @handler TEXT
-DO
-  EVALUATE
-    WHEN @result = 'greeting' THEN
-      CALL greet_user(@input)
-    WHEN @result = 'question' THEN
-      CALL answer_question(@input)
-    ELSE
-      CALL unknown_intent(@input)
+  OUTPUT @route TEXT
+  @intent := @input;
+  DO
+    EVALUATE
+      WHEN @intent = 'book_flight' THEN
+        GENERATE book_flight_route(@intent);
+      WHEN @intent = 'make_reservation' THEN
+        GENERATE make_reservation_route(@intent);
+      ELSE
+        @route := 'unknown';
+    END;
+    COMMIT @route;
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @route := 'unknown';
+      COMMIT @route;
   END;
-END;
+
+CREATE FUNCTION classify_intent(text TEXT) RETURNS TEXT AS $$
+  CLASSIFY(text)
+$$;
+
+CREATE FUNCTION extract_entities(text TEXT) RETURNS LIST AS $$
+  EXTRACT_ENTITIES(text)
+$$;
+
+CREATE FUNCTION summarize(text TEXT) RETURNS TEXT AS $$
+  SUMMARIZE(text)
+$$;
+
+CREATE FUNCTION intent_to_text(intent TEXT, entities LIST, summary TEXT) RETURNS TEXT AS $$
+  FORMAT("%s: %s", intent, summary)
+$$;
+
+CREATE FUNCTION book_flight_route(intent TEXT) RETURNS TEXT AS $$
+  "Book flight to destination"
+$$;
+
+CREATE FUNCTION make_reservation_route(intent TEXT) RETURNS TEXT AS $$
+  "Make reservation at hotel"
+$$;

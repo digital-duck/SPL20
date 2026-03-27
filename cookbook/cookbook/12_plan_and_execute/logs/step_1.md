@@ -1,7 +1,8 @@
-This step defines a RESTful API endpoint for creating new todo items, validating user input, and storing it in the database. It establishes a clear separation of concerns between data model, business logic, and API routing. The resulting implementation will provide a robust foundation for managing todo data.
+This step defines the API endpoints and data models for the application, outlining how users will interact with the system and what data will be exchanged between the client and server. The resulting definitions will serve as a blueprint for the entire development process.
 
-Created filenames:
-- todos.controller.js
-- todos.model.js
-- todos.route.js
-- todos.service.js
+The following files are created:
+
+* `api_endpoints.yaml` or `endpoints.json`
+* `data_models.json` or `models.yaml`
+
+These design decisions and file names provide a foundation for implementing the application's API endpoints and data structures.

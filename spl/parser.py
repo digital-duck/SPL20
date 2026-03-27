@@ -1084,7 +1084,7 @@ class Parser:
     # ================================================================
 
     def _parse_retry_statement(self) -> RetryStatement:
-        """Parse RETRY [WITH key=value, ...]"""
+        """Parse RETRY [WITH key=value, ...] [LIMIT n]"""
         self._expect(TokenType.RETRY)
 
         options = {}
@@ -1100,7 +1100,12 @@ class Parser:
                     break
                 self._advance()
 
-        return RetryStatement(options=options)
+        limit = None
+        if self._check(TokenType.LIMIT):
+            self._advance()
+            limit = int(self._expect(TokenType.INTEGER).value)
+
+        return RetryStatement(options=options, limit=limit)
 
     # ================================================================
     # SPL 2.0: RAISE Statement

@@ -307,6 +307,7 @@ class CommitStatement:
 class RetryStatement:
     """RETRY WITH fallback options"""
     options: dict[str, Expression] = field(default_factory=dict)
+    limit: int | None = None
 
 
 @dataclass
