@@ -1,5 +1,7 @@
 """LLM adapter registry and factory for SPL 2.0."""
 
+import inspect
+
 from spl.adapters.base import LLMAdapter, GenerationResult
 
 _ADAPTER_REGISTRY: dict[str, type[LLMAdapter]] = {}
@@ -11,11 +13,17 @@ def register_adapter(name: str, adapter_cls: type[LLMAdapter]):
 
 
 def get_adapter(name: str, **kwargs) -> LLMAdapter:
-    """Get an LLM adapter instance by name."""
+    """Get an LLM adapter instance by name, filtering unsupported kwargs."""
     if name not in _ADAPTER_REGISTRY:
         available = ", ".join(_ADAPTER_REGISTRY.keys()) or "(none)"
         raise ValueError(f"Unknown adapter '{name}'. Available: {available}")
-    return _ADAPTER_REGISTRY[name](**kwargs)
+    cls = _ADAPTER_REGISTRY[name]
+    sig = inspect.signature(cls.__init__)
+    supported = {
+        k: v for k, v in kwargs.items()
+        if k in sig.parameters
+    }
+    return cls(**supported)
 
 
 def list_adapters() -> list[str]:

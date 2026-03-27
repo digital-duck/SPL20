@@ -1,3 +1,3 @@
 Lines of code descend
-Logic's gentle, guiding hand
-Silicon's soft song
+Darkness falls, yet logic reigns
+Code's quiet delight

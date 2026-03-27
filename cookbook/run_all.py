@@ -5,23 +5,25 @@ Recipes are defined in cookbook/cookbook_catalog.json — edit that file to
 add, remove, or update recipes without touching Python code.
 
 Usage:
-    python cookbook/run_all.py run                               # run all active recipes
-    python cookbook/run_all.py run --adapter ollama              # override adapter
-    python cookbook/run_all.py run --model gemma3                # override model
-    python cookbook/run_all.py run --ids 04,08,13                # run specific recipes by ID
-    python cookbook/run_all.py run --adapter momagrid            # parallel submit to momagrid hub
-    python cookbook/run_all.py run --adapter momagrid --workers 4
-    python cookbook/run_all.py list                              # brief recipe list
-    python cookbook/run_all.py list --category agentic
-    python cookbook/run_all.py catalog                           # full catalog table
-    python cookbook/run_all.py catalog --status new
+    python cookbook/run_all.py                                   # run all active recipes
+    python cookbook/run_all.py --adapter ollama                  # override adapter
+    python cookbook/run_all.py --adapter momagrid                # parallel submit to momagrid hub
+    python cookbook/run_all.py --adapter momagrid --workers 5
+    python cookbook/run_all.py --model gemma3                    # override model
+    python cookbook/run_all.py --ids 04,08,13                    # run specific recipes by ID
+    python cookbook/run_all.py --list                            # brief recipe list
+    python cookbook/run_all.py --list --category agentic
+    python cookbook/run_all.py --catalog                         # full catalog table
+    python cookbook/run_all.py --catalog --status new
 
 conda activate spl
 cd ~/projects/digital-duck/SPL20
-python cookbook/run_all.py 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md 
+python cookbook/run_all.py 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md
 
 # run on Momagrid
-python cookbook/run_all.py --adapter momagrid 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S)-momagrid.md 
+python cookbook/run_all.py --workers 5 --adapter momagrid 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S)-momagrid.md
+
+python cookbook/run_all.py --workers 10 --adapter momagrid 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S)-momagrid.md
 
 """
 
@@ -33,7 +35,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
-import click
+import argparse
 
 COOKBOOK_DIR = Path(__file__).resolve().parent
 
@@ -158,7 +160,7 @@ def run_recipe_sequential(cmd_args: list[str], log_path: Path, cwd: Path) -> tup
             process.wait()
             ok = process.returncode == 0
     except Exception as e:
-        click.echo(f"     | ERROR: {e}")
+        print(f"     | ERROR: {e}")
         ok = False
     elapsed = (datetime.now() - start).total_seconds()
     return ok, elapsed
@@ -175,7 +177,7 @@ def run_recipe_parallel(recipe: dict, cmd_args: list[str], log_path: Path, cwd: 
     name = recipe["name"]
     log_path.parent.mkdir(parents=True, exist_ok=True)
     start = datetime.now()
-    click.echo(f"[{rid}] {name}  →  started")
+    print(f"[{rid}] {name}  →  started")
     sys.stdout.flush()
     try:
         with open(log_path, "w") as log_file:
@@ -186,80 +188,123 @@ def run_recipe_parallel(recipe: dict, cmd_args: list[str], log_path: Path, cwd: 
             proc.wait()
         ok = proc.returncode == 0
     except Exception as e:
-        click.echo(f"[{rid}] ERROR: {e}")
+        print(f"[{rid}] ERROR: {e}")
         ok = False
     elapsed = (datetime.now() - start).total_seconds()
     status = "SUCCESS" if ok else "FAILED"
-    click.echo(f"[{rid}] {name}  →  {status}  ({elapsed:.1f}s)  log: {log_path.name}")
+    print(f"[{rid}] {name}  →  {status}  ({elapsed:.1f}s)  log: {log_path.name}")
     sys.stdout.flush()
     return {"id": rid, "name": name, "ok": ok, "elapsed": elapsed}
+
+
+def print_list(recipes: list[dict], category: str, status: str) -> None:
+    filtered = apply_filters(recipes, category, status)
+    label = f" (category={category!r} status={status!r})" if (category or status) else ""
+    print(f"SPL 2.0 Cookbook — {len(filtered)} recipes{label}")
+    for r in filtered:
+        print(
+            f"  {r['id']:<4}  {status_marker(r)}  {r['name']:<28}  "
+            f"{r.get('approval_status',''):<12}  {r.get('category',''):<14}  "
+            f"{r.get('description','')}"
+        )
+
+
+def print_catalog(recipes: list[dict], category: str, status: str) -> None:
+    filtered = apply_filters(recipes, category, status)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    counts: dict[str, int] = {}
+    for r in recipes:
+        if r.get("is_active"):
+            counts["active"] = counts.get("active", 0) + 1
+        s = r.get("approval_status", "")
+        counts[s] = counts.get(s, 0) + 1
+
+    print(f"=== SPL 2.0 Cookbook Catalog — {now} ===")
+    if category or status:
+        print(f"    Filter: category={category!r}  status={status!r}  → {len(filtered)}/{len(recipes)} recipes\n")
+    else:
+        print(
+            f"    Total: {len(recipes)} recipes  |  {counts.get('active', 0)} active  |  "
+            f"{counts.get(STATUS_NEW, 0)} new  |  {counts.get(STATUS_WIP, 0)} wip  |  "
+            f"{counts.get(STATUS_DISABLED, 0)} disabled\n"
+        )
+
+    print(f"{'ID':<4}  {'':2}  {'Name':<28}  {'Category':<14}  {'Status':<12}  Description")
+    print("-" * 110)
+    for r in filtered:
+        print(
+            f"{r['id']:<4}  {status_marker(r)}  {r['name']:<28}  "
+            f"{r.get('category',''):<14}  {r.get('approval_status',''):<12}  "
+            f"{r.get('description','')}"
+        )
+
+    print()
+    print("Markers: ✅ active  🆕 new  🔧 wip  ⏸  disabled  ❌ rejected\n")
+    print("Run active recipes:           python cookbook/run_all.py")
+    print("Run specific recipe:          python cookbook/run_all.py --ids 05,11")
+    print("Override adapter/model:       python cookbook/run_all.py --adapter momagrid --model llama3.2")
+    print("Filter catalog by category:   python cookbook/run_all.py --catalog --category agentic")
+    print("Filter catalog by status:     python cookbook/run_all.py --catalog --status new")
+
+    cat_counts: dict[str, int] = {}
+    for r in recipes:
+        c = r.get("category", "")
+        cat_counts[c] = cat_counts.get(c, 0) + 1
+    parts = [f"{c}({n})" for c, n in sorted(cat_counts.items())]
+    print(f"\nCategories: {'  '.join(parts)}")
 
 
 def print_summary(results: list[dict], start_all: datetime) -> None:
     total = len(results)
     passed = sum(1 for r in results if r["ok"])
     total_elapsed = (datetime.now() - start_all).total_seconds()
-    click.echo(f"\n=== Summary: {passed}/{total} passed  (total {total_elapsed:.1f}s) ===\n")
-    click.echo(f"{'ID':<4}  {'Recipe':<28}  {'Status':<8}  {'Elapsed':>8}")
-    click.echo("-" * 56)
+    print(f"\n=== Summary: {passed}/{total} Success  (total {total_elapsed:.1f}s) ===\n")
+    print(f"{'ID':<4}  {'Recipe':<28}  {'Status':<8}  {'Elapsed':>8}")
+    print("-" * 56)
     for r in results:
         s = "OK" if r["ok"] else "FAILED"
-        click.echo(f"{r['id']:<4}  {r['name']:<28}  {s:<8}  {r['elapsed']:>7.1f}s")
-    click.echo()
+        print(f"{r['id']:<4}  {r['name']:<28}  {s:<8}  {r['elapsed']:>7.1f}s")
+    print()
 
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+def main() -> None:
+    parser = argparse.ArgumentParser(description="SPL 2.0 Cookbook batch runner")
+    parser.add_argument("--adapter", "-a", default="", help="Override LLM adapter for all recipes (e.g. ollama, momagrid)")
+    parser.add_argument("--model", "-m", default="", help="Override model for all recipes")
+    parser.add_argument("--ids", default="", help="Comma-separated recipe IDs or ranges to run (e.g. '04,08,10-13')")
+    parser.add_argument("--workers", "-w", default=0, type=int, help="Max parallel workers for momagrid (default: 5)")
+    parser.add_argument("--category", default="", help="Only run recipes in this category")
+    parser.add_argument("--status", default="", help="Only run recipes with this approval status")
+    parser.add_argument("--list", action="store_true", dest="list_recipes", help="Print brief recipe list and exit")
+    parser.add_argument("--catalog", action="store_true", help="Print full catalog table and exit")
+    args = parser.parse_args()
 
-@click.group()
-def cli() -> None:
-    """SPL 2.0 Cookbook batch runner."""
-
-
-@cli.command("run")
-@click.option("--adapter", "-a", default="", metavar="NAME",
-              help="Override LLM adapter for all recipes (e.g. ollama, momagrid).")
-@click.option("--model", "-m", default="", metavar="MODEL",
-              help="Override model for all recipes.")
-@click.option("--ids", default="", metavar="IDS",
-              help="Comma-separated recipe IDs or ranges to run (e.g. '04,08,10-13').")
-@click.option("--workers", "-w", default=0, type=int, metavar="N",
-              help="Max parallel workers when using momagrid adapter (default: 5).")
-@click.option("--category", default="", metavar="CAT",
-              help="Only run recipes in this category.")
-@click.option("--status", default="", metavar="STATUS",
-              help="Only run recipes with this approval status.")
-def cmd_run(adapter: str, model: str, ids: str, workers: int,
-            category: str, status: str) -> None:
-    """Run active cookbook recipes.
-
-    When --adapter momagrid, recipes are submitted in parallel so the hub
-    dispatcher sees multiple tasks queued simultaneously and can spread work
-    across all registered agents.
-
-    \b
-    Examples:
-      python run_all.py run
-      python run_all.py run --adapter momagrid --model llama3.2
-      python run_all.py run --adapter momagrid --workers 4
-      python run_all.py run --ids 01,03,10-13
-      python run_all.py run --category agentic
-    """
-    use_parallel = adapter == "momagrid"
     recipes = load_catalog()
-    id_filter = parse_id_filter(ids) if ids else set()
+
+    if args.catalog:
+        print_catalog(recipes, args.category, args.status)
+        return
+
+    if args.list_recipes:
+        print_list(recipes, args.category, args.status)
+        return
+
+    use_parallel = args.adapter == "momagrid"
+    id_filter = parse_id_filter(args.ids) if args.ids else set()
 
     start_all = datetime.now()
-    click.echo(f"=== SPL 2.0 Cookbook Batch Run — {start_all.strftime('%Y-%m-%d %H:%M:%S')} ===")
+    print(f"=== SPL 2.0 Cookbook Batch Run — {start_all.strftime('%Y-%m-%d %H:%M:%S')} ===")
     overrides = []
-    if adapter:
-        overrides.append(f"adapter={adapter}")
-    if model:
-        overrides.append(f"model={model}")
+    if args.adapter:
+        overrides.append(f"adapter={args.adapter}")
+    if args.model:
+        overrides.append(f"model={args.model}")
     if overrides:
-        click.echo(f"    Overrides : {', '.join(overrides)}")
+        print(f"    Overrides : {', '.join(overrides)}")
     if use_parallel:
-        click.echo("    Mode      : parallel (momagrid — recipes submitted concurrently)")
-    click.echo()
+        print("    Mode      : parallel (momagrid — recipes submitted concurrently)")
+    print()
 
     os.chdir(COOKBOOK_DIR)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -272,26 +317,26 @@ def cmd_run(adapter: str, model: str, ids: str, workers: int,
             if rid not in id_filter:
                 continue
         else:
-            if category and r.get("category") != category:
+            if args.category and r.get("category") != args.category:
                 continue
-            if status and r.get("approval_status") != status:
+            if args.status and r.get("approval_status") != args.status:
                 continue
             if not r.get("is_active"):
-                click.echo(f"[{rid}] {r['name']}  (skipping — {r.get('approval_status','').upper()})")
+                print(f"[{rid}] {r['name']}  (skipping — {r.get('approval_status','').upper()})")
                 continue
-        cmd_args = apply_overrides(r["args"], adapter, model)
+        cmd_args = apply_overrides(r["args"], args.adapter, args.model)
         log_path = COOKBOOK_DIR / r["dir"] / f"{r['log']}_{ts}.md"
         active.append((r, cmd_args, log_path))
 
     if not active:
-        click.echo("No recipes to run.")
+        print("No recipes to run.")
         return
 
     results: list[dict] = []
 
     if use_parallel:
-        n_workers = workers or len(active)
-        click.echo(f"Submitting {len(active)} recipe(s) with {n_workers} parallel worker(s)...\n")
+        n_workers = args.workers or len(active)
+        print(f"Submitting {len(active)} recipe(s) with {n_workers} parallel worker(s)...\n")
         futures: dict = {}
         with ThreadPoolExecutor(max_workers=n_workers) as pool:
             for r, cmd_args, log_path in active:
@@ -303,98 +348,15 @@ def cmd_run(adapter: str, model: str, ids: str, workers: int,
     else:
         for r, cmd_args, log_path in active:
             rid = r["id"]
-            click.echo(f"[{rid}] {r['name']}")
-            click.echo(f"     cmd : {' '.join(cmd_args)}")
-            click.echo(f"     log : {log_path}")
+            print(f"[{rid}] {r['name']}")
+            print(f"     cmd : {' '.join(cmd_args)}")
+            print(f"     log : {log_path}")
             ok, elapsed = run_recipe_sequential(cmd_args, log_path, COOKBOOK_DIR)
-            click.echo(f"     result: {'SUCCESS' if ok else 'FAILED'}  ({elapsed:.1f}s)\n")
+            print(f"     result: {'SUCCESS' if ok else 'FAILED'}  ({elapsed:.1f}s)\n")
             results.append({"id": rid, "name": r["name"], "ok": ok, "elapsed": elapsed})
 
     print_summary(results, start_all)
 
 
-@cli.command("list")
-@click.option("--category", default="", metavar="CAT", help="Filter by category.")
-@click.option("--status", default="", metavar="STATUS", help="Filter by approval status.")
-def cmd_list(category: str, status: str) -> None:
-    """Print a brief recipe list.
-
-    \b
-    Examples:
-      python run_all.py list
-      python run_all.py list --category agentic
-      python run_all.py list --status new
-    """
-    recipes = load_catalog()
-    filtered = apply_filters(recipes, category, status)
-    label = f" (category={category!r} status={status!r})" if (category or status) else ""
-    click.echo(f"SPL 2.0 Cookbook — {len(filtered)} recipes{label}")
-    for r in filtered:
-        click.echo(
-            f"  {r['id']:<4}  {status_marker(r)}  {r['name']:<28}  "
-            f"{r.get('approval_status',''):<12}  {r.get('category',''):<14}  "
-            f"{r.get('description','')}"
-        )
-
-
-@cli.command("catalog")
-@click.option("--category", default="", metavar="CAT", help="Filter by category.")
-@click.option("--status", default="", metavar="STATUS", help="Filter by approval status.")
-def cmd_catalog(category: str, status: str) -> None:
-    """Print the full recipe catalog table.
-
-    \b
-    Examples:
-      python run_all.py catalog
-      python run_all.py catalog --category reasoning
-      python run_all.py catalog --status new
-    """
-    recipes = load_catalog()
-    filtered = apply_filters(recipes, category, status)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    counts: dict[str, int] = {}
-    for r in recipes:
-        if r.get("is_active"):
-            counts["active"] = counts.get("active", 0) + 1
-        s = r.get("approval_status", "")
-        counts[s] = counts.get(s, 0) + 1
-
-    click.echo(f"=== SPL 2.0 Cookbook Catalog — {now} ===")
-    if category or status:
-        click.echo(f"    Filter: category={category!r}  status={status!r}  → {len(filtered)}/{len(recipes)} recipes\n")
-    else:
-        click.echo(
-            f"    Total: {len(recipes)} recipes  |  {counts.get('active', 0)} active  |  "
-            f"{counts.get(STATUS_NEW, 0)} new  |  {counts.get(STATUS_WIP, 0)} wip  |  "
-            f"{counts.get(STATUS_DISABLED, 0)} disabled\n"
-        )
-
-    click.echo(f"{'ID':<4}  {'':2}  {'Name':<28}  {'Category':<14}  {'Status':<12}  Description")
-    click.echo("-" * 110)
-    for r in filtered:
-        click.echo(
-            f"{r['id']:<4}  {status_marker(r)}  {r['name']:<28}  "
-            f"{r.get('category',''):<14}  {r.get('approval_status',''):<12}  "
-            f"{r.get('description','')}"
-        )
-
-    click.echo()
-    click.echo("Markers: ✅ active  🆕 new  🔧 wip  ⏸  disabled  ❌ rejected\n")
-    click.echo("Run active recipes:           python run_all.py run")
-    click.echo("Run specific recipe:          python run_all.py run --ids 05,11")
-    click.echo("Run any (incl. inactive):     python run_all.py run --ids 17")
-    click.echo("Override adapter/model:       python run_all.py run --adapter momagrid --model llama3.2")
-    click.echo("Filter catalog by category:   python run_all.py catalog --category agentic")
-    click.echo("Filter catalog by status:     python run_all.py catalog --status new")
-
-    cat_counts: dict[str, int] = {}
-    for r in recipes:
-        c = r.get("category", "")
-        cat_counts[c] = cat_counts.get(c, 0) + 1
-    parts = [f"{c}({n})" for c, n in sorted(cat_counts.items())]
-    click.echo(f"\nCategories: {'  '.join(parts)}")
-
-
 if __name__ == "__main__":
-    cli()
+    main()

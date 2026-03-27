@@ -1,50 +1,39 @@
-WORKFLOW review_agent
-  INPUT @draft TEXT, @quality REAL
+WORKFLOW refine_text
+  INPUT @draft TEXT
   OUTPUT @final TEXT
 DO
-  @current := @draft;
+  @quality := summarize(@draft);
   WHILE @quality < 0.8 DO
-    GENERATE rewrite(@current) INTO @temp;
+    GENERATE rewrite(@draft, style='improved') INTO @temp;
     GENERATE sentiment(@temp) INTO @new_quality;
     IF @new_quality > @quality THEN
       @quality := @new_quality;
-      @current := @temp;
-    ENDIF;
+      @draft := @temp;
+    END;
   END;
-  @final := @current;
+  @final := @draft;
   COMMIT @final;
+END;
 
-CREATE FUNCTION rewrite(text TEXT)
+CREATE FUNCTION summarize(input TEXT)
+RETURNS NUMBER AS $$
+  sum([token] FOR token IN split(input, ' '))
+$$;
+
+CREATE FUNCTION rewrite(input TEXT, style TEXT)
 RETURNS TEXT AS $$
-  # Simple rewriting function: replace one word with a synonym
-  text := text || ' ';
-  FOR word IN SELECT * FROM extract_entities(text) DO
-    GENERATE get_synonym(word, style='improved') INTO temp;
-    text := text || temp;
+  CASE style
+    WHEN 'improved' THEN replace(replace(input, 'not a good word', 'a better one'), 'not a great phrase', 'an even better one')
+    ELSE input
   END;
-  return text;
 $$;
 
-CREATE FUNCTION sentiment(text TEXT)
-RETURNS REAL AS $$
-  # Simple sentiment analysis function: count positive words
-  let pos_words = SELECT * FROM extract_entities(text) WHERE entity_type = 'positive';
-  return length(pos_words) / length(extract_entities(text));
+CREATE FUNCTION sentiment(input TEXT)
+RETURNS NUMBER AS $$
+  (sum([token] FOR token IN split(input, ' ') WHERE token IN ['good', 'great']) - sum([token] FOR token IN split(input, ' ') WHERE token IN ['bad', 'terrible'])) / length(split(input, ' '))
 $$;
 
-CREATE FUNCTION get_synonym(word TEXT, style TEXT)
-RETURNS TEXT AS $$
-  # Simple synonym retrieval function: use WordNet API
-  if style = 'formal' then return word; else return get_synonym(word, 'informal'); end;
+CREATE FUNCTION split(input TEXT, delimiter TEXT)
+RETURNS LIST<TEXT> AS $$
+  list([token] FOR token IN split(input, delimiter))
 $$;
-
-CREATE FUNCTION extract_entities(text TEXT)
-RETURNS LIST AS $$
-  # Simple entity extraction function: use regular expressions
-  let entities = SELECT * FROM text WHERE match('http|www');
-  return entities;
-$$;
-
-CREATE PROCEDURE IF (condition REAL) THEN
-  -- body statements
-ENDIF;

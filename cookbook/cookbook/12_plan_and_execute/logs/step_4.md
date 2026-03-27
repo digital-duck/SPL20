@@ -1,6 +1,6 @@
-This step produces detailed definitions of API endpoints and data models for the application, serving as a blueprint for the entire development process. It ensures consistency and correctness throughout the application. The resulting designs guide the creation of the REST API.
+This step generates a detailed outline of the primary HTTP request routes for CRUD operations. The output will provide a clear plan for implementing the endpoint creation feature. This allows developers to focus on creating the required routes efficiently.
 
-Created files:
+Filenames created:
 
-* `api_endpoints.yaml` or `endpoints.json`
-* `data_models.json` or `models.yaml`
+- controllers/crud_controller.php
+- routes/api_routes.php

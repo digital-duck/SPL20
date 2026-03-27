@@ -1,10 +1,9 @@
-PROMPT classify_intent
-SELECT @input AS text LIMIT 100 TOKENS;
-GENERATE classify(text) WITH OUTPUT BUDGET 200 TOKENS INTO @label;
-IF @label = 'booking' THEN 
-  CALL book_flight
-ELSE IF @label = 'payment' THEN 
-  CALL process_payment
-ELSE 
-  CALL handle_unknown_intent
-END;
+PROMPT classify_intent WITH BUDGET 100 TOKENS
+SELECT @input AS text LIMIT 50 TOKENS
+GENERATE extract_entities(@text) INTO @entities;
+WHEN @entities = 'user_request' THEN
+  CALL intent_handler('request')
+WHEN @entities = 'product_query' THEN
+  CALL intent_handler('query')
+ELSE
+  CALL intent_handler('unknown')
