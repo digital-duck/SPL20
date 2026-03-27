@@ -1,17 +1,18 @@
 PROMPT classify_intent
-SELECT intent AS classification
-GENERATE classify(intent) WITH TEMPERATURE 0.5;
+SELECT @input AS text LIMIT 100 TOKENS,
+       'user intent' AS category
+GENERATE classify(text, category) WITH OUTPUT BUDGET 500 TOKENS INTO @result;
 
 WORKFLOW route_handler
-  INPUT @intent TEXT
+  INPUT @input TEXT
   OUTPUT @handler TEXT
 DO
-  IF @intent = 'book_flight' THEN
-    @handler := 'book_flight_handler';
-  ELSIF @intent = 'make_reservation' THEN
-    @handler := 'make_reservation_handler';
-  ELSE
-    @handler := 'unknown_intent_handler';
+  EVALUATE
+    WHEN @result = 'greeting' THEN
+      CALL greet_user(@input)
+    WHEN @result = 'question' THEN
+      CALL answer_question(@input)
+    ELSE
+      CALL unknown_intent(@input)
   END;
-  COMMIT @handler;
 END;

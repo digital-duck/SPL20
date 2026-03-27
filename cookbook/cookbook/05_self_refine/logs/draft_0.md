@@ -1,3 +1,5 @@
+Here's a haiku about coding:
+
 Lines of code descend
-Logic's gentle, steady hum
-Mind in digital
+Mindful focus, error free dance
+Logic's gentle art

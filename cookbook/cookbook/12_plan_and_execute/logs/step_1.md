@@ -1,6 +1,7 @@
-This step defines the data structure of todo items to be stored in the database. A clear understanding of the Todo model ensures that all necessary fields are included and relationships between them are properly defined. This results in an efficient and scalable database schema.
+This step defines a RESTful API endpoint for creating new todo items, validating user input, and storing it in the database. It establishes a clear separation of concerns between data model, business logic, and API routing. The resulting implementation will provide a robust foundation for managing todo data.
 
-Filenames created:
-
-* Todo.js (model definition)
-* Todo.schema.js (Mongoose schema definition)
+Created filenames:
+- todos.controller.js
+- todos.model.js
+- todos.route.js
+- todos.service.js

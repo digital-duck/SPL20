@@ -1,32 +1,48 @@
-WORKFLOW review_agent
+WORKFLOW refine_text
   INPUT @draft TEXT
   OUTPUT @final TEXT
 DO
-  @quality := 0.0;
-  @current := @draft;
-  WHILE @quality < 0.8 DO
-    GENERATE rewrite(@current, style='improved') INTO @current;
-    GENERATE sentiment(@current) INTO @quality;
-    IF @quality = 0.8 THEN
-      BREAK;
-    END;
+  DO
+    GENERATE rewrite(@draft, style='improved') INTO @temp;
+    GENERATE sentiment(@temp) INTO @quality;
+    IF @quality < 0.8 THEN
+      GENERATE critique(@temp) INTO @critique;
+      @refine := @temp;
+    ELSE
+      @final := @temp;
+      COMMIT @final;
+    END; -- Removed endif statement
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @draft := 'unknown';
+      COMMIT @draft;
+    WHEN ContextLengthExceeded THEN
+      GENERATE truncate(@draft, length=200) INTO @temp;
+      GENERATE sentiment(@temp) INTO @quality;
+      IF @quality < 0.8 THEN
+        GENERATE critique(@temp) INTO @critique;
+        @refine := @temp;
+      ELSE
+        @final := @temp;
+        COMMIT @final;
+      END; -- Removed endif statement
+    WHEN ModelOverloaded THEN
+      RETRY;
   END;
-  @final := @current;
-  COMMIT @final;
 
 CREATE FUNCTION rewrite(text TEXT, style TEXT)
-RETURNS TEXT
-AS $$  
-
-CASE style
-    WHEN 'improved' THEN text || ' improved'
-    WHEN 'standardized' THEN text || ' standardized'
+RETURNS TEXT AS $$
+  CASE style
+    WHEN 'improved' THEN text || '.'
+    WHEN 'standardized' THEN text || ','
     ELSE text
   END;
 $$;
 
-CREATE FUNCTION sentiment(text TEXT) RETURNS NUMBER
-AS $$  
-
-SELECT sum(1) WHERE text LIKE '%good%' OR text LIKE '%great%'
+CREATE FUNCTION critique(text TEXT) RETURNS TEXT AS $$
+  CASE
+    WHEN text LIKE '%ungrammatical%' THEN 'ungrammatical sentence detected'
+    WHEN text LIKE '%unclear%' THEN 'sentence is unclear'
+    ELSE 'good sentence'
+  END;
 $$;
