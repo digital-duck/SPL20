@@ -3837,3 +3837,213 @@ M cookbook/22_text2spl_demo/generated/classifier.spl
 M cookbook/run_all.py
  M go_git.log
 2026-03-27 11:05:13,027 - INFO - Running 'git add .' in 'SPL20'...
+2026-03-27 11:05:13,040 - INFO - Running 'git commit -m "refine"' in 'SPL20'...
+2026-03-27 11:05:13,072 - INFO - Running 'git push' in 'SPL20'...
+2026-03-27 11:05:13,805 - INFO - Successfully committed and pushed changes for 'SPL20'.
+2026-03-27 11:05:13,806 - INFO - 
+>>>>>> SUCCESS: 'SPL20'.
+2026-03-27 11:05:13,806 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:13,806 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/SPL-LLM ...........
+2026-03-27 11:05:13,806 - INFO - Local repository 'SPL-LLM' found at '/home/gongai/projects/digital-duck/SPL-LLM'.
+2026-03-27 11:05:13,811 - INFO - Running 'git pull' in 'SPL-LLM'...
+2026-03-27 11:05:14,289 - INFO - Successfully pulled changes for 'SPL-LLM'.
+2026-03-27 11:05:14,289 - INFO - Running 'git status --porcelain' in 'SPL-LLM' to check for local changes...
+2026-03-27 11:05:14,294 - INFO - No local changes in 'SPL-LLM'. Done.
+2026-03-27 11:05:14,294 - INFO - 
+>>>>>> SUCCESS: 'SPL-LLM'.
+2026-03-27 11:05:14,295 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:14,295 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/Cookbook-of-SPL-Recipes ...........
+2026-03-27 11:05:14,295 - INFO - Local repository 'Cookbook-of-SPL-Recipes' found at '/home/gongai/projects/digital-duck/Cookbook-of-SPL-Recipes'.
+2026-03-27 11:05:14,300 - INFO - Running 'git pull' in 'Cookbook-of-SPL-Recipes'...
+2026-03-27 11:05:14,946 - INFO - Successfully pulled changes for 'Cookbook-of-SPL-Recipes'.
+2026-03-27 11:05:14,946 - INFO - Running 'git status --porcelain' in 'Cookbook-of-SPL-Recipes' to check for local changes...
+2026-03-27 11:05:14,972 - INFO - No local changes in 'Cookbook-of-SPL-Recipes'. Done.
+2026-03-27 11:05:14,972 - INFO - 
+>>>>>> SUCCESS: 'Cookbook-of-SPL-Recipes'.
+2026-03-27 11:05:14,973 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:14,973 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/momagrid ...........
+2026-03-27 11:05:14,973 - INFO - Local repository 'momagrid' found at '/home/gongai/projects/digital-duck/momagrid'.
+2026-03-27 11:05:14,978 - INFO - Running 'git pull' in 'momagrid'...
+2026-03-27 11:05:15,473 - INFO - Successfully pulled changes for 'momagrid'.
+2026-03-27 11:05:15,473 - INFO - Running 'git status --porcelain' in 'momagrid' to check for local changes...
+2026-03-27 11:05:15,538 - INFO - Local changes detected in 'momagrid'. Performing commit and push...
+2026-03-27 11:05:15,538 - INFO - Git status output:
+M internal/hub/dispatcher.go
+2026-03-27 11:05:15,538 - INFO - Running 'git add .' in 'momagrid'...
+2026-03-27 11:05:15,541 - INFO - Running 'git commit -m "refine"' in 'momagrid'...
+2026-03-27 11:05:15,545 - INFO - Running 'git push' in 'momagrid'...
+2026-03-27 11:05:16,674 - INFO - Successfully committed and pushed changes for 'momagrid'.
+2026-03-27 11:05:16,674 - INFO - 
+>>>>>> SUCCESS: 'momagrid'.
+2026-03-27 11:05:16,675 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:16,675 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/momahub.py ...........
+2026-03-27 11:05:16,675 - INFO - Local repository 'momahub.py' found at '/home/gongai/projects/digital-duck/momahub.py'.
+2026-03-27 11:05:16,680 - INFO - Running 'git pull' in 'momahub.py'...
+2026-03-27 11:05:17,161 - INFO - Successfully pulled changes for 'momahub.py'.
+2026-03-27 11:05:17,161 - INFO - Running 'git status --porcelain' in 'momahub.py' to check for local changes...
+2026-03-27 11:05:17,168 - INFO - No local changes in 'momahub.py'. Done.
+2026-03-27 11:05:17,168 - INFO - 
+>>>>>> SUCCESS: 'momahub.py'.
+2026-03-27 11:05:17,168 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:17,168 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/momahub.go ...........
+2026-03-27 11:05:17,168 - INFO - Local repository 'momahub.go' found at '/home/gongai/projects/digital-duck/momahub.go'.
+2026-03-27 11:05:17,172 - INFO - Running 'git pull' in 'momahub.go'...
+2026-03-27 11:05:17,648 - INFO - Successfully pulled changes for 'momahub.go'.
+2026-03-27 11:05:17,649 - INFO - Running 'git status --porcelain' in 'momahub.go' to check for local changes...
+2026-03-27 11:05:17,657 - INFO - No local changes in 'momahub.go'. Done.
+2026-03-27 11:05:17,657 - INFO - 
+>>>>>> SUCCESS: 'momahub.go'.
+2026-03-27 11:05:17,658 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:17,658 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/momahub ...........
+2026-03-27 11:05:17,658 - INFO - Local repository 'momahub' found at '/home/gongai/projects/digital-duck/momahub'.
+2026-03-27 11:05:17,662 - INFO - Running 'git pull' in 'momahub'...
+2026-03-27 11:05:18,178 - INFO - Successfully pulled changes for 'momahub'.
+2026-03-27 11:05:18,178 - INFO - Running 'git status --porcelain' in 'momahub' to check for local changes...
+2026-03-27 11:05:18,186 - INFO - No local changes in 'momahub'. Done.
+2026-03-27 11:05:18,186 - INFO - 
+>>>>>> SUCCESS: 'momahub'.
+2026-03-27 11:05:18,186 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:18,187 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/momahub-opus ...........
+2026-03-27 11:05:18,187 - INFO - Local repository 'momahub-opus' found at '/home/gongai/projects/digital-duck/momahub-opus'.
+2026-03-27 11:05:18,189 - INFO - Running 'git pull' in 'momahub-opus'...
+2026-03-27 11:05:18,849 - INFO - Successfully pulled changes for 'momahub-opus'.
+2026-03-27 11:05:18,850 - INFO - Running 'git status --porcelain' in 'momahub-opus' to check for local changes...
+2026-03-27 11:05:18,857 - INFO - No local changes in 'momahub-opus'. Done.
+2026-03-27 11:05:18,857 - INFO - 
+>>>>>> SUCCESS: 'momahub-opus'.
+2026-03-27 11:05:18,858 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:18,858 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/momahub-sonnet ...........
+2026-03-27 11:05:18,858 - INFO - Local repository 'momahub-sonnet' found at '/home/gongai/projects/digital-duck/momahub-sonnet'.
+2026-03-27 11:05:18,863 - INFO - Running 'git pull' in 'momahub-sonnet'...
+2026-03-27 11:05:19,367 - INFO - Successfully pulled changes for 'momahub-sonnet'.
+2026-03-27 11:05:19,367 - INFO - Running 'git status --porcelain' in 'momahub-sonnet' to check for local changes...
+2026-03-27 11:05:19,369 - INFO - No local changes in 'momahub-sonnet'. Done.
+2026-03-27 11:05:19,369 - INFO - 
+>>>>>> SUCCESS: 'momahub-sonnet'.
+2026-03-27 11:05:19,369 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:19,369 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/momahub-gemini ...........
+2026-03-27 11:05:19,369 - INFO - Local repository 'momahub-gemini' found at '/home/gongai/projects/digital-duck/momahub-gemini'.
+2026-03-27 11:05:19,370 - INFO - Running 'git pull' in 'momahub-gemini'...
+2026-03-27 11:05:19,897 - INFO - Successfully pulled changes for 'momahub-gemini'.
+2026-03-27 11:05:19,897 - INFO - Running 'git status --porcelain' in 'momahub-gemini' to check for local changes...
+2026-03-27 11:05:19,904 - INFO - No local changes in 'momahub-gemini'. Done.
+2026-03-27 11:05:19,904 - INFO - 
+>>>>>> SUCCESS: 'momahub-gemini'.
+2026-03-27 11:05:19,905 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:19,905 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/pocoflow ...........
+2026-03-27 11:05:19,905 - INFO - Local repository 'pocoflow' found at '/home/gongai/projects/digital-duck/pocoflow'.
+2026-03-27 11:05:19,910 - INFO - Running 'git pull' in 'pocoflow'...
+2026-03-27 11:05:20,409 - INFO - Successfully pulled changes for 'pocoflow'.
+2026-03-27 11:05:20,409 - INFO - Running 'git status --porcelain' in 'pocoflow' to check for local changes...
+2026-03-27 11:05:20,417 - INFO - No local changes in 'pocoflow'. Done.
+2026-03-27 11:05:20,417 - INFO - 
+>>>>>> SUCCESS: 'pocoflow'.
+2026-03-27 11:05:20,417 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:20,417 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/markoflow ...........
+2026-03-27 11:05:20,418 - INFO - Local repository 'markoflow' found at '/home/gongai/projects/digital-duck/markoflow'.
+2026-03-27 11:05:20,422 - INFO - Running 'git pull' in 'markoflow'...
+2026-03-27 11:05:20,960 - INFO - Successfully pulled changes for 'markoflow'.
+2026-03-27 11:05:20,960 - INFO - Running 'git status --porcelain' in 'markoflow' to check for local changes...
+2026-03-27 11:05:20,967 - INFO - No local changes in 'markoflow'. Done.
+2026-03-27 11:05:20,967 - INFO - 
+>>>>>> SUCCESS: 'markoflow'.
+2026-03-27 11:05:20,967 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:20,967 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/monteflow ...........
+2026-03-27 11:05:20,967 - INFO - Local repository 'monteflow' found at '/home/gongai/projects/digital-duck/monteflow'.
+2026-03-27 11:05:20,973 - INFO - Running 'git pull' in 'monteflow'...
+2026-03-27 11:05:21,444 - INFO - Successfully pulled changes for 'monteflow'.
+2026-03-27 11:05:21,444 - INFO - Running 'git status --porcelain' in 'monteflow' to check for local changes...
+2026-03-27 11:05:21,446 - INFO - No local changes in 'monteflow'. Done.
+2026-03-27 11:05:21,446 - INFO - 
+>>>>>> SUCCESS: 'monteflow'.
+2026-03-27 11:05:21,446 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:21,446 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/research-copilot ...........
+2026-03-27 11:05:21,446 - INFO - Local repository 'research-copilot' found at '/home/gongai/projects/digital-duck/research-copilot'.
+2026-03-27 11:05:21,447 - INFO - Running 'git pull' in 'research-copilot'...
+2026-03-27 11:05:21,933 - INFO - Successfully pulled changes for 'research-copilot'.
+2026-03-27 11:05:21,933 - INFO - Running 'git status --porcelain' in 'research-copilot' to check for local changes...
+2026-03-27 11:05:21,939 - INFO - No local changes in 'research-copilot'. Done.
+2026-03-27 11:05:21,939 - INFO - 
+>>>>>> SUCCESS: 'research-copilot'.
+2026-03-27 11:05:21,939 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:21,940 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/elegant-elefant ...........
+2026-03-27 11:05:21,940 - INFO - Local repository 'elegant-elefant' found at '/home/gongai/projects/digital-duck/elegant-elefant'.
+2026-03-27 11:05:21,944 - INFO - Running 'git pull' in 'elegant-elefant'...
+2026-03-27 11:05:22,464 - INFO - Successfully pulled changes for 'elegant-elefant'.
+2026-03-27 11:05:22,465 - INFO - Running 'git status --porcelain' in 'elegant-elefant' to check for local changes...
+2026-03-27 11:05:22,471 - INFO - No local changes in 'elegant-elefant'. Done.
+2026-03-27 11:05:22,471 - INFO - 
+>>>>>> SUCCESS: 'elegant-elefant'.
+2026-03-27 11:05:22,472 - INFO - 
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2026-03-27 11:05:22,472 - INFO - <<<<< Processing: /home/gongai/projects/digital-duck/vibe-coding ...........
+2026-03-27 11:05:22,472 - INFO - Local repository 'vibe-coding' found at '/home/gongai/projects/digital-duck/vibe-coding'.
+2026-03-27 11:05:22,478 - INFO - Running 'git pull' in 'vibe-coding'...
+2026-03-27 11:05:22,712 - INFO - Successfully pulled changes for 'vibe-coding'.
+2026-03-27 11:05:22,713 - INFO - Running 'git status --porcelain' in 'vibe-coding' to check for local changes...
+2026-03-27 11:05:22,719 - INFO - No local changes in 'vibe-coding'. Done.
+2026-03-27 11:05:22,720 - INFO - 
+>>>>>> SUCCESS: 'vibe-coding'.
+2026-03-27 11:05:22,721 - INFO - 
+
+
+============================================================
+2026-03-27 11:05:22,721 - INFO - === OPERATION SUMMARY ===
+2026-03-27 11:05:22,721 - INFO - ============================================================
+2026-03-27 11:05:22,721 - INFO - Total repositories processed: 40
+2026-03-27 11:05:22,721 - INFO - Repositories cloned: 0
+2026-03-27 11:05:22,721 - INFO - Repositories pulled: 40
+2026-03-27 11:05:22,721 - INFO - Repositories committed & pushed: 2
+2026-03-27 11:05:22,721 - INFO - Failed operations: 0
+2026-03-27 11:05:22,721 - INFO - 
+Committed & pushed repositories:
+2026-03-27 11:05:22,721 - INFO -   • SPL20
+2026-03-27 11:05:22,721 - INFO -   • momagrid
+2026-03-27 11:05:22,721 - INFO - 
+============================================================
+2026-03-27 11:05:22,722 - INFO - --- go_git.py finished at 2026-03-27 11:05:22.722039 ---
+2026-03-27 11:05:22,722 - INFO - All specified repositories have been processed.
