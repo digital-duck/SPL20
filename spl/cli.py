@@ -147,26 +147,53 @@ def _setup_logging(run_name: str, adapter: str = "", spl_file: str = ""):
     return log_path
 
 
-def _print_result(result) -> None:
+def _caller_label(adapter: str) -> str:
+    """Return a privacy-safe host label for the given adapter."""
+    _labels: dict[str, str] = {
+        "ollama":      "localhost",
+        "echo":        "localhost",
+        "claude_cli":  "localhost",
+        "momagrid":    "momagrid-hub",
+        "anthropic":   "api.anthropic.com",
+        "openrouter":  "openrouter.ai",
+        "openai":      "api.openai.com",
+        "google":      "generativelanguage.googleapis.com",
+        "deepseek":    "api.deepseek.com",
+        "qwen":        "dashscope.aliyuncs.com",
+    }
+    return _labels.get(adapter, adapter)
+
+
+def _print_result(result, adapter: str = "") -> None:
     """Pretty-print an SPLResult or WorkflowResult."""
     from spl.executor import SPLResult, WorkflowResult
 
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     if isinstance(result, SPLResult):
         click.echo("=" * 60)
+        if adapter:
+            click.echo(f"Caller:  {_caller_label(adapter)}")
+            click.echo(f"Adapter: {adapter}")
         click.echo(f"Model: {result.model}")
         click.echo(f"Tokens: {result.input_tokens} in / {result.output_tokens} out")
         click.echo(f"Latency: {result.latency_ms:.0f}ms")
         if result.cost_usd is not None:
             click.echo(f"Cost: ${result.cost_usd:.6f}")
+        click.echo(f"Timestamp: {timestamp}")
         click.echo("-" * 60)
         click.echo(f"```output\n{result.content}\n```")
         click.echo("=" * 60)
     elif isinstance(result, WorkflowResult):
         click.echo("=" * 60)
+        if adapter:
+            click.echo(f"Caller:  {_caller_label(adapter)}")
+            click.echo(f"Adapter: {adapter}")
         click.echo(f"Status: {result.status}")
         click.echo(f"LLM Calls: {result.total_llm_calls}")
         click.echo(f"Tokens: {result.total_input_tokens} in / {result.total_output_tokens} out")
         click.echo(f"Latency: {result.total_latency_ms:.0f}ms")
+        click.echo(f"Timestamp: {timestamp}")
         if result.committed_value:
             click.echo("-" * 60)
             click.echo(f"```output\n{result.committed_value}\n```")
@@ -415,7 +442,7 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
         try:
             results = asyncio.run(executor.execute_program(analysis, params=params))
             for result in results:
-                _print_result(result)
+                _print_result(result, adapter)
                 log.info("Result: model=%s tokens=%d latency=%.0fms",
                          getattr(result, "model", ""),
                          getattr(result, "total_tokens", 0) or
@@ -1353,7 +1380,7 @@ def cmd_text2spl(description: str, adapter: str | None, model: str | None,
         try:
             results = asyncio.run(executor.execute_program(analysis, params=params))
             for result in results:
-                _print_result(result)
+                _print_result(result, adapter)
         finally:
             executor.close()
 
