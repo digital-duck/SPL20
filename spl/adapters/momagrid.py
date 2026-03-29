@@ -10,6 +10,7 @@ import asyncio
 import logging
 import os
 import uuid
+from pathlib import Path
 
 from spl.adapters.base import LLMAdapter, GenerationResult
 from spl.token_counter import TokenCounter
@@ -20,6 +21,45 @@ except ImportError:
     httpx = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
+
+def _hub_url_from_igrid_config() -> str:
+    """Read the first hub URL from ~/.igrid/config.yaml without external deps.
+
+    Parses the YAML line-by-line: looks for a list item under the 'urls:' key
+    inside the 'hub:' section. This avoids a PyYAML dependency and works with
+    the fixed indentation format that mg always writes.
+    """
+    config_path = Path.home() / ".igrid" / "config.yaml"
+    try:
+        lines = config_path.read_text().splitlines()
+    except OSError:
+        return ""
+
+    in_hub = False
+    in_urls = False
+    for line in lines:
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+        # Top-level 'hub:' section
+        if indent == 0:
+            in_hub = stripped.startswith("hub:")
+            in_urls = False
+            continue
+        if not in_hub:
+            continue
+        # 'urls:' key inside hub section
+        if stripped.startswith("urls:"):
+            in_urls = True
+            continue
+        if in_urls:
+            # First list item: '- <url>'
+            if stripped.startswith("- "):
+                return stripped[2:].strip().rstrip("/")
+            # Any non-list line ends the urls block
+            if not stripped.startswith("-"):
+                in_urls = False
+    return ""
+
 
 # Terminal states — stop polling when we see one of these.
 _TERMINAL_STATES = {"COMPLETE", "FAILED"}
@@ -52,6 +92,7 @@ class MomagridAdapter(LLMAdapter):
         self.hub_url = (
             hub_url
             or os.environ.get("MOMAGRID_HUB_URL")
+            or _hub_url_from_igrid_config()
             or "http://localhost:9000"
         )
         self.default_model = default_model
