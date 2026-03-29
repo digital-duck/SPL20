@@ -1,68 +1,153 @@
-Here's an example implementation for a URL shortener system in Python using Flask and SQLAlchemy:
+Designing a URL Shortener System
+=====================================
 
-```python
-from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+Overview
+--------
 
-app = Flask(__name__)
-db = SQLAlchemy(app)
-limiter = Limiter(key_func=get_remote_address)
+A URL shortener is a service that takes a long, cumbersome URL and converts it into a shorter, more memorable version. This system will provide a user-friendly interface for users to submit their URLs, store them in a database, generate unique shortened URLs, and return the original long URL when clicked.
 
-class Url(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    original_url = db.Column(db.String(200), unique=True)
-    encoded_id = db.Column(db.String(10), unique=True)
+System Requirements
+--------------------
 
-@app.route('/shorten', methods=['POST'])
-@limiter.limit("10/minute")
-def shorten():
-    try:
-        url = request.form['url']
-        
-        # Input validation
-        if not url.startswith('http://') and not url.startswith('https://'):
-            return jsonify({'error': 'Invalid URL. Please provide a valid HTTP or HTTPS URL.'})
-        
-        encoded_id = uuid.uuid4().hex[:6]
-        new_url = Url(original_url=url, encoded_id=encoded_id)
-        db.session.add(new_url)
-        db.session.commit()
-        return jsonify({'shortened_url': f"https://short.url/{encoded_id}"})
-    except Exception as e:
-        # Handle errors more robustly
-        error_message = str(e).replace('\n', '')
-        return jsonify({'error': error_message}), 500
+*   Database to store URLs (e.g., MySQL or MongoDB)
+*   Web server to host the application (e.g., Apache or Nginx)
+*   Front-end framework for user interface (e.g., React or Angular)
 
-@app.route('/<encoded_id>')
-def redirect(encoded_id):
-    url = Url.query.filter_by(encoded_id=encoded_id).first().original_url
-    return redirect(url, code=302)
+System Design
+-------------
 
-if __name__ == '__main__':
-    app.run(debug=True)
+### 1. User Interface
+
+The front-end will be a simple web page with input fields for users to enter their long URL and an "Submit" button.
+
+```html
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>URL Shortener</h1>
+    <input id="url-input" type="text" placeholder="Enter your URL">
+    <button id="submit-btn">Submit</button>
+    <p id="result"></p>
+
+    <script src="script.js"></script>
+</body>
+</html>
 ```
 
-To improve the system's performance and security:
+### 2. Back-end
 
-1.  Use a more secure hash function like Argon2 or PBKDF2.
-2.  Implement rate limiting to prevent abuse.
-3.  Regularly update dependencies and frameworks to ensure you have the latest security patches.
+The back-end will be a Node.js application using Express.js as the web framework.
 
-Example use case:
+```javascript
+// server.js
+const express = require('express');
+const app = express();
+const mysql = require('mysql');
 
-*   A user submits a long URL: `https://www.example.com/very-long-url`.
-*   The system generates a unique identifier (`encoded_id`) for the submitted URL and stores it in the database along with the original URL.
-*   The system creates a shortened version of the original URL based on the encoded ID.
-*   A user accesses the shortened URL: `https://short.url/abc123`.
-*   The redirect service redirects the user to the original URL.
+// Connect to database
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'username',
+    password: 'password',
+    database: 'url_shortener'
+});
 
-Advantages:
+db.connect((err) => {
+    if (err) {
+        console.error('error connecting:', err);
+        return;
+    }
+    console.log('connected as id ' + db.threadId);
+});
 
-*   Scalability: The system can handle a large volume of requests due to its ability to store data in a database and generate unique identifiers.
-*   Reliability: The system provides a reliable way for users to share links by maintaining a mapping between the encoded ID and the original URL.
+// API endpoint to handle short URL generation
+app.post('/shorten', (req, res) => {
+    const longUrl = req.body.longUrl;
 
-Disadvantages:
+    // Generate a unique shortened URL
+    const shortUrl = generateShortUrl();
 
-*   Security: The system is vulnerable to security threats such as URL spoofing, since the shortened URLs do not contain any validation checks.
+    // Insert the long URL and shortened URL into database
+    db.query('INSERT INTO urls SET ?', [longUrl, shortUrl], (err, results) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ message: 'Error generating short URL' });
+        } else {
+            res.send({ shortUrl: `http://localhost/${shortUrl}` });
+        }
+    });
+});
+
+// API endpoint to return the original long URL when clicked
+app.get('/:shortUrl', (req, res) => {
+    const shortUrl = req.params.shortUrl;
+
+    // Retrieve the original long URL from database
+    db.query('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl], (err, results) => {
+        if (err || !results[0]) {
+            console.error(err);
+            res.status(404).send({ message: 'Not found' });
+        } else {
+            const longUrl = results[0].long_url;
+            res.send({ longUrl });
+        }
+    });
+});
+
+// API endpoint to retrieve all shortened URLs
+app.get('/urls', (req, res) => {
+    db.query('SELECT * FROM urls', (err, results) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ message: 'Error retrieving short URLs' });
+        } else {
+            const shortenedUrls = results.map((row) => row.short_url);
+            res.send({ shortenedUrls });
+        }
+    });
+});
+
+app.listen(3000, () => {
+    console.log('Server listening on port 3000');
+});
+```
+
+### 3. Database Schema
+
+The database schema will store the long URL and its corresponding shortened URL.
+
+```sql
+CREATE TABLE urls (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    long_url VARCHAR(255) NOT NULL,
+    short_url VARCHAR(10) UNIQUE NOT NULL
+);
+```
+
+### 4. Front-end Functionality
+
+The front-end will send a POST request to the `/shorten` API endpoint with the long URL in the request body.
+
+```javascript
+// script.js
+const urlInput = document.getElementById('url-input');
+const submitBtn = document.getElementById('submit-btn');
+
+submitBtn.addEventListener('click', () => {
+    const longUrl = urlInput.value;
+
+    if (!longUrl) {
+        alert('Please enter a URL');
+        return;
+    }
+
+    fetch('/shorten', {
+        method: 'POST',
+        headers: {

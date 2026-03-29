@@ -1,35 +1,158 @@
-Here's a comprehensive design for a scalable and secure URL shortener system:
+To design an efficient URL shortener system, consider the following key components and their respective implementation details:
 
-**System Components:**
+### 1. Front-end Functionality
 
-1.  **Database:** Utilize a NoSQL database like MongoDB or PostgreSQL to store the mapping between shortened URLs and original URLs.
-2.  **Load Balancer:** Employ a load balancer to distribute incoming traffic across multiple servers, ensuring high availability and scalability.
-3.  **Web Server:** Use a web server like Nginx or Apache to handle HTTP requests and responses efficiently.
-4.  **Redis/Cache Layer:** Implement Redis as an in-memory caching layer to store frequently accessed data and reduce the load on the database.
-5.  **Security Measures:**
-    *   **HTTPS Encryption:** Serve shortened URLs over HTTPS to ensure secure communication between clients and servers.
-    *   **Rate Limiting:** Employ rate limiting mechanisms, such as IP blocking or Redis-based rate limiting, to prevent abuse.
-    *   **User Authentication:** Implement user authentication to restrict access to the system and prevent unauthorized modifications.
+The front-end should provide a simple, user-friendly interface for users to submit URLs. This can be achieved using HTML, CSS, and JavaScript.
 
-**System Flow:**
+```html
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>URL Shortener</h1>
+    <input id="url-input" type="text" placeholder="Enter your URL">
+    <button id="submit-btn">Submit</button>
+    <p id="result"></p>
 
-1.  **Request Handling:**
-    *   The client sends a request to the web server with a shortened URL.
-    *   The web server verifies the request, checks for rate limiting, and ensures HTTPS encryption is in place.
-2.  **Database Query:**
-    *   If the request is valid, the web server queries the database to retrieve the original URL associated with the shortened URL.
-3.  **Redirect Response:**
-    *   The web server sends a redirect response with the original URL to the client's browser.
+    <script src="script.js"></script>
+</body>
+</html>
+```
 
-**System Design Considerations:**
+```javascript
+// script.js
+const urlInput = document.getElementById('url-input');
+const submitBtn = document.getElementById('submit-btn');
 
-1.  **Scalability:** Design the system to scale horizontally by adding more servers as traffic increases.
-2.  **High Availability:** Implement load balancing and redundancy to ensure the system remains available during maintenance or failures.
-3.  **Security:** Prioritize security through HTTPS encryption, rate limiting, user authentication, and secure database storage.
+submitBtn.addEventListener('click', async () => {
+    const longUrl = urlInput.value;
 
-**Additional Enhancements:**
+    if (!longUrl) {
+        alert('Please enter a URL');
+        return;
+    }
 
-1.  **Monitoring and Logging:** Integrate monitoring tools like Prometheus, Grafana, or New Relic to track system performance, errors, and security breaches.
-2.  **Regular Backups:** Schedule regular backups of the database and Redis to ensure data integrity in case of failures or losses.
+    try {
+        // Validate the input URL
+        if (!/^(https?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+$/.test(longUrl)) {
+            throw new Error('Invalid URL format');
+        }
 
-By following this design, you can create a secure, scalable, and efficient URL shortener system that meets the needs of modern web applications.
+        const response = await fetch('/shorten', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ longUrl })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log(data.shortUrl);
+            urlInput.value = '';
+        } else {
+            throw new Error('Error generating short URL');
+        }
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+    }
+});
+```
+
+### 2. Back-end Functionality
+
+The back-end should be implemented using a programming language such as Node.js and Express.js.
+
+```javascript
+const express = require('express');
+const app = express();
+const mysql = require('mysql');
+
+// Connect to database
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'username',
+    password: 'password',
+    database: 'url_shortener'
+});
+
+db.connect((err) => {
+    if (err) {
+        console.error(err);
+        return;
+    }
+    console.log('connected as id ' + db.threadId);
+});
+
+// API endpoint to handle short URL generation
+app.post('/shorten', (req, res) => {
+    const longUrl = req.body.longUrl;
+
+    try {
+        // Validate the input URL
+        if (!/^(https?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+$/.test(longUrl)) {
+            throw new Error('Invalid URL format');
+        }
+
+        // Generate a unique shortened URL
+        const shortUrl = generateShortUrl();
+
+        // Insert the long URL and shortened URL into database
+        db.query('INSERT INTO urls SET ?', [longUrl, shortUrl], (err, results) => {
+            if (err) {
+                throw new Error(`Error inserting data into database: ${err}`);
+            } else {
+                res.send({ shortUrl: `http://localhost/${shortUrl}` });
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: error.message });
+    }
+});
+
+// API endpoint to return the original long URL when clicked
+app.get('/:shortUrl', (req, res) => {
+    const shortUrl = req.params.shortUrl;
+
+    try {
+        // Retrieve the original long URL from database
+        db.query('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl], (err, results) => {
+            if (err || !results[0]) {
+                throw new Error(`Error retrieving data from database: ${err}`);
+            } else {
+                const longUrl = results[0].long_url;
+                res.send({ longUrl });
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(404).send({ message: 'Not found' });
+    }
+});
+
+app.listen(3000, () => {
+    console.log('Server listening on port 3000');
+});
+```
+
+### 3. Database Schema
+
+The database schema should store the long URL and its corresponding shortened URL.
+
+```sql
+CREATE TABLE urls (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    long_url VARCHAR(255) NOT NULL,
+    short_url VARCHAR(10) UNIQUE NOT NULL
+);
+```
+
+### 4.

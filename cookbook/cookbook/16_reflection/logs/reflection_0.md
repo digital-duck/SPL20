@@ -1,33 +1,151 @@
-The provided design for a URL shortener system meets the requirements of scalability, reliability, and simplicity. However, there are some areas that can be improved for better security and performance:
+Here's a revised and expanded version of the code with improved documentation, error handling, and security measures:
 
-**Security Improvements**
+```javascript
+// server.js
+const express = require('express');
+const app = express();
+const mysql = require('mysql2/promise');
 
-1.  **Validation Checks**: Implement validation checks to ensure that the submitted URL is valid and not vulnerable to URL spoofing attacks.
-2.  **Hash Function**: Use a more secure hash function than SHA-256 to generate unique identifiers. Consider using a cryptographically secure pseudorandom number generator (CSPRNG) to generate random IDs.
-3.  **ID Generation**: Implement ID generation in a way that makes it difficult for attackers to guess or predict the generated IDs.
+// Connect to database
+async function connectToDatabase() {
+    try {
+        const db = await mysql.createConnection({
+            host: 'localhost',
+            user: 'username',
+            password: 'password',
+            database: 'url_shortener'
+        });
+        return db;
+    } catch (err) {
+        console.error('Error connecting to database:', err);
+        throw err;
+    }
+}
 
-**Performance Improvements**
+// API endpoint to handle short URL generation
+async function shortenUrl(db) {
+    try {
+        const longUrl = req.body.longUrl;
 
-1.  **Database Indexing**: Ensure proper indexing of database tables to improve query performance and reduce latency.
-2.  **Caching**: Consider implementing caching mechanisms to store frequently accessed data, such as shortened URLs.
-3.  **Load Balancing**: Implement load balancing techniques to distribute incoming traffic across multiple instances of the system.
+        // Generate a unique shortened URL
+        const shortUrl = generateShortUrl();
 
-**Scalability Improvements**
+        // Insert the long URL and shortened URL into database
+        await db.execute('INSERT INTO urls SET ?', [longUrl, shortUrl]);
 
-1.  **Cloud Hosting**: Host the system on a cloud platform that provides scalable infrastructure and automatic scaling.
-2.  **Containerization**: Consider containerizing the system using Docker or similar technologies to improve scalability and portability.
-3.  **Microservices Architecture**: Implement a microservices architecture to break down the system into smaller, independent services that can be scaled individually.
+        return { shortUrl: `http://localhost/${shortUrl}` };
+    } catch (err) {
+        console.error('Error generating short URL:', err);
+        throw err;
+    }
+}
 
-**Code Refactoring**
+// API endpoint to return the original long URL when clicked
+async function retrieveLongUrl(db, req) {
+    try {
+        const shortUrl = req.params.shortUrl;
 
-1.  **Database Modeling**: Improve database modeling by adding more tables or relationships to better represent the data and improve query performance.
-2.  **Error Handling**: Implement robust error handling mechanisms to handle unexpected errors and exceptions.
-3.  **Security Measures**: Integrate security measures such as SSL/TLS encryption, secure password storage, and input validation.
+        // Retrieve the original long URL from database
+        const result = await db.execute('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl]);
 
-**Future Development**
+        if (!result[0]) {
+            console.error('Not found:', err);
+            throw new Error('Not found');
+        }
 
-1.  **API Integration**: Develop a RESTful API to integrate the system with other services or applications.
-2.  **Mobile App Support**: Implement mobile app support to allow users to access the shortened URLs on-the-go.
-3.  **Analytics and Reporting**: Integrate analytics and reporting features to provide insights into usage patterns and traffic trends.
+        return { longUrl: result[0].long_url };
+    } catch (err) {
+        console.error('Error retrieving long URL:', err);
+        throw err;
+    }
+}
 
-By addressing these areas, you can improve the security, performance, and scalability of the URL shortener system while maintaining its simplicity and reliability.
+// API endpoint to retrieve all shortened URLs
+async function getAllShortUrls(db) {
+    try {
+        const results = await db.execute('SELECT * FROM urls');
+
+        return results.map((row) => row.short_url);
+    } catch (err) {
+        console.error('Error retrieving short URLs:', err);
+        throw err;
+    }
+}
+
+// API endpoint to handle GET requests
+app.get('/', async (req, res) => {
+    try {
+        const db = await connectToDatabase();
+
+        if (req.query.url) {
+            // Handle URL query parameter
+            const longUrl = req.query.url;
+
+            const response = await shortenUrl(db);
+
+            res.send(response);
+        } else {
+            // Return all shortened URLs
+            const shortUrls = await getAllShortUrls(db);
+
+            res.send({ shortenedUrls });
+        }
+    } catch (err) {
+        console.error('Error handling GET request:', err);
+        res.status(500).send({ message: 'Error generating short URL' });
+    }
+});
+
+// API endpoint to handle POST requests
+app.post('/shorten', async (req, res) => {
+    try {
+        const db = await connectToDatabase();
+
+        // Validate request body
+        if (!req.body.longUrl) {
+            console.error('Invalid request body:', err);
+            throw new Error('Invalid request body');
+        }
+
+        const response = await shortenUrl(db);
+
+        res.send(response);
+    } catch (err) {
+        console.error('Error handling POST request:', err);
+        res.status(500).send({ message: 'Error generating short URL' });
+    }
+});
+
+// API endpoint to handle GET requests for individual URLs
+app.get('/:shortUrl', async (req, res) => {
+    try {
+        const db = await connectToDatabase();
+
+        // Retrieve the original long URL from database
+        const response = await retrieveLongUrl(db, req);
+
+        res.send(response);
+    } catch (err) {
+        console.error('Error handling GET request:', err);
+        res.status(404).send({ message: 'Not found' });
+    }
+});
+
+// Start server
+const port = 3000;
+app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+});
+```
+
+### Security Measures
+
+1.  Validate user input: Always validate and sanitize user input to prevent SQL injection and cross-site scripting (XSS) attacks.
+2.  Use secure password storage: Store passwords securely using a salted hash function, such as bcrypt or PBKDF2.
+3.  Implement rate limiting: Limit the number of requests from a single IP address to prevent brute-force attacks on shortened URLs.
+4.  Use HTTPS: Serve the application over HTTPS to encrypt data transmitted between the client and server.
+
+### Best Practices
+
+1.  Follow standard naming conventions: Use consistent naming conventions for variables, functions, and classes to improve code readability.
+2.  Use meaningful variable names: Choose variable names that accurately describe their purpose, making it easier to understand and maintain the codebase

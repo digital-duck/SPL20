@@ -1,32 +1,30 @@
-WORKFLOW review_agent
+WORKFLOW refine_text
   INPUT @draft TEXT
   OUTPUT @final TEXT
 DO
-  @quality := 0.0;
-  @current := @draft;
+  @quality := summarize(@draft);
   WHILE @quality < 0.8 DO
-    GENERATE rewrite(@current, style='improved') INTO @current;
-    GENERATE sentiment(@current) INTO @quality;
+    GENERATE rewrite(@draft) INTO @temp;
+    GENERATE sentiment(@temp) INTO @new_quality;
+    IF @new_quality > @quality THEN
+      @quality := @new_quality;
+      @draft := @temp;
+    END IF;  -- Added 'IF'
   END;
-  @final := @current;
+  @final := @draft;
   COMMIT @final;
 
-CREATE FUNCTION rewrite(
-  input TEXT,
-  style TEXT DEFAULT 'standard'
-)
-RETURNS TEXT AS $$
-  CASE style
-    WHEN 'improved' THEN
-      REPLACE(input, 'this', 'that')
-    WHEN 'formal' THEN
-      REPLACE(input, 'is', 'are')
-  END;
+CREATE FUNCTION summarize(text TEXT)
+RETURNS NUMBER AS $$
+  sum(1.0 for token in split(text, ' ') if length(token) > 3)
 $$;
 
-CREATE FUNCTION sentiment(
-  input TEXT
-)
+CREATE FUNCTION rewrite(text TEXT)
+RETURNS TEXT AS $$
+  replace('bad', 'good', text)
+$$;
+
+CREATE FUNCTION sentiment(text TEXT)
 RETURNS NUMBER AS $$
-  RETURN LENGTH(REPLACE(input, ',', '')) / LENGTH(input);
+  (sum(1.0 for word in split(text, ' ') if word:is upper) - sum(1.0 for word in split(text, ' ') if word:is lower)) / length(split(text, ' '))
 $$;

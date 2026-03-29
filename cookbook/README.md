@@ -59,6 +59,54 @@ python cookbook/run_all.py run --adapter momagrid --ids "01-10,13"
 In parallel mode, each recipe logs to its own file under `<recipe_dir>/`. Completion
 messages print as recipes finish; a summary table appears at the end.
 
+### Hub URL resolution (no env var needed)
+
+The momagrid adapter resolves the hub URL in this order:
+
+1. `hub_url=` constructor argument
+2. `MOMAGRID_HUB_URL` environment variable
+3. `~/.igrid/config.yaml` → `hub.urls[0]`  ← auto-populated by `mg join`
+4. `http://localhost:9000` (last resort)
+
+After running `mg join <hub-url>` on any machine, subsequent `spl run --adapter momagrid`
+calls will find the hub automatically without needing to export `MOMAGRID_HUB_URL`.
+
+### LAN cluster — tuning agent participation
+
+The hub dispatches tasks by **tier first** (GOLD > SILVER > BRONZE), then by least active
+tasks. With `--max-concurrent 3` (the default) and three GOLD nodes, the grid has 9 GOLD
+slots — a SILVER node only receives work when all 9 GOLD slots are busy.
+
+**To give lower-tier nodes more work, choose one:**
+
+**Option A — Promote the node's tier** (use when the hardware is comparable):
+```bash
+# PostgreSQL hub
+psql momagrid -c "UPDATE agents SET tier='GOLD' WHERE name='goose';"
+
+# SQLite hub
+sqlite3 .igrid/hub.sqlite3 "UPDATE agents SET tier='GOLD' WHERE name='goose';"
+```
+The change takes effect immediately; no hub restart required.
+
+**Option B — Increase max-concurrent slots per agent** (use when you want all nodes busier):
+```bash
+# Restart the hub with more slots per agent
+mg hub up --max-concurrent 5   # 4 nodes × 5 = 20 total slots
+```
+With 20 slots and 10 workers the SILVER node starts filling in much sooner.
+
+**Reference — LAN 4-node cluster (duck/cat/dog/goose)**
+
+| Node  | GPU           | VRAM  | Tier   |
+|-------|---------------|-------|--------|
+| duck  | GTX 1080 Ti   | 11 GB | GOLD   |
+| cat   | GTX 1080 Ti   | 11 GB | GOLD   |
+| dog   | GTX 1080 Ti   | 11 GB | GOLD   |
+| goose | RTX 4060      |  8 GB | SILVER |
+
+Hub: `http://192.168.0.235:9000` (duck machine, PostgreSQL backend)
+
 ### Browse recipes
 
 ```bash

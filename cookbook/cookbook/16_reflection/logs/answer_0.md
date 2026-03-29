@@ -1,137 +1,149 @@
-**URL Shortener System Design**
+Designing a URL Shortener System
+=====================================
 
-### Overview
+Overview
+--------
 
-A URL shortener system is a service that takes a long, cumbersome URL and converts it into a shorter, more memorable version. The system should handle the following requirements:
+A URL shortener is a service that takes a long, cumbersome URL and converts it into a shorter, more memorable version. This system will provide a user-friendly interface for users to submit their URLs, store them in a database, generate unique shortened URLs, and return the original long URL when clicked.
 
-* Store user-generated short URLs in a database
-* Map short URLs to their corresponding original URLs
-* Handle URL encoding and decoding
-* Implement a mechanism for users to submit new URLs
-* Provide an option for users to view the statistics of their short URLs
+System Requirements
+--------------------
 
-### System Architecture
+*   Database to store URLs (e.g., MySQL or MongoDB)
+*   Web server to host the application (e.g., Apache or Nginx)
+*   Front-end framework for user interface (e.g., React or Angular)
 
-The system will consist of three primary components:
+System Design
+-------------
 
-1. **URL Shortener Service**
-	* Handles user requests, including submitting new URLs, mapping short URLs to original URLs, and decoding URLs
-	* Utilizes a database to store information about generated short URLs
-2. **Database**
-	* Stores all short URL mappings and statistics data
-3. **Web Interface**
-	* Provides a user-friendly interface for users to submit new URLs and view their statistics
+### 1. User Interface
 
-### Database Schema
+The front-end will be a simple web page with input fields for users to enter their long URL and an "Submit" button.
 
-The database schema will consist of the following tables:
+```html
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>URL Shortener</h1>
+    <input id="url-input" type="text" placeholder="Enter your URL">
+    <button id="submit-btn">Submit</button>
+    <p id="result"></p>
 
-#### `short_urls`
-
-| Field Name | Data Type | Description |
-| --- | --- | --- |
-| id | int | Unique identifier for each short URL |
-| original_url | varchar(255) | The original URL associated with the short URL |
-| shortened_url | varchar(255) | The shortened version of the original URL |
-
-#### `statistics`
-
-| Field Name | Data Type | Description |
-| --- | --- | --- |
-| id | int | Unique identifier for each statistics entry |
-| user_id | int | Foreign key referencing the users table (assuming a separate users table) |
-| total_clicks | int | Total number of clicks for the short URL |
-| latest_click_time | datetime | Timestamp of the most recent click |
-
-### Implementation
-
-The implementation will be in Python using Flask as the web framework and MySQL as the database. We'll use Flask-RESTful for API requests.
-
-**urls.py**
-```python
-from flask import Flask, request, jsonify
-from flask_restful import Api, Resource
-from flask_sqlalchemy import SQLAlchemy
-
-app = Flask(__name__)
-api = Api(app)
-
-# Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql://username:password@localhost/db_name"
-db = SQLAlchemy(app)
+    <script src="script.js"></script>
+</body>
+</html>
 ```
 
-**models.py**
-```python
-from app import db
+### 2. Back-end
 
-class ShortUrl(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    original_url = db.Column(db.String(255), unique=True)
-    shortened_url = db.Column(db.String(255), unique=True)
+The back-end will be a Node.js application using Express.js as the web framework.
 
-class Statistics(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    total_clicks = db.Column(db.Integer)
-    latest_click_time = db.Column(db.DateTime)
+```javascript
+// server.js
+const express = require('express');
+const app = express();
+const mysql = require('mysql');
+
+// Connect to database
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'username',
+    password: 'password',
+    database: 'url_shortener'
+});
+
+db.connect((err) => {
+    if (err) {
+        console.error('error connecting:', err);
+        return;
+    }
+    console.log('connected as id ' + db.threadId);
+});
+
+// API endpoint to handle short URL generation
+app.post('/shorten', (req, res) => {
+    const longUrl = req.body.longUrl;
+
+    // Generate a unique shortened URL
+    const shortUrl = generateShortUrl();
+
+    // Insert the long URL and shortened URL into database
+    db.query('INSERT INTO urls SET ?', [longUrl, shortUrl], (err, results) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ message: 'Error generating short URL' });
+        } else {
+            res.send({ shortUrl: `http://localhost/${shortUrl}` });
+        }
+    });
+});
+
+// API endpoint to return the original long URL when clicked
+app.get('/:shortUrl', (req, res) => {
+    const shortUrl = req.params.shortUrl;
+
+    // Retrieve the original long URL from database
+    db.query('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl], (err, results) => {
+        if (err || !results[0]) {
+            console.error(err);
+            res.status(404).send({ message: 'Not found' });
+        } else {
+            const longUrl = results[0].long_url;
+            res.send({ longUrl });
+        }
+    });
+});
+
+// API endpoint to retrieve all shortened URLs
+app.get('/urls', (req, res) => {
+    db.query('SELECT * FROM urls', (err, results) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ message: 'Error retrieving short URLs' });
+        } else {
+            const shortenedUrls = results.map((row) => row.short_url);
+            res.send({ shortenedUrls });
+        }
+    });
+});
+
+app.listen(3000, () => {
+    console.log('Server listening on port 3000');
+});
 ```
 
-**controllers.py**
-```python
-from flask import request, jsonify
-from models import ShortUrl, Statistics
+### 3. Database Schema
 
-class URLController(Resource):
-    def post(self):
-        data = request.get_json()
-        original_url = data["original_url"]
-        shortened_url = generate_shortened_url(original_url)
-        short_url = ShortUrl(original_url=original_url, shortened_url=shortened_url)
-        db.session.add(short_url)
-        db.session.commit()
-        return {"shortened_url": shortened_url}, 201
+The database schema will store the long URL and its corresponding shortened URL.
 
-    def get(self):
-        data = request.get_json()
-        original_url = data["original_url"]
-        short_url = ShortUrl.query.filter_by(original_url=original_url).first()
-        if short_url:
-            return {"shortened_url": short_url.shortened_url}
-        else:
-            return {"error": "Short URL not found"}, 404
-
-class StatisticsController(Resource):
-    def get(self, user_id):
-        data = request.get_json()
-        statistics = Statistics.query.filter_by(user_id=user_id).first()
-        if statistics:
-            return {"total_clicks": statistics.total_clicks, "latest_click_time": statistics.latest_click_time}
-        else:
-            return {"error": "Statistics not found"}, 404
+```sql
+CREATE TABLE urls (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    long_url VARCHAR(255) NOT NULL,
+    short_url VARCHAR(10) UNIQUE NOT NULL
+);
 ```
 
-**generate_shortened_url.py**
-```python
-import hashlib
+### 4. Front-end Functionality
 
-def generate_shortened_url(original_url):
-    hashed_url = hashlib.sha256(original_url.encode()).hexdigest()
-    shortened_url = f"{hashed_url[:6]}"
-    return shortened_url
-```
-This design provides a scalable and efficient solution for the URL shortener system, allowing users to submit new URLs, view their statistics, and handle URL encoding and decoding.
+The front-end will send a POST request to the `/shorten` API endpoint with the long URL in the request body.
 
-**Example Use Cases:**
+```javascript
+// script.js
+const urlInput = document.getElementById('url-input');
+const submitBtn = document.getElementById('submit-btn');
 
-* Submitting a new URL:
-```bash
-curl -X POST \
-  http://localhost:5000/shorten \
-  -H 'Content-Type: application/json' \
-  -d '{"original_url": "https://www.example.com/very-long-url"}'
-```
-* Viewing the shortened URL:
-```bash
-curl -X GET \
-  http://localhost:500
+submitBtn.addEventListener('click', () => {
+    const longUrl = urlInput.value;
+    fetch('/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ longUrl }),
+    })

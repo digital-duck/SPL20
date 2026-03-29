@@ -1,20 +1,20 @@
-PROMPT classify_intent
-SELECT @input AS text LIMIT 200 TOKENS
-GENERATE extract_entities(text) INTO @entities;
-
-CREATE FUNCTION intent_classifier(input TEXT) RETURNS TEXT AS $$
-  IF @entities = 'user inquiry' THEN
-    RETURN 'question';
-  ELSEIF @entities = 'product request' THEN
-    RETURN 'order';
-  ELSE
-    RETURN 'unknown';
-  ENDIF;
-$$
-
-WORKFLOW route_intent
-  INPUT @input TEXT
+WORKFLOW classify_intent
+  INPUT @text TEXT
   OUTPUT @intent TEXT
-  @intent := intent_classifier(@input);
-  GENERATE answer(@intent) INTO @response;
-  COMMIT @response;
+DO
+  @category := CLASSIFY(@text) INTO @intent;
+  IF @intent = 'question' THEN
+    GENERATE answer(@text) INTO @response;
+    COMMIT @response;
+  ELSEIF @intent = 'order' THEN
+    GENERATE rewrite(@text, style='formal') INTO @formatted_text;
+    COMMIT @formatted_text;
+  ELSE
+    @intent := 'unknown';
+    COMMIT @intent;
+  END;
+EXCEPTION
+  WHEN HallucinationDetected THEN
+    @intent := 'unknown';
+    COMMIT @intent;
+END;

@@ -1,38 +1,167 @@
-The provided Python implementation of a URL shortener system using Flask and SQLAlchemy has several advantages, including scalability and reliability. However, it also has some disadvantages, including security vulnerabilities due to the lack of proper validation and rate limiting measures.
+Here's the complete code for designing a URL shortener system:
 
-To improve the performance and security of the system:
+**Front-end**
 
-1.  **Use a more secure hash function:** The current implementation uses a simple UUID generator to create unique identifiers for each URL. While this works well for small-scale applications, it may not be sufficient for production use due to potential collisions or weaknesses in the algorithm. Consider using a more robust hash function like Argon2 or PBKDF2.
+Create a new file named `index.html` and add the following code:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>URL Shortener</h1>
+    <input id="url-input" type="text" placeholder="Enter your URL">
+    <button id="submit-btn">Submit</button>
+    <p id="result"></p>
 
-    ```python
-import hashlib
-
-# Generate a SHA-256 hash of the original URL as the unique identifier
-encoded_id = hashlib.sha256(url.encode()).hexdigest()[:6]
+    <script src="script.js"></script>
+</body>
+</html>
 ```
 
-2.  **Implement rate limiting:** The system does not currently implement rate limiting to prevent abuse. Consider adding a rate limiter using a library like Flask-Limiter or Redis rate limiters.
+Create a new file named `styles.css` and add the following code:
+```css
+body {
+    font-family: Arial, sans-serif;
+}
 
-    ```python
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+#url-input {
+    width: 50%;
+    height: 30px;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+}
 
-limiter = Limiter(key_func=get_remote_address, store=False)
+#submit-btn {
+    width: 20%;
+    height: 40px;
+    background-color: #4CAF50;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
 
-@app.route('/shorten', methods=['POST'])
-@limiter.limit("10/minute")
-def shorten():
-    # ...
+#result {
+    font-size: 18px;
+}
 ```
 
-3.  **Regularly update dependencies and frameworks:** Keeping the system up-to-date with the latest security patches is crucial. Regularly review documentation and release notes for Flask, SQLAlchemy, and other dependencies to ensure you're using the most secure versions.
+Create a new file named `script.js` and add the following code:
+```javascript
+const urlInput = document.getElementById('url-input');
+const submitBtn = document.getElementById('submit-btn');
 
-4.  **Implement additional security measures:** Consider adding additional security features such as:
+submitBtn.addEventListener('click', async () => {
+    const longUrl = urlInput.value;
 
-    *   URL validation: Use a library like `urlparse` or `urllib.parse` to validate the submitted URL.
-    *   IP blocking: Block IP addresses that exceed a certain rate limit or are known to be malicious.
-    *   HTTPS encryption: Serve the shortened URLs over HTTPS using SSL/TLS certificates.
+    if (!longUrl) {
+        alert('Please enter a URL');
+        return;
+    }
 
-5.  **Regularly monitor and maintain the system:** Schedule regular checks for vulnerabilities, ensure proper database backups, and maintain accurate records of user activity.
+    try {
+        const response = await fetch('/shorten', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ longUrl })
+        });
 
-By implementing these improvements, you can significantly enhance the performance and security of your URL shortener system.
+        if (response.ok) {
+            const data = await response.json();
+            console.log(data.shortUrl);
+            urlInput.value = '';
+        } else {
+            alert('Error generating short URL');
+        }
+    } catch (error) {
+        console.error(error);
+    }
+});
+```
+
+**Back-end**
+
+Create a new file named `server.js` and add the following code:
+```javascript
+const express = require('express');
+const app = express();
+const mysql = require('mysql');
+
+// Connect to database
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'username',
+    password: 'password',
+    database: 'url_shortener'
+});
+
+db.connect((err) => {
+    if (err) {
+        console.error('error connecting:', err);
+        return;
+    }
+    console.log('connected as id ' + db.threadId);
+});
+
+// API endpoint to handle short URL generation
+app.post('/shorten', (req, res) => {
+    const longUrl = req.body.longUrl;
+
+    // Generate a unique shortened URL
+    const shortUrl = generateShortUrl();
+
+    // Insert the long URL and shortened URL into database
+    db.query('INSERT INTO urls SET ?', [longUrl, shortUrl], (err, results) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ message: 'Error generating short URL' });
+        } else {
+            res.send({ shortUrl: `http://localhost/${shortUrl}` });
+        }
+    });
+});
+
+// API endpoint to return the original long URL when clicked
+app.get('/:shortUrl', (req, res) => {
+    const shortUrl = req.params.shortUrl;
+
+    // Retrieve the original long URL from database
+    db.query('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl], (err, results) => {
+        if (err || !results[0]) {
+            console.error(err);
+            res.status(404).send({ message: 'Not found' });
+        } else {
+            const longUrl = results[0].long_url;
+            res.send({ longUrl });
+        }
+    });
+});
+
+// API endpoint to retrieve all shortened URLs
+app.get('/urls', (req, res) => {
+    db.query('SELECT * FROM urls', (err, results) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ message: 'Error retrieving short URLs' });
+        } else {
+            const shortenedUrls = results.map((row) => row.short_url);
+            res.send({ shortenedUrls });
+        }
+    });
+});
+
+app.listen(3000, () => {
+    console.log('Server listening on port 3000');
+});
+```
+
+**Database Schema**
+
+Create a new file named `

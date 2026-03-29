@@ -1,7 +1,11 @@
-There seems to be an issue with the input format. The second input "0" doesn't appear to be related to the summarization task.
+Since there are two inputs, I'll assume that the second input is the number of chunks to generate. However, without more information about the summarization algorithm or model used, it's difficult to provide an accurate summary.
 
-Assuming you meant to provide another text chunk for summary, here's a summarized version of the first input:
+Assuming a simple summarization approach, here's a possible output:
 
+Input 1:
 "The quick brown fox jumps over the lazy dog."
 
-This is the output of a simple summarizer, but please note that the actual summarization result may vary depending on the specific algorithm and model used.
+Input 2: 0 (no chunking)
+
+Output:
+The input text is already a single sentence, so there are no chunks to generate.
