@@ -1,0 +1,99 @@
+
+```bash
+spl run ./23_structured_output/structured_output.spl --adapter momagrid text=John Smith, 42, joined Acme Corp in March 2021 earning $95,000/year
+```
+
+```spl
+-- Recipe 23: Structured Output
+-- Extract typed, structured data from free-form text using CREATE FUNCTION with JSON schema.
+-- Demonstrates schema-constrained generation — the LLM must return valid JSON matching the spec.
+--
+-- Usage:
+--   spl run cookbook/23_structured_output/structured_output.spl --adapter ollama -m gemma3 \
+--       text="John Smith, 42, joined Acme Corp in March 2021 earning $95,000/year"
+--
+--   spl run cookbook/23_structured_output/structured_output.spl --adapter ollama \
+--       text="Invoice #INV-2045 from TechSupplies Ltd dated 15 Jan 2024 for $3,420.50 due in 30 days"
+
+-- Define the extraction schema
+CREATE FUNCTION extract_entity_schema()
+RETURNS JSON
+AS $$
+{
+  "type": "object",
+  "properties": {
+    "people": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name":       { "type": "string" },
+          "age":        { "type": "integer" },
+          "role":       { "type": "string" },
+          "salary":     { "type": "number" },
+          "start_date": { "type": "string", "format": "date" }
+        },
+        "required": ["name"]
+      }
+    },
+    "organizations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name":     { "type": "string" },
+          "type":     { "type": "string" },
+          "industry": { "type": "string" }
+        },
+        "required": ["name"]
+      }
+    },
+    "amounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "value":    { "type": "number" },
+          "currency": { "type": "string", "default": "USD" },
+          "label":    { "type": "string" }
+        },
+        "required": ["value"]
+      }
+    },
+    "dates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "value": { "type": "string" },
+          "label": { "type": "string" }
+        },
+        "required": ["value"]
+      }
+    }
+  }
+}
+$$;
+
+PROMPT extract_entities
+SELECT
+    system_role('You are a precise data extraction engine. Extract all entities from the text and return valid JSON matching the provided schema. Return only the JSON object, no explanation.'),
+    context.text AS text,
+    extract_entity_schema() AS schema
+GENERATE structured_extraction(text, schema)
+```
+
+============================================================
+Caller:  momagrid-hub
+Adapter: momagrid
+Model: llama3.2
+Tokens: 99 in / 71 out
+Latency: 4181ms
+Cost: $0.000000
+Timestamp: 2026-03-27 13:53:49
+------------------------------------------------------------
+```output
+{"entities": [{"type": "Person", "name": "John Smith"}, {"type": "Company", "name": "Acme Corp"}, {"type": "Date", "value": "2021-03", "period": "March"}], "date": {"value": "2021-03", "period": "March"}}
+```
+============================================================
+Log: /home/wengong/.spl/logs/structured_output-momagrid-20260327-135345.md

@@ -30,3 +30,8 @@ Works with any adapter: `--adapter openrouter`, `--adapter momagrid`, `--adapter
 ## Source
 
 See [`scripts/ollama_proxy.spl`](../../scripts/ollama_proxy.spl) — also used by Recipe 04 (Model Showdown).
+
+```bash
+export MOMAGRID_HUB_URL=http://192.168.0.235:9000
+spl run scripts/ollama_proxy.spl --adapter momagrid -m gemma3 prompt="What is 9!?"
+```
