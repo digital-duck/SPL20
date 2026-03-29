@@ -10,7 +10,7 @@ General-purpose LLM query — use any Ollama model from the command line with a 
 ```bash
 spl run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
 spl run scripts/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
-spl run scripts/ollama_proxy.spl --adapter ollama -m mistral prompt="What is 2+2?"
+spl run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="What is 2+2?"
 ```
 
 The `--model (-m)` flag overrides the model at runtime — no `.spl` edits needed. This makes it trivial to test any Ollama model:

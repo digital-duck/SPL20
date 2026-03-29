@@ -1,39 +1,32 @@
-WORKFLOW refine_text
+WORKFLOW review_agent
   INPUT @draft TEXT
   OUTPUT @final TEXT
 DO
-  @quality := summarize(@draft);
+  @quality := 0.0;
+  @current := @draft;
   WHILE @quality < 0.8 DO
-    GENERATE rewrite(@draft, style='improved') INTO @temp;
-    GENERATE sentiment(@temp) INTO @new_quality;
-    IF @new_quality > @quality THEN
-      @quality := @new_quality;
-      @draft := @temp;
-    END;
+    GENERATE rewrite(@current, style='improved') INTO @current;
+    GENERATE sentiment(@current) INTO @quality;
   END;
-  @final := @draft;
+  @final := @current;
   COMMIT @final;
-END;
 
-CREATE FUNCTION summarize(input TEXT)
-RETURNS NUMBER AS $$
-  sum([token] FOR token IN split(input, ' '))
-$$;
-
-CREATE FUNCTION rewrite(input TEXT, style TEXT)
+CREATE FUNCTION rewrite(
+  input TEXT,
+  style TEXT DEFAULT 'standard'
+)
 RETURNS TEXT AS $$
   CASE style
-    WHEN 'improved' THEN replace(replace(input, 'not a good word', 'a better one'), 'not a great phrase', 'an even better one')
-    ELSE input
+    WHEN 'improved' THEN
+      REPLACE(input, 'this', 'that')
+    WHEN 'formal' THEN
+      REPLACE(input, 'is', 'are')
   END;
 $$;
 
-CREATE FUNCTION sentiment(input TEXT)
+CREATE FUNCTION sentiment(
+  input TEXT
+)
 RETURNS NUMBER AS $$
-  (sum([token] FOR token IN split(input, ' ') WHERE token IN ['good', 'great']) - sum([token] FOR token IN split(input, ' ') WHERE token IN ['bad', 'terrible'])) / length(split(input, ' '))
-$$;
-
-CREATE FUNCTION split(input TEXT, delimiter TEXT)
-RETURNS LIST<TEXT> AS $$
-  list([token] FOR token IN split(input, delimiter))
+  RETURN LENGTH(REPLACE(input, ',', '')) / LENGTH(input);
 $$;
