@@ -53,15 +53,17 @@ Latency: 440ms
 ```bash
 # Same recipe, three different backends — zero .spl changes
 spl run examples/hello_world.spl --adapter ollama     -m llama3.2  user_input="hello" lang="French"
-spl run examples/hello_world.spl --adapter momagrid   -m llama3.2  user_input="hello" lang="French"
 spl run examples/hello_world.spl --adapter anthropic  -m claude-sonnet-4-6  user_input="hello" lang="French"
+
+export MOMAGRID_HUB_URL="<URL>"
+spl run examples/hello_world.spl --adapter momagrid   -m llama3.2  user_input="hello" lang="French"
 ```
 
 ## Quick Start
 
 ```bash
 # Clone and install
-git clone <repo-url> SPL20
+git clone https://github.com/digital-duck/SPL20.git
 cd SPL20
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
