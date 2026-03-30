@@ -1,167 +1,188 @@
-Here's the complete code for designing a URL shortener system:
+Based on the provided design for a URL shortener system, here's an implementation in Node.js and Express.js with MongoDB as the NoSQL database.
 
-**Front-end**
+**Project Structure:**
 
-Create a new file named `index.html` and add the following code:
+```bash
+url-shortener/
+app.js
+config/
+database.js
+routes.js
+utils.js
+models/
+Url.js
+public/
+script.js
+index.html
+package.json
+```
+
+**Database Configuration:**
+
+Create a `database.js` file in the `config/` directory to configure MongoDB:
+
+```javascript
+// config/database.js
+
+const mongoose = require('mongoose');
+
+const urlSchema = new mongoose.Schema({
+    originalUrl: {
+        type: String,
+        required: true
+    },
+    shortenedUrl: {
+        type: String,
+        unique: true,
+        index: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const Url = mongoose.model('Url', urlSchema);
+
+mongoose.connect('mongodb://localhost/url-shortener', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+});
+
+module.exports = Url;
+```
+
+**Backend Routes:**
+
+Create a `routes.js` file in the `config/` directory to define backend routes:
+
+```javascript
+// config/routes.js
+
+const express = require('express');
+const router = express.Router();
+const Url = require('./database');
+
+router.post('/shorten', async (req, res) => {
+    try {
+        const originalUrl = req.body.originalUrl;
+        const shortenedUrl = generateShortUrl();
+
+        await Url.create({
+            originalUrl,
+            shortenedUrl
+        });
+
+        return res.json({ shortUrl: shortenedUrl });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error shortening URL' });
+    }
+});
+
+router.get('/:shortUrl', async (req, res) => {
+    try {
+        const shortUrl = req.params.shortUrl;
+
+        const urlDoc = await Url.findOne({ shortenedUrl: shortUrl });
+
+        if (!urlDoc) {
+            return res.status(404).json({ message: 'URL not found' });
+        }
+
+        return res.json({ originalUrl: urlDoc.originalUrl });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error retrieving URL' });
+    }
+});
+
+module.exports = router;
+```
+
+**Short URL Generation:**
+
+Create a `utils.js` file in the root directory to generate unique short URLs:
+
+```javascript
+// utils.js
+
+const crypto = require('crypto');
+const shortId = require('shortid');
+
+function generateShortUrl() {
+    const timestamp = Date.now();
+    const randomString = crypto.randomBytes(6).toString('hex');
+    return shortId.generate() + '-' + timestamp + '-' + randomString;
+}
+
+module.exports = { generateShortUrl };
+```
+
+**Frontend Code:**
+
+Create an `index.html` file in the `public/` directory to display a form and the shortened URL:
+
 ```html
+<!-- public/index.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>URL Shortener</title>
-    <link rel="stylesheet" href="styles.css">
+    <script src="/static/script.js"></script>
 </head>
 <body>
-    <h1>URL Shortener</h1>
-    <input id="url-input" type="text" placeholder="Enter your URL">
-    <button id="submit-btn">Submit</button>
-    <p id="result"></p>
+    <form id="shorten-form">
+        <input type="text" id="original-url" placeholder="Enter URL">
+        <button type="submit">Shorten URL</button>
+    </form>
 
-    <script src="script.js"></script>
+    <div id="result">
+        <!-- Shortened URL will be displayed here -->
+    </div>
 </body>
 </html>
 ```
 
-Create a new file named `styles.css` and add the following code:
-```css
-body {
-    font-family: Arial, sans-serif;
-}
+**Frontend JavaScript Code:**
 
-#url-input {
-    width: 50%;
-    height: 30px;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-}
+Create a `script.js` file in the `static/` directory to handle form submission and display the shortened URL:
 
-#submit-btn {
-    width: 20%;
-    height: 40px;
-    background-color: #4CAF50;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-}
-
-#result {
-    font-size: 18px;
-}
-```
-
-Create a new file named `script.js` and add the following code:
 ```javascript
-const urlInput = document.getElementById('url-input');
-const submitBtn = document.getElementById('submit-btn');
+// static/script.js
 
-submitBtn.addEventListener('click', async () => {
-    const longUrl = urlInput.value;
+const form = document.getElementById('shorten-form');
+const resultDiv = document.getElementById('result');
 
-    if (!longUrl) {
-        alert('Please enter a URL');
-        return;
-    }
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-    try {
-        const response = await fetch('/shorten', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ longUrl })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            console.log(data.shortUrl);
-            urlInput.value = '';
-        } else {
-            alert('Error generating short URL');
-        }
-    } catch (error) {
-        console.error(error);
-    }
-});
-```
-
-**Back-end**
-
-Create a new file named `server.js` and add the following code:
-```javascript
-const express = require('express');
-const app = express();
-const mysql = require('mysql');
-
-// Connect to database
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'username',
-    password: 'password',
-    database: 'url_shortener'
-});
-
-db.connect((err) => {
-    if (err) {
-        console.error('error connecting:', err);
-        return;
-    }
-    console.log('connected as id ' + db.threadId);
-});
-
-// API endpoint to handle short URL generation
-app.post('/shorten', (req, res) => {
-    const longUrl = req.body.longUrl;
-
-    // Generate a unique shortened URL
+    const originalUrl = document.getElementById('original-url').value;
     const shortUrl = generateShortUrl();
-
-    // Insert the long URL and shortened URL into database
-    db.query('INSERT INTO urls SET ?', [longUrl, shortUrl], (err, results) => {
-        if (err) {
-            console.error(err);
-            res.status(500).send({ message: 'Error generating short URL' });
-        } else {
-            res.send({ shortUrl: `http://localhost/${shortUrl}` });
-        }
-    });
+    fetch('/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ originalUrl })
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            resultDiv.innerHTML += `<p>Shortened URL: ${data.shortUrl}</p>`;
+        })
+        .catch((error) => console.error(error));
 });
 
-// API endpoint to return the original long URL when clicked
-app.get('/:shortUrl', (req, res) => {
-    const shortUrl = req.params.shortUrl;
-
-    // Retrieve the original long URL from database
-    db.query('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl], (err, results) => {
-        if (err || !results[0]) {
-            console.error(err);
-            res.status(404).send({ message: 'Not found' });
-        } else {
-            const longUrl = results[0].long_url;
-            res.send({ longUrl });
-        }
-    });
-});
-
-// API endpoint to retrieve all shortened URLs
-app.get('/urls', (req, res) => {
-    db.query('SELECT * FROM urls', (err, results) => {
-        if (err) {
-            console.error(err);
-            res.status(500).send({ message: 'Error retrieving short URLs' });
-        } else {
-            const shortenedUrls = results.map((row) => row.short_url);
-            res.send({ shortenedUrls });
-        }
-    });
-});
-
-app.listen(3000, () => {
-    console.log('Server listening on port 3000');
-});
+// Function to generate short URL
+function generateShortUrl() {
+    const { generateShortUrl } = require('./utils');
+    return generateShortUrl();
+}
 ```
 
-**Database Schema**
+**Start the Server:**
 
-Create a new file named `
+Start the server by running `node app.js` in your terminal:
+
+```bash

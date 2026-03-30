@@ -1,8 +1,7 @@
-This step sets up a new Node.js project using the Express.js framework, allowing us to build a web application with fast and flexible routing.
+This step produces a comprehensive set of API endpoints for managing tasks, defining how data is accessed, created, updated, and deleted. The resulting API will provide a solid foundation for building a robust task management system.
 
-The resulting files will include:
+The following files will be created:
 
-- `package.json`
-- `server.js` (or `app.js`, depending on configuration)
-- `app.css` (for CSS stylesheets)
-- `index.html` (or similar HTML entry point)
+* `tasks.json` (endpoints documentation)
+* `tasks.route.js` (API endpoint routes file)
+* `task.controller.js` (task-related controller file)

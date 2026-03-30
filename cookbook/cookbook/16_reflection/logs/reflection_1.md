@@ -1,147 +1,73 @@
-It seems like you started a task on designing a URL shortener system, but didn't provide an Input 2 for the problem. However, I can continue with providing solutions based on common requirements.
-
-### Problem Statement
-Design a URL shortener system.
-
-### Solution
-
-Overview
---------
-
-A URL shortener is a service that takes a long, cumbersome URL and converts it into a shorter, more memorable version. This system will provide a user-friendly interface for users to submit their URLs, store them in a database, generate unique shortened URLs, and return the original long URL when clicked.
-
-System Requirements
---------------------
-
-*   Database to store URLs (e.g., MySQL or MongoDB)
-*   Web server to host the application (e.g., Apache or Nginx)
-*   Front-end framework for user interface (e.g., React or Angular)
-
-### System Design
-
-#### 1. User Interface
-
-The front-end will be a simple web page with input fields for users to enter their long URL and an "Submit" button.
-
-```html
-<!-- index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Shortener</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <h1>URL Shortener</h1>
-    <input id="url-input" type="text" placeholder="Enter your URL">
-    <button id="submit-btn">Submit</button>
-    <p id="result"></p>
-
-    <script src="script.js"></script>
-</body>
-</html>
-```
-
-#### 2. Back-end
-
-The back-end will be a Node.js application using Express.js as the web framework.
-
-```javascript
-// server.js
 const express = require('express');
+const mongoose = require('mongoose');
+
 const app = express();
-const mysql = require('mysql');
+const port = 3000;
 
-// Connect to database
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'username',
-    password: 'password',
-    database: 'url_shortener'
-});
+mongoose.connect("mongodb://localhost/shorturl", { useNewUrlParser: true, useUnifiedTopology: true });
 
-db.connect((err) => {
-    if (err) {
-        console.error('error connecting:', err);
-        return;
+app.use(express.json());
+
+const urlSchema = new mongoose.Schema({
+    originalUrl: {
+        type: String,
+        required: true
+    },
+    shortenedUrl: {
+        type: String,
+        unique: true,
+        index: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
-    console.log('connected as id ' + db.threadId);
 });
 
-// API endpoint to handle short URL generation
-app.post('/shorten', (req, res) => {
-    const longUrl = req.body.longUrl;
+const Url = mongoose.model('Url', urlSchema);
 
-    // Generate a unique shortened URL
-    const shortUrl = generateShortUrl();
+app.post('/shorten', async (req, res) => {
+    try {
+        const originalUrl = req.body.originalUrl;
+        const shortenedUrl = generateShortUrl();
 
-    // Insert the long URL and shortened URL into database
-    db.query('INSERT INTO urls SET ?', [longUrl, shortUrl], (err, results) => {
-        if (err) {
-            console.error(err);
-            res.status(500).send({ message: 'Error generating short URL' });
-        } else {
-            res.send({ shortUrl: `http://localhost/${shortUrl}` });
+        // Store the URL in the database
+        await Url.create({
+            originalUrl,
+            shortenedUrl
+        });
+
+        return res.json({ shortUrl: shortenedUrl });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error shortening URL' });
+    }
+});
+
+app.get('/:shortUrl', async (req, res) => {
+    try {
+        const shortUrl = req.params.shortUrl;
+
+        // Find the original URL in the database
+        const urlDoc = await Url.findOne({ shortenedUrl: shortUrl });
+
+        if (!urlDoc) {
+            return res.status(404).json({ message: 'URL not found' });
         }
-    });
+
+        return res.json({ originalUrl: urlDoc.originalUrl });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error retrieving URL' });
+    }
 });
 
-// API endpoint to return the original long URL when clicked
-app.get('/:shortUrl', (req, res) => {
-    const shortUrl = req.params.shortUrl;
+function generateShortUrl() {
+    const timestamp = Date.now();
+    const randomString = crypto.randomBytes(6).toString('hex');
+    return shortId.generate() + '-' + timestamp + '-' + randomString;
+}
 
-    // Retrieve the original long URL from database
-    db.query('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl], (err, results) => {
-        if (err || !results[0]) {
-            console.error(err);
-            res.status(404).send({ message: 'Not found' });
-        } else {
-            const longUrl = results[0].long_url;
-            res.send({ longUrl });
-        }
-    });
+app.listen(port, () => {
+    console.log(`Server started on port ${port}`);
 });
-
-// API endpoint to retrieve all shortened URLs
-app.get('/urls', (req, res) => {
-    db.query('SELECT * FROM urls', (err, results) => {
-        if (err) {
-            console.error(err);
-            res.status(500).send({ message: 'Error retrieving short URLs' });
-        } else {
-            const shortenedUrls = results.map((row) => row.short_url);
-            res.send({ shortenedUrls });
-        }
-    });
-});
-
-app.listen(3000, () => {
-    console.log('Server listening on port 3000');
-});
-```
-
-#### 3. Database Schema
-
-The database schema will store the long URL and its corresponding shortened URL.
-
-```sql
-CREATE TABLE urls (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    long_url VARCHAR(255) NOT NULL,
-    short_url VARCHAR(10) UNIQUE NOT NULL
-);
-```
-
-#### 4. Front-end Functionality
-
-The front-end will send a POST request to the `/shorten` API endpoint with the long URL in the request body.
-
-```javascript
-// script.js
-const urlInput = document.getElementById('url-input');
-const submitBtn = document.getElementById('submit-btn');
-
-submitBtn.addEventListener('click', () => {
-    const longUrl

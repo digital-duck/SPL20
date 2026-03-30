@@ -1,8 +1,7 @@
-This step sets up a new Node.js project with Express.js, allowing for the development of a web application. The resulting directory structure will enable efficient routing and routing configuration.
+This step defines the API endpoints for managing tasks, including basic CRUD operations. The resulting API will provide a solid foundation for building a robust task management system. It sets up the structure for handling data access, creation, update, and deletion.
 
-The following files will be created:
+Filenames created:
 
-- `package.json`
-- `server.js` (or `app.js`)
-- `app.css`
-- `index.html`
+* `tasks.json`
+* `tasks.route.js`
+* `task.controller.js`
