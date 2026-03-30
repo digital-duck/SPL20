@@ -1,6 +1,7 @@
 .spl/
 .claude/
 memory/
+**/logs
 
 
 # Byte-compiled / optimized / DLL files

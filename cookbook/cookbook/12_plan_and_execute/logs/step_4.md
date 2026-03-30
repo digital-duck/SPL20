@@ -1,7 +1,7 @@
-This step sets up a basic directory structure for the todo app by creating an empty project folder with essential directories for managing dependencies (node_modules) and source code (src), as well as test files (tests).
+This step designs the database schema for storing tasks, including fields such as task ID, title, description, due date, and status. The resulting schema will provide a structured data store for managing tasks. This will be used to establish a data storage foundation for the task management system.
 
-The resulting filenames are:
-1. `node_modules/`
-2. `package.json`
-3. `src/`
-4. `tests/`
+Filenames created:
+
+* `tasks.json`
+* `tasks.route.js`
+* `task.controller.js`
