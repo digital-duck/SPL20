@@ -1,20 +1,15 @@
 WORKFLOW classify_intent
   INPUT @text TEXT
-  OUTPUT @intent TEXT
+  OUTPUT @label TEXT
+  INPUT @models LIST<MODEL> DEFAULT ['default_model']
 DO
-  @category := CLASSIFY(@text) INTO @intent;
-  IF @intent = 'question' THEN
-    GENERATE answer(@text) INTO @response;
-    COMMIT @response;
-  ELSEIF @intent = 'order' THEN
-    GENERATE rewrite(@text, style='formal') INTO @formatted_text;
-    COMMIT @formatted_text;
-  ELSE
-    @intent := 'unknown';
-    COMMIT @intent;
+  GENERATE extract_entities(@text) INTO @entities;
+  GENERATE classify_entities(@entities, 'intent') INTO @intent_label;
+  COMMIT @intent_label;
+  EVALUATE
+    WHEN @intent_label = 'unknown' THEN
+      @label := 'unknown';
+    ELSE
+      @label := 'default_handler';
   END;
-EXCEPTION
-  WHEN HallucinationDetected THEN
-    @intent := 'unknown';
-    COMMIT @intent;
 END;

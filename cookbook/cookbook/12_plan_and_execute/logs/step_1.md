@@ -1,8 +1,6 @@
-This step sets up a new Node.js project with Express.js, allowing for the development of a web application. The resulting directory structure will enable efficient routing and routing configuration.
+This step sets up a basic structure for a RESTful API using Express.js and Mongoose, allowing for easy database interaction. The resulting project includes updated `package.json` with new dependencies, environment variables in `.env`, and files for MongoDB connection setup (`database.js`) and the application server (`app.js`). The following filenames are created:
 
-The following files will be created:
-
-- `package.json`
-- `server.js` (or `app.js`)
-- `app.css`
-- `index.html`
+* `app.js`
+* `.env`
+* `database.js`
+* `package.json`

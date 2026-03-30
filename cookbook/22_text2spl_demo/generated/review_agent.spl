@@ -2,29 +2,73 @@ WORKFLOW refine_text
   INPUT @draft TEXT
   OUTPUT @final TEXT
 DO
-  @quality := summarize(@draft);
-  WHILE @quality < 0.8 DO
-    GENERATE rewrite(@draft) INTO @temp;
-    GENERATE sentiment(@temp) INTO @new_quality;
-    IF @new_quality > @quality THEN
-      @quality := @new_quality;
-      @draft := @temp;
-    END IF;  -- Added 'IF'
+  DO
+    GENERATE rewrite(@draft, style='improved') INTO @temp;
+    GENERATE sentiment(@temp) INTO @quality;
+    COMMIT @temp;
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @quality := 0.0;
+      @temp := @draft;
+      COMMIT @temp;
+    WHEN ModelOverloaded THEN
+      RETRY;
   END;
-  @final := @draft;
+
+  DO
+    IF @quality < 0.8 THEN
+      GENERATE rewrite(@temp, style='refined') INTO @temp;
+      GENERATE sentiment(@temp) INTO @quality;
+      COMMIT @temp;
+    ELSE
+      BREAK;
+    END;
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @quality := 0.0;
+      @temp := @draft;
+      COMMIT @temp;
+    WHEN ModelOverloaded THEN
+      RETRY;
+  END;
+
+  DO
+    IF @summary != 'the text is high quality' THEN
+      GENERATE rewrite(@temp, style='improved') INTO @temp;
+      GENERATE sentiment(@temp) INTO @quality;
+      COMMIT @temp;
+    ELSE
+      BREAK;
+    END;
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @quality := 0.0;
+      @temp := @draft;
+      COMMIT @temp;
+    WHEN ModelOverloaded THEN
+      RETRY;
+  END;
+
+  GENERATE classify(@temp) INTO @label;
+  COMMIT @label;
+
+  DO
+    IF @label != 'positive' THEN
+      GENERATE rewrite(@temp, style='improved') INTO @temp;
+      GENERATE sentiment(@temp) INTO @quality;
+      COMMIT @temp;
+    ELSE
+      BREAK;
+    END;
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @quality := 0.0;
+      @temp := @draft;
+      COMMIT @temp;
+    WHEN ModelOverloaded THEN
+      RETRY;
+  END;
+
+  GENERATE rewrite(@temp, style='refined') INTO @final;
   COMMIT @final;
-
-CREATE FUNCTION summarize(text TEXT)
-RETURNS NUMBER AS $$
-  sum(1.0 for token in split(text, ' ') if length(token) > 3)
-$$;
-
-CREATE FUNCTION rewrite(text TEXT)
-RETURNS TEXT AS $$
-  replace('bad', 'good', text)
-$$;
-
-CREATE FUNCTION sentiment(text TEXT)
-RETURNS NUMBER AS $$
-  (sum(1.0 for word in split(text, ' ') if word:is upper) - sum(1.0 for word in split(text, ' ') if word:is lower)) / length(split(text, ' '))
-$$;
+END;
