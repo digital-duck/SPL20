@@ -1,7 +1,11 @@
-"""SQLite-backed memory store for SPL 2.0.
+"""Persistent memory and prompt-cache store for SPL 2.0.
 
-Provides persistent key-value storage for memory.get()/set(),
-prompt caching, and workflow variable state.
+  kv_store    — SQLite-backed key-value store for memory.get()/set()
+  prompt_cache — dd-cache DiskCache for LLM response caching (TTL-aware)
+
+The two stores are intentionally separate:
+  - kv_store  : long-lived workflow state, no expiry
+  - prompt_cache: ephemeral LLM result cache, expires after cache_ttl seconds
 """
 
 from __future__ import annotations
@@ -11,7 +15,7 @@ from datetime import datetime
 
 
 class MemoryStore:
-    """SQLite-backed key-value store for SPL memory operations."""
+    """Persistent memory and prompt-cache store for SPL 2.0."""
 
     def __init__(self, db_path: str = ".spl/memory.db"):
         self.db_path = db_path
@@ -19,6 +23,10 @@ class MemoryStore:
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
         self._init_schema()
+        # Prompt cache via dd-cache DiskCache (separate SQLite file)
+        cache_path = os.path.join(os.path.dirname(db_path) or ".", "prompt_cache.db")
+        from dd_cache import DiskCache
+        self._cache: DiskCache = DiskCache(path=cache_path)
 
     def _init_schema(self):
         self._conn.executescript("""
@@ -29,17 +37,12 @@ class MemoryStore:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-
-            CREATE TABLE IF NOT EXISTS prompt_cache (
-                prompt_hash TEXT PRIMARY KEY,
-                result TEXT NOT NULL,
-                model TEXT,
-                tokens_used INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP
-            );
         """)
         self._conn.commit()
+
+    # ------------------------------------------------------------------ #
+    # Key-value store (workflow memory)                                   #
+    # ------------------------------------------------------------------ #
 
     def get(self, key: str) -> str | None:
         row = self._conn.execute(
@@ -71,24 +74,33 @@ class MemoryStore:
         ).fetchall()
         return [row["key"] for row in rows]
 
-    def cache_get(self, prompt_hash: str) -> str | None:
-        row = self._conn.execute(
-            """SELECT result FROM prompt_cache
-               WHERE prompt_hash = ?
-               AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)""",
-            (prompt_hash,)
-        ).fetchone()
-        return row["result"] if row else None
+    # ------------------------------------------------------------------ #
+    # Prompt cache (dd-cache DiskCache)                                   #
+    # ------------------------------------------------------------------ #
 
-    def cache_set(self, prompt_hash: str, result: str, model: str = "",
-                  tokens_used: int = 0, expires_at: str | None = None):
-        self._conn.execute(
-            """INSERT OR REPLACE INTO prompt_cache
-               (prompt_hash, result, model, tokens_used, expires_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (prompt_hash, result, model, tokens_used, expires_at)
+    def cache_get(self, prompt_hash: str) -> str | None:
+        """Return cached LLM result for prompt_hash, or None if absent/expired."""
+        entry = self._cache.get(prompt_hash)
+        if entry is None:
+            return None
+        return entry.get("result") if isinstance(entry, dict) else str(entry)
+
+    def cache_set(
+        self,
+        prompt_hash: str,
+        result: str,
+        model: str = "",
+        tokens_used: int = 0,
+        ttl: int | None = None,
+        # Legacy parameter kept for call-site compat; ignored (use ttl instead)
+        expires_at: str | None = None,
+    ) -> None:
+        """Cache an LLM result with optional TTL (seconds)."""
+        self._cache.set(
+            prompt_hash,
+            {"result": result, "model": model, "tokens_used": tokens_used},
+            ttl=ttl,
         )
-        self._conn.commit()
 
     def close(self):
         self._conn.close()

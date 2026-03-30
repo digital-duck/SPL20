@@ -399,32 +399,42 @@ Three cookbook recipes currently fail due to parser gaps:
 
 ## Tech Debt
 
-Seven items identified during the CLI clean-up (2026-03-23). Address in order after the `spl` command clean-up is complete.
+Seven items identified during the CLI clean-up (2026-03-23). Status updated 2026-03-30.
 
-### 1. Replace `spl/storage.py` with `dd-vectordb`
-The doc-rag store (`spl doc-rag`) uses a hand-rolled FAISS wrapper in `spl/storage.py`. `dd-vectordb` provides the same abstraction as a shared library; using it makes the backend swappable (FAISS today, something else tomorrow).
-**Scope:** `spl/storage.py`, `spl/cli.py` doc-rag subcommands.
+### ~~1. Replace `spl/storage.py` with `dd-vectordb`~~ ✅ DONE
+`spl/storage/vector.py` now uses `dd-vectordb` (FAISSVectorDB) + `dd-embed`.
+The old FAISS+SQLite hand-rolled implementation is gone.
 
-### 2. Replace `spl/code_rag.py` ChromaDB layer with `dd-vectordb`
-The code-rag store (`spl code-rag`) wraps ChromaDB directly in `spl/code_rag.py`. Same abstraction as #1 — both stores should sit behind the same interface.
-**Scope:** `spl/code_rag.py`.
+### ~~2. Replace `spl/code_rag.py` ChromaDB layer with `dd-vectordb`~~ ✅ DONE
+`spl/code_rag.py` now uses `dd-vectordb` (ChromaVectorDB) + `dd-embed`.
 
-### 3. Consolidate embeddings with `dd-embed`
-Both doc-rag and code-rag embed text independently (FAISS uses sentence-transformers, ChromaDB uses its own default). A single embedding layer from `dd-embed` would dedup the logic and allow model-swapping in one place.
-**Scope:** `spl/storage.py`, `spl/code_rag.py`.
+### ~~3. Consolidate embeddings with `dd-embed`~~ ✅ DONE
+Both `vector.py` and `code_rag.py` use `dd-embed` (SentenceTransformerAdapter).
+A single `get_adapter(provider, model_name=...)` call; model-swapping in one place.
 
-### 4. Replace `spl/adapters/` with `dd-llm`
-The adapters layer (`spl/adapters/`) is a bespoke multi-provider LLM client. `dd-llm` provides the same abstraction across the digital-duck ecosystem; convergence avoids maintaining two parallel implementations.
-**Scope:** `spl/adapters/` directory, `spl/executor.py`.
+### ~~4. Replace `spl/adapters/` with `dd-llm`~~ ✅ DONE (2026-03-30)
+Added `spl/adapters/dd_llm_bridge.py` — wraps any dd-llm adapter in SPL's async
+`LLMAdapter` interface via `asyncio.to_thread()`. Updated `adapters/__init__.py`
+to prefer the bridge for all providers dd-llm supports (anthropic, openai, ollama,
+openrouter, claude_cli, google). Bespoke adapters remain as fallback when dd-llm
+is not installed, and as primary for providers dd-llm does not cover (echo,
+momagrid, deepseek, qwen, bedrock, vertex, azure_openai).
 
 ### 5. Replace Streamlit `db.py` SQLite layer with `dd-db`
-`spl/ui/streamlit/db.py` is a hand-written SQLite wrapper. `dd-db` provides a shared database abstraction; using it makes the knowledge base backend swappable.
+`spl/ui/streamlit/db.py` is a hand-written SQLite wrapper. `dd-db` provides a
+shared database abstraction; using it makes the knowledge base backend swappable.
+**Deferred**: the file uses `sqlite3.Row`, `executescript`, `lastrowid` and other
+low-level APIs that require significant rework. Pattern established in
+`storage/storage_conn.py` — follow that when time allows.
 **Scope:** `streamlit/db.py`.
 
-### 6. Use `dd-extract` for `--dataset FILE` loading
-The `--dataset` flag on `spl run` currently reads files as raw UTF-8 text. `dd-extract` can handle PDF, CSV, DOCX, HTML extraction properly without adding new deps to SPL.
-**Scope:** `spl/cli.py` `run` command dataset loader.
+### ~~6. Use `dd-extract` for `--dataset FILE` loading~~ ✅ DONE (2026-03-30)
+`_load_datasets()` in `spl/cli.py` now uses `PDFExtractor` from `dd-extract`
+for `.pdf` files; all other file types remain UTF-8 text reads.
 
-### 7. Replace prompt cache with `dd-cache`
-The prompt result cache (`.spl/memory.db` `prompt_cache` table) is hand-rolled. `dd-cache` provides a shared caching layer.
-**Scope:** `spl/cache.py` (if it exists), `spl/cli.py` cache group.
+### ~~7. Replace prompt cache with `dd-cache`~~ ✅ DONE (2026-03-30)
+`MemoryStore.cache_get/cache_set` in `spl/storage/memory.py` now use `dd-cache`
+`DiskCache` (backed by `.spl/prompt_cache.db`). The `prompt_cache` SQLite table
+in `memory.db` has been removed. `spl/cli.py` `cache list/clear` commands updated
+to query the DiskCache SQLite file directly. `executor.py` updated to pass
+`ttl=self.cache_ttl` instead of `expires_at` string.

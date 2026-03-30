@@ -354,13 +354,11 @@ class Executor:
 
         # Step 7: Cache result
         if self.cache_enabled:
-            from datetime import datetime, timedelta
-            expires = (datetime.utcnow() + timedelta(seconds=self.cache_ttl)).strftime("%Y-%m-%d %H:%M:%S")
             self.memory.cache_set(
                 prompt_hash, gen_result.content,
                 model=gen_result.model,
                 tokens_used=gen_result.total_tokens,
-                expires_at=expires,
+                ttl=self.cache_ttl,
             )
             _log.info("[%s] cache STORE (ttl=%ds)", plan.prompt_name, self.cache_ttl)
 

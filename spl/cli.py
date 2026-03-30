@@ -61,7 +61,8 @@ def _parse_params(raw: tuple[str, ...]) -> dict[str, str]:
 def _load_datasets(datasets: tuple[str, ...]) -> dict[str, str]:
     """Parse NAME=FILE tuples, read each file, and return {name: content}.
 
-    # TODO (tech-debt): replace with dd-extract for PDF/CSV/DOCX support.
+    PDF files are extracted via dd-extract (PDFExtractor); all other files
+    are read as UTF-8 text.
     """
     result: dict[str, str] = {}
     for item in datasets:
@@ -74,10 +75,20 @@ def _load_datasets(datasets: tuple[str, ...]) -> dict[str, str]:
         path = Path(filepath)
         if not path.exists():
             raise click.ClickException(f"Dataset file not found: {filepath!r}")
-        try:
-            result[name] = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            result[name] = path.read_text(encoding="utf-8", errors="replace")
+        if path.suffix.lower() == ".pdf":
+            try:
+                from dd_extract import PDFExtractor
+                result[name] = PDFExtractor().from_file(str(path))
+            except ImportError:
+                raise click.ClickException(
+                    "dd-extract is required to load PDF datasets. "
+                    "Install with: pip install dd-extract"
+                )
+        else:
+            try:
+                result[name] = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                result[name] = path.read_text(encoding="utf-8", errors="replace")
     return result
 
 
@@ -640,34 +651,27 @@ def cmd_cache() -> None:
 @click.option("--storage-dir", default=None, show_default=True)
 def cache_list(storage_dir: str | None) -> None:
     """List cached prompts."""
+    import sqlite3 as _sqlite3
+    import time as _time
     storage_dir = storage_dir or _cfg_default("storage_dir", ".spl")
-    from spl.storage.memory import MemoryStore
-    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
-    rows = store._conn.execute(
-        "SELECT prompt_hash, model, tokens_used, created_at, expires_at "
-        "FROM prompt_cache ORDER BY created_at DESC"
-    ).fetchall()
-    store.close()
+    cache_path = os.path.join(storage_dir, "prompt_cache.db")
+    if not os.path.exists(cache_path):
+        click.echo("(empty)")
+        return
+    conn = _sqlite3.connect(cache_path)
+    conn.row_factory = _sqlite3.Row
+    rows = conn.execute("SELECT key, expires_at FROM cache ORDER BY rowid DESC").fetchall()
+    conn.close()
     if not rows:
         click.echo("(empty)")
         return
+    now = _time.time()
     for r in rows:
-        expired = ""
-        if r["expires_at"]:
-            from datetime import datetime
-            try:
-                # Handle both ISO format and SQLite format
-                exp_str = r["expires_at"].replace("T", " ")
-                exp = datetime.strptime(exp_str[:19], "%Y-%m-%d %H:%M:%S")
-                if exp < datetime.utcnow():
-                    expired = " [EXPIRED]"
-            except (ValueError, TypeError):
-                pass
-        click.echo(
-            f"  {r['prompt_hash'][:12]}...  model={r['model']}  "
-            f"tokens={r['tokens_used']}  created={r['created_at']}"
-            f"  expires={r['expires_at'] or 'never'}{expired}"
-        )
+        key = r["key"]
+        exp = r["expires_at"]
+        expired = " [EXPIRED]" if (exp is not None and now > exp) else ""
+        expires_str = f"never" if exp is None else f"{exp:.0f}"
+        click.echo(f"  {key[:12]}...  expires={expires_str}{expired}")
     click.echo(f"\nTotal: {len(rows)} cached entries")
 
 
@@ -677,20 +681,28 @@ def cache_list(storage_dir: str | None) -> None:
               help="Only clear expired entries.")
 def cache_clear(storage_dir: str | None, expired_only: bool) -> None:
     """Clear the prompt cache."""
+    import time as _time
     storage_dir = storage_dir or _cfg_default("storage_dir", ".spl")
-    from spl.storage.memory import MemoryStore
-    store = MemoryStore(os.path.join(storage_dir, "memory.db"))
+    cache_path = os.path.join(storage_dir, "prompt_cache.db")
+    if not os.path.exists(cache_path):
+        click.echo("Cleared 0 cache entries")
+        return
+    from dd_cache import DiskCache
+    cache = DiskCache(path=cache_path)
     if expired_only:
-        cursor = store._conn.execute(
-            "DELETE FROM prompt_cache WHERE expires_at IS NOT NULL "
-            "AND expires_at < CURRENT_TIMESTAMP"
+        import sqlite3 as _sqlite3
+        conn = _sqlite3.connect(cache_path)
+        now = _time.time()
+        cursor = conn.execute(
+            "DELETE FROM cache WHERE expires_at IS NOT NULL AND expires_at < ?", (now,)
         )
+        conn.commit()
+        count = cursor.rowcount
+        conn.close()
+        click.echo(f"Cleared {count} expired cache entries")
     else:
-        cursor = store._conn.execute("DELETE FROM prompt_cache")
-    store._conn.commit()
-    store.close()
-    label = "expired " if expired_only else ""
-    click.echo(f"Cleared {cursor.rowcount} {label}cache entries")
+        cache.clear()
+        click.echo("Cleared all cache entries")
 
 
 # ── spl memory ───────────────────────────────────────────────────────────────
