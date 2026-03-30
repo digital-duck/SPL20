@@ -1,149 +1,119 @@
-Designing a URL Shortener System
-=====================================
+**URL Shortener System Design**
 
-Overview
---------
+**Overview**
 
-A URL shortener is a service that takes a long, cumbersome URL and converts it into a shorter, more memorable version. This system will provide a user-friendly interface for users to submit their URLs, store them in a database, generate unique shortened URLs, and return the original long URL when clicked.
+The goal of this project is to design and implement a simple URL shortener system that allows users to submit long URLs and receive a unique short URL in return.
 
-System Requirements
---------------------
+**Components**
 
-*   Database to store URLs (e.g., MySQL or MongoDB)
-*   Web server to host the application (e.g., Apache or Nginx)
-*   Front-end framework for user interface (e.g., React or Angular)
+1. **Frontend (Web Application)**
+	* User Interface: A user-friendly interface that allows users to enter long URLs and receive the corresponding short URL.
+	* Frontend Framework: Utilize a framework like React or Angular to build the UI components.
+2. **Backend (Server-Side Application)**
+	* Server Framework: Use a framework like Node.js, Express.js, or Django to create the server-side application.
+	* Database: Design a database schema to store short URLs and their corresponding long URLs.
+	* API Endpoints:
+		+ `POST /shorten`: Handles URL submission from the frontend.
+		+ `GET /{shortUrl}`: Returns the original long URL for the given short URL.
+3. **Short URL Storage**
+	* Database Schema: Store the following data in a database table:
+		+ `id` (primary key): Unique identifier for each short URL.
+		+ `long_url`: The original URL submitted by the user.
+		+ `short_url`: The unique short URL generated for the long URL.
+4. **Shortening Algorithm**
+	* Generate Short URL: Use a cryptographically secure algorithm like SHA-256 to generate a unique short URL from the long URL.
 
-System Design
--------------
+**Example Use Case**
 
-### 1. User Interface
+1. A user submits a long URL (`https://example.com/very-long-url`) through the frontend application.
+2. The server-side application receives the request and generates a new short URL using the cryptographically secure algorithm.
+3. The short URL is stored in the database along with its corresponding long URL.
+4. The frontend application returns the short URL to the user.
 
-The front-end will be a simple web page with input fields for users to enter their long URL and an "Submit" button.
+**Code Implementation**
 
-```html
-<!-- index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Shortener</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <h1>URL Shortener</h1>
-    <input id="url-input" type="text" placeholder="Enter your URL">
-    <button id="submit-btn">Submit</button>
-    <p id="result"></p>
-
-    <script src="script.js"></script>
-</body>
-</html>
-```
-
-### 2. Back-end
-
-The back-end will be a Node.js application using Express.js as the web framework.
+### Frontend (React)
 
 ```javascript
-// server.js
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function App() {
+    const [longUrl, setLongUrl] = useState('');
+    const [shortUrl, setShortUrl] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axios.post('/shorten', { longUrl });
+            setShortUrl(response.data.shortUrl);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    return (
+        <div>
+            <form onSubmit={handleSubmit}>
+                <input type="text" value={longUrl} onChange={(e) => setLongUrl(e.target.value)} />
+                <button type="submit">Shorten URL</button>
+                {shortUrl && <p>Short URL: {shortUrl}</p>}
+            </form>
+        </div>
+    );
+}
+
+export default App;
+```
+
+### Backend (Express.js)
+
+```javascript
 const express = require('express');
 const app = express();
-const mysql = require('mysql');
+const sha256 = require('sha256');
 
-// Connect to database
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'username',
-    password: 'password',
-    database: 'url_shortener'
+app.post('/shorten', async (req, res) => {
+    const longUrl = req.body.longUrl;
+    const shortUrl = sha256(longUrl).toString();
+
+    // Store the short URL and its corresponding long URL in the database
+    const db = await connectToDatabase(); // Connect to the database
+    await db.insert({ id: shortUrl, long_url: longUrl });
+
+    res.json({ shortUrl });
 });
 
-db.connect((err) => {
-    if (err) {
-        console.error('error connecting:', err);
+app.get('/:shortUrl', async (req, res) => {
+    const shortUrl = req.params.shortUrl;
+    // Retrieve the corresponding long URL from the database
+    const db = await connectToDatabase(); // Connect to the database
+    const longUrl = await db.findOne({ id: shortUrl });
+
+    if (!longUrl) {
+        res.status(404).send('Short URL not found');
         return;
     }
-    console.log('connected as id ' + db.threadId);
+
+    res.json(longUrl.long_url);
 });
 
-// API endpoint to handle short URL generation
-app.post('/shorten', (req, res) => {
-    const longUrl = req.body.longUrl;
-
-    // Generate a unique shortened URL
-    const shortUrl = generateShortUrl();
-
-    // Insert the long URL and shortened URL into database
-    db.query('INSERT INTO urls SET ?', [longUrl, shortUrl], (err, results) => {
-        if (err) {
-            console.error(err);
-            res.status(500).send({ message: 'Error generating short URL' });
-        } else {
-            res.send({ shortUrl: `http://localhost/${shortUrl}` });
-        }
-    });
-});
-
-// API endpoint to return the original long URL when clicked
-app.get('/:shortUrl', (req, res) => {
-    const shortUrl = req.params.shortUrl;
-
-    // Retrieve the original long URL from database
-    db.query('SELECT long_url FROM urls WHERE short_url = ?', [shortUrl], (err, results) => {
-        if (err || !results[0]) {
-            console.error(err);
-            res.status(404).send({ message: 'Not found' });
-        } else {
-            const longUrl = results[0].long_url;
-            res.send({ longUrl });
-        }
-    });
-});
-
-// API endpoint to retrieve all shortened URLs
-app.get('/urls', (req, res) => {
-    db.query('SELECT * FROM urls', (err, results) => {
-        if (err) {
-            console.error(err);
-            res.status(500).send({ message: 'Error retrieving short URLs' });
-        } else {
-            const shortenedUrls = results.map((row) => row.short_url);
-            res.send({ shortenedUrls });
-        }
-    });
-});
-
-app.listen(3000, () => {
-    console.log('Server listening on port 3000');
-});
+app.listen(3000, () => console.log('Server listening on port 3000'));
 ```
 
-### 3. Database Schema
+**Security Considerations**
 
-The database schema will store the long URL and its corresponding shortened URL.
+1. **Hash Function:** Choose a secure hash function like SHA-256 or Argon2.
+2. **Database Security:** Implement proper database security measures (encryption, access controls, least privilege principle).
+3. **Rate Limiting:** Introduce rate limiting on URL submissions to prevent brute-force attacks and denial-of-service (DoS) attacks.
+4. **URL Validation:** Validate user input URLs to prevent malicious URLs from being submitted.
 
-```sql
-CREATE TABLE urls (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    long_url VARCHAR(255) NOT NULL,
-    short_url VARCHAR(10) UNIQUE NOT NULL
-);
-```
+**Scalability Considerations**
 
-### 4. Front-end Functionality
+1. **Load Balancer:** Implement a load balancer to distribute incoming traffic across multiple servers.
+2. **Distributed Database:** Use a distributed database like Redis or Cassandra to store short URLs and their corresponding long URLs.
+3. **Caching:** Leverage caching mechanisms (Redis or Memcached) to reduce database queries.
 
-The front-end will send a POST request to the `/shorten` API endpoint with the long URL in the request body.
+**Monitoring and Maintenance**
 
-```javascript
-// script.js
-const urlInput = document.getElementById('url-input');
-const submitBtn = document.getElementById('submit-btn');
-
-submitBtn.addEventListener('click', () => {
-    const longUrl = urlInput.value;
-    fetch('/shorten', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ longUrl }),
-    })
+1. **Log Analysis:** Regularly analyze

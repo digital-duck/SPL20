@@ -1,5 +1,5 @@
 Here's a haiku about coding:
 
-Lines of code unfold
-Logic's gentle, endless dance
-Mind's creative fire
+Lines of code descend
+ Logic flowing, mind at ease
+Code's gentle rhythm

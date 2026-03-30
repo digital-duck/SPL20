@@ -59,6 +59,59 @@ python cookbook/run_all.py run --adapter momagrid --ids "01-10,13"
 In parallel mode, each recipe logs to its own file under `<recipe_dir>/`. Completion
 messages print as recipes finish; a summary table appears at the end.
 
+### Running from a client machine (laptop, no GPU required)
+
+The machine submitting recipes does **not** need to be a grid agent — it is a pure client.
+It submits SPL tasks to the hub over HTTP; the hub dispatches them to GPU nodes.
+
+**Step 1 — Verify hub is reachable**
+
+```bash
+curl http://192.168.0.235:9000/agents
+```
+
+You should see a JSON list of online agents. If this fails, check that you are on the same
+LAN as the hub machine (duck, 192.168.0.235).
+
+**Step 2 — Install dependencies (first time only)**
+
+```bash
+cd ~/projects/digital-duck/SPL20
+pip install -e .       # install spl package
+pip install httpx      # momagrid adapter HTTP client
+```
+
+If the repo is not cloned yet:
+
+```bash
+git clone https://github.com/digital-duck/SPL20 ~/projects/digital-duck/SPL20
+cd ~/projects/digital-duck/SPL20
+pip install -e .
+pip install httpx
+```
+
+**Step 3 — Run all recipes**
+
+```bash
+bash cookbook/run_cookbook_on_momagrid.sh
+```
+
+The script exports `MOMAGRID_HUB_URL=http://192.168.0.235:9000` and runs all 37 active
+recipes with `--workers 10`. Output is saved to `cookbook/out/run_all_<timestamp>-momagrid.md`.
+
+Or run directly:
+
+```bash
+export MOMAGRID_HUB_URL=http://192.168.0.235:9000
+python cookbook/run_all.py run --adapter momagrid --workers 10 2>&1 \
+  | tee cookbook/out/run_laptop_$(date +%Y%m%d_%H%M%S).md
+```
+
+`--workers 10` controls how many recipes the client submits concurrently to the hub.
+The hub's own dispatch across GPU nodes is independent of this value.
+
+---
+
 ### Hub URL resolution (no env var needed)
 
 The momagrid adapter resolves the hub URL in this order:
