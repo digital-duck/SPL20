@@ -48,10 +48,48 @@ spl run cookbook/05_self_refine/self_refine.spl \
 
 ### Via Claude Code CLI
 ```bash
+
 spl run cookbook/05_self_refine/self_refine.spl \
-    --adapter claude_cli -m claude-sonnet-4-6 \
+    --adapter ollama \
     task="Write an executive summary of the benefits of SPL - Structured Prompt Language" \
     max_iterations=3
+
+spl run cookbook/05_self_refine/self_refine.spl \
+    --adapter claude_cli \
+    task="Who is Srinivasa Ramanujan" \
+    max_iterations=3 \
+    output_budget=3000 \
+    writer_model=claude-sonnet-4-6 \
+    critic_model=claude-sonnet-4-6 \
+    log_dir=cookbook/05_self_refine/logs-ramanujan 
+
+export OPENAI_API_KEY=sk-...
+spl run cookbook/05_self_refine/self_refine.spl \
+    --adapter openai -m gpt-4o-mini\
+    task="How does Transformer work in deep learning" \
+    max_iterations=3 \
+    output_budget=2000 \
+    log_dir=cookbook/05_self_refine/logs-openai
+
+export ANTHROPIC_API_KEY=sk-...
+spl run cookbook/05_self_refine/self_refine.spl \
+    --adapter anthropic -m claude-sonnet-4-5-20250929 \
+    task="How does Transformer work in deep learning" \
+    max_iterations=3 \
+    output_budget=2000 \
+    log_dir=cookbook/05_self_refine/logs-anthropic
+
+
+export OPENROUTER_API_KEY=sk-...
+spl run cookbook/05_self_refine/self_refine.spl \
+    --adapter openrouter \
+    task="How does Transformer work in deep learning" \
+    max_iterations=3 \
+    output_budget=3000 \
+    writer_model=anthropic/claude-sonnet-4.6 \
+    critic_model=anthropic/claude-haiku-4.5 \
+    log_dir=cookbook/05_self_refine/logs-openrouter-3
+
 ```
 
 ## Output status

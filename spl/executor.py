@@ -28,7 +28,7 @@ from spl.ast_nodes import (
     LoggingStatement, AssignmentStatement, StoreStatement, GenerateIntoStatement,
     CommitStatement, RetryStatement, RaiseStatement, CallStatement, SelectIntoStatement,
     SemanticCondition, ComparisonCondition, Condition, ExceptionHandler,
-    FStringLiteral, ListLiteral,
+    FStringLiteral, ListLiteral, MapLiteral,
     StorageSpec, StorageSubscript, StorageAssignStatement,
 )
 from spl.optimizer import ExecutionPlan, ExecutionStep, WorkflowPlan
@@ -186,6 +186,8 @@ class Executor:
         cache_ttl: int = 3600,
         max_llm_calls: int = DEFAULT_MAX_LLM_CALLS,
         max_total_tokens: int = DEFAULT_MAX_TOTAL_TOKENS,
+        default_max_tokens: int = 1000,
+        default_model: str = "",
     ):
         self.adapter = adapter or get_adapter(adapter_name, **(adapter_kwargs or {}))
         self._storage_dir_base = storage_dir
@@ -200,6 +202,8 @@ class Executor:
         self._vector_store = None
         self.max_llm_calls = max_llm_calls
         self.max_total_tokens = max_total_tokens
+        self.default_max_tokens = default_max_tokens
+        self.default_model = default_model
 
     def register_tool(self, name: str, fn) -> "Executor":
         """Register a Python callable as a CALL-able tool. Returns self for chaining."""
@@ -654,9 +658,12 @@ class Executor:
             for i, arg_text in enumerate(args_text):
                 prompt_text += f"Input {i+1}:\n{arg_text}\n\n"
 
-        model = gen.model or ""
-        if model.startswith('@'):
-            model = state.get_var(model[1:])
+        if self.default_model:
+            model = self.default_model  # --model CLI flag overrides everything
+        else:
+            model = gen.model or ""
+            if model.startswith('@'):
+                model = state.get_var(model[1:])
 
         _log.info("CTE GENERATE %s (model=%s)", gen.function_name, model or "default")
         self._check_budget(state)
@@ -697,15 +704,23 @@ class Executor:
             for param, arg_val in zip(func_def.parameters, args_text):
                 prompt = prompt.replace("{" + param.name + "}", arg_val)
 
-        model = gen.model or ""
-        if model.startswith('@'):
-            model = state.get_var(model[1:])
+        if self.default_model:
+            model = self.default_model  # --model CLI flag overrides everything
+        else:
+            model = gen.model or ""
+            if model.startswith('@'):
+                model = state.get_var(model[1:])
+
+        budget = gen.output_budget
+        if isinstance(budget, str) and budget.startswith('@'):
+            budget = int(state.get_var(budget[1:]))
+        max_tokens = int(budget) if budget else self.default_max_tokens
 
         self._check_budget(state)
         gen_result = await self.adapter.generate(
             prompt=prompt,
             model=model,
-            max_tokens=gen.output_budget or 1000,
+            max_tokens=max_tokens,
             temperature=gen.temperature or 0.7,
         )
         state.record_llm_call(gen_result)
@@ -888,15 +903,26 @@ class Executor:
         _log.debug("STORE %s -> memory.%s (%d chars)", stmt.variable, stmt.key, len(str(value)))
 
     def _exec_storage_assign(self, stmt: StorageAssignStatement, state: WorkflowState):
-        """Execute @memory['key'] := expr — write to a STORAGE-typed variable."""
+        """Execute @var['key'] := expr — write to a STORAGE-typed or MAP variable."""
+        import json
         conn = state.get_storage(stmt.storage_var)
-        if conn is None:
-            _log.warning("STORAGE assign: %r is not a STORAGE-typed variable", stmt.storage_var)
-            return
         key = self._eval_expression(stmt.key, state)
         value = self._eval_expression(stmt.value, state)
-        conn.set(str(key), str(value))
-        _log.debug("STORAGE %s['%s'] := (%d chars)", stmt.storage_var, key, len(str(value)))
+        if conn is not None:
+            conn.set(str(key), str(value))
+            _log.debug("STORAGE %s['%s'] := (%d chars)", stmt.storage_var, key, len(str(value)))
+            return
+        # Fallback: treat variable as a JSON MAP
+        raw = state.get_var(stmt.storage_var)
+        try:
+            obj = json.loads(raw) if raw else {}
+            if not isinstance(obj, dict):
+                obj = {}
+        except (json.JSONDecodeError, ValueError):
+            obj = {}
+        obj[str(key)] = value
+        state.set_var(stmt.storage_var, json.dumps(obj))
+        _log.debug("MAP %s['%s'] := (%d chars)", stmt.storage_var, key, len(str(value)))
 
     async def _exec_call(self, stmt: CallStatement, state: WorkflowState):
         """Execute CALL procedure(args) INTO @var"""
@@ -1022,6 +1048,11 @@ class Executor:
             import json
             elements = [self._eval_expression(e, state) for e in expr.elements]
             return json.dumps(elements)
+        elif isinstance(expr, MapLiteral):
+            import json
+            obj = {self._eval_expression(k, state): self._eval_expression(v, state)
+                   for k, v in expr.pairs}
+            return json.dumps(obj)
         elif isinstance(expr, BinaryOp):
             left = self._eval_expression(expr.left, state)
             right = self._eval_expression(expr.right, state)
@@ -1049,16 +1080,24 @@ class Executor:
         elif isinstance(expr, MemoryGet):
             return self.memory.get(expr.key) or ""
         elif isinstance(expr, StorageSubscript):
-            # @memory['key'] — route to StorageConnection if the var is STORAGE-typed,
-            # otherwise fall back to built-in GET (list/dict indexing).
+            # @var['key'] — route to StorageConnection if STORAGE-typed,
+            # then MAP (JSON dict), then LIST (JSON array / GET built-in).
+            import json
             conn = state.get_storage(expr.storage_var) if state else None
             if conn is not None:
                 key = self._eval_expression(expr.key, state)
                 return conn.get(str(key))
-            # Fallback: list/dict indexing via the GET built-in
             var_val = state.get_var(expr.storage_var) if state else ""
-            idx = self._eval_expression(expr.key, state)
-            return self.functions.call_builtin("GET", var_val, idx) if self.functions.is_builtin("GET") else ""
+            key_str = self._eval_expression(expr.key, state)
+            # Try MAP (JSON dict) first
+            try:
+                obj = json.loads(var_val)
+                if isinstance(obj, dict):
+                    return str(obj.get(key_str, ""))
+            except (json.JSONDecodeError, ValueError):
+                pass
+            # Fallback: list indexing via the GET built-in
+            return self.functions.call_builtin("GET", var_val, key_str) if self.functions.is_builtin("GET") else ""
         elif isinstance(expr, DottedName):
             return state.get_var(expr.full_name)
         elif isinstance(expr, NamedArg):

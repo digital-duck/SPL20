@@ -13,6 +13,7 @@ Extends SPL 1.0 AST with nodes for agentic workflow orchestration:
 - StoreStatement (STORE @var IN memory.<key>)
 - FStringLiteral (f'text {@var} text')
 - ListLiteral ([] or [expr, expr, ...])
+- MapLiteral ({'key': value, ...} — key/value MAP literal)
 - StorageSpec (STORAGE(backend, path) — typed INPUT param for dd-db backends)
 - StorageSubscript (@memory['key'] — read from a STORAGE-typed variable)
 - StorageAssignStatement (@memory['key'] := expr — write to a STORAGE-typed variable)
@@ -122,6 +123,12 @@ class ListLiteral(Expression):
     elements: list[Expression] = field(default_factory=list)
 
 
+@dataclass
+class MapLiteral(Expression):
+    """{'key': value, ...} — native MAP literal (serialized as JSON object)."""
+    pairs: list[tuple[Expression, Expression]] = field(default_factory=list)
+
+
 # === Clause Nodes (SPL 1.0 — unchanged) ===
 
 @dataclass
@@ -159,7 +166,7 @@ class GenerateClause:
     """GENERATE function(args) WITH options."""
     function_name: str
     arguments: list[Expression] = field(default_factory=list)
-    output_budget: int | None = None
+    output_budget: int | str | None = None  # int literal or '@varname'
     temperature: float | None = None
     output_format: str | None = None
     schema: str | None = None

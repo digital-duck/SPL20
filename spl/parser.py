@@ -16,7 +16,7 @@ from spl.ast_nodes import (
     EvaluateStatement, WhenClause, SemanticCondition, ComparisonCondition,
     WhileStatement, CommitStatement, RetryStatement, RaiseStatement,
     LoggingStatement, AssignmentStatement, StoreStatement, GenerateIntoStatement,
-    CallStatement, SelectIntoStatement, FStringLiteral, ListLiteral,
+    CallStatement, SelectIntoStatement, FStringLiteral, ListLiteral, MapLiteral,
     StorageSpec, StorageSubscript, StorageAssignStatement,
 )
 
@@ -560,7 +560,11 @@ class Parser:
                 if self._check(TokenType.OUTPUT):
                     self._advance()
                     self._expect(TokenType.BUDGET)
-                    output_budget = int(self._expect(TokenType.INTEGER).value)
+                    if self._check(TokenType.AT):
+                        self._advance()
+                        output_budget = '@' + self._expect_identifier_or_keyword().value
+                    else:
+                        output_budget = int(self._expect(TokenType.INTEGER).value)
                     self._expect(TokenType.TOKENS)
                 elif self._check(TokenType.TEMPERATURE):
                     self._advance()
@@ -1390,6 +1394,24 @@ class Parser:
                     elements.append(self._parse_expression())
             self._expect(TokenType.RBRACKET)
             return ListLiteral(elements=elements)
+
+        # Map literal: {} or {key: value, ...}
+        if tok.type == TokenType.LBRACE:
+            self._advance()  # consume {
+            pairs: list[tuple[Expression, Expression]] = []
+            if not self._check(TokenType.RBRACE):
+                key = self._parse_expression()
+                self._expect(TokenType.COLON)
+                val = self._parse_expression()
+                pairs.append((key, val))
+                while self._check(TokenType.COMMA):
+                    self._advance()
+                    key = self._parse_expression()
+                    self._expect(TokenType.COLON)
+                    val = self._parse_expression()
+                    pairs.append((key, val))
+            self._expect(TokenType.RBRACE)
+            return MapLiteral(pairs=pairs)
 
         # Boolean literals
         if tok.type == TokenType.TRUE:

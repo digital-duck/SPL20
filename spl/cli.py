@@ -325,6 +325,8 @@ def cmd_explain(file: str) -> None:
               help="Python module to load as CALL-able tools (e.g. tools/my_tools.py).")
 @click.option("--timeout", default=None, type=int, metavar="SECONDS",
               help="Per-call timeout in seconds (default: 600 with --claude-allowed-tools, 300 otherwise).")
+@click.option("--max-tokens", "max_tokens", default=None, type=int, metavar="N",
+              help="Default max tokens per GENERATE call (overrides built-in default of 1000).")
 @click.argument("extra_args", nargs=-1, type=click.UNPROCESSED)
 def cmd_execute(file: str, adapter: str | None, model: str | None,
                 param: tuple[str, ...],
@@ -334,6 +336,7 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
                 allowed_tools: str | None,
                 tools_module: str | None,
                 timeout: int | None,
+                max_tokens: int | None,
                 extra_args: tuple[str, ...]) -> None:
     """Execute FILE and print each PROMPT/WORKFLOW result.
 
@@ -433,6 +436,8 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
             cache_ttl=cache_ttl,
             max_llm_calls=max_llm_calls,
             max_total_tokens=max_total_tokens,
+            default_max_tokens=max_tokens or int(_cfg_default("max_tokens", 1000)),
+            default_model=model or "",
         )
         if tools_module:
             from spl.tools import load_tools_module

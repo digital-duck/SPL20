@@ -35,6 +35,15 @@ class FunctionRegistry:
         self._builtins["list_concat"] = FunctionRegistry._builtin_join
         self._builtins["list_count"] = FunctionRegistry._builtin_count
         self._builtins["list_get"] = FunctionRegistry._builtin_get
+        # Map operations
+        self._builtins["map"] = FunctionRegistry._builtin_map
+        self._builtins["map_get"] = FunctionRegistry._builtin_map_get
+        self._builtins["map_set"] = FunctionRegistry._builtin_map_set
+        self._builtins["map_keys"] = FunctionRegistry._builtin_map_keys
+        self._builtins["map_values"] = FunctionRegistry._builtin_map_values
+        self._builtins["map_merge"] = FunctionRegistry._builtin_map_merge
+        self._builtins["map_has"] = FunctionRegistry._builtin_map_has
+        self._builtins["map_delete"] = FunctionRegistry._builtin_map_delete
         # File I/O — deterministic, zero tokens
         self._builtins["write_file"] = FunctionRegistry._builtin_write_file
         self._builtins["read_file"] = FunctionRegistry._builtin_read_file
@@ -169,6 +178,97 @@ class FunctionRegistry:
         except (json.JSONDecodeError, ValueError):
             pass
         return str(collection)
+
+    # === Map Built-ins ===
+
+    @staticmethod
+    def _builtin_map(*args) -> str:
+        """MAP() → empty JSON object; MAP('k1','v1','k2','v2',...) → JSON object."""
+        if len(args) % 2 != 0:
+            raise ValueError("map() requires an even number of arguments (key-value pairs)")
+        obj = {args[i]: args[i + 1] for i in range(0, len(args), 2)}
+        return json.dumps(obj)
+
+    @staticmethod
+    def _builtin_map_get(mapping: str, key: str, default: str = "") -> str:
+        """MAP_GET(map, key [, default]) — return value for key, or default if missing."""
+        try:
+            obj = json.loads(mapping)
+            if isinstance(obj, dict):
+                return str(obj.get(key, default))
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return default
+
+    @staticmethod
+    def _builtin_map_set(mapping: str, key: str, value: str) -> str:
+        """MAP_SET(map, key, value) — return updated map with key set to value."""
+        try:
+            obj = json.loads(mapping) if mapping.strip() else {}
+            if not isinstance(obj, dict):
+                obj = {}
+        except (json.JSONDecodeError, ValueError):
+            obj = {}
+        obj[key] = value
+        return json.dumps(obj)
+
+    @staticmethod
+    def _builtin_map_keys(mapping: str) -> str:
+        """MAP_KEYS(map) — return JSON array of keys."""
+        try:
+            obj = json.loads(mapping)
+            if isinstance(obj, dict):
+                return json.dumps(list(obj.keys()))
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return json.dumps([])
+
+    @staticmethod
+    def _builtin_map_values(mapping: str) -> str:
+        """MAP_VALUES(map) — return JSON array of values."""
+        try:
+            obj = json.loads(mapping)
+            if isinstance(obj, dict):
+                return json.dumps(list(obj.values()))
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return json.dumps([])
+
+    @staticmethod
+    def _builtin_map_merge(*mappings: str) -> str:
+        """MAP_MERGE(map1, map2, ...) — merge maps left to right; later keys win."""
+        result: dict = {}
+        for mapping in mappings:
+            try:
+                obj = json.loads(mapping)
+                if isinstance(obj, dict):
+                    result.update(obj)
+            except (json.JSONDecodeError, ValueError):
+                pass
+        return json.dumps(result)
+
+    @staticmethod
+    def _builtin_map_has(mapping: str, key: str) -> str:
+        """MAP_HAS(map, key) — return 'true' if key exists, 'false' otherwise."""
+        try:
+            obj = json.loads(mapping)
+            if isinstance(obj, dict):
+                return "true" if key in obj else "false"
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return "false"
+
+    @staticmethod
+    def _builtin_map_delete(mapping: str, key: str) -> str:
+        """MAP_DELETE(map, key) — return map with key removed."""
+        try:
+            obj = json.loads(mapping)
+            if isinstance(obj, dict):
+                obj.pop(key, None)
+                return json.dumps(obj)
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return mapping
 
     # === File I/O Built-ins ===
 
