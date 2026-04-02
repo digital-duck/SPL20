@@ -11,7 +11,7 @@
 --       domain="product" confidence_threshold=0.75
 
 CREATE FUNCTION hypothesis_framework()
-RETURNS TEXT
+RETURN TEXT
 AS $$
 Scientific hypothesis format:
 - Null hypothesis (H0): The effect does not exist / is due to chance
@@ -21,7 +21,7 @@ Scientific hypothesis format:
 $$;
 
 CREATE FUNCTION evidence_schema()
-RETURNS JSON
+RETURN JSON
 AS $$
 {
   "type": "object",
@@ -80,7 +80,7 @@ DO
             GENERATE write_conclusion(
                 @hypotheses, @evidence_json, @test_plan, 'confident'
             ) INTO @conclusion
-            COMMIT @conclusion WITH
+            RETURN @conclusion WITH
                 status = 'concluded',
                 verdict = 'h1_supported',
                 confidence = @confidence
@@ -88,7 +88,7 @@ DO
             GENERATE write_conclusion(
                 @hypotheses, @evidence_json, @test_plan, 'uncertain'
             ) INTO @conclusion
-            COMMIT @conclusion WITH
+            RETURN @conclusion WITH
                 status = 'inconclusive',
                 verdict = 'needs_more_data',
                 confidence = @confidence
@@ -96,7 +96,7 @@ DO
             GENERATE write_conclusion(
                 @hypotheses, @evidence_json, @test_plan, 'refuted'
             ) INTO @conclusion
-            COMMIT @conclusion WITH
+            RETURN @conclusion WITH
                 status = 'concluded',
                 verdict = 'h0_not_rejected',
                 confidence = @confidence
@@ -104,5 +104,7 @@ DO
 
 EXCEPTION
     WHEN GenerationError THEN
-        COMMIT @hypotheses WITH status = 'hypotheses_only', reason = 'evidence_evaluation_failed'
+        RETURN @hypotheses WITH 
+            status = 'hypotheses_only', 
+            reason = 'evidence_evaluation_failed'
 END

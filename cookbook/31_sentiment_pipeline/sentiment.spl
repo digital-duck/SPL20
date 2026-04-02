@@ -26,7 +26,7 @@
 -- ── Schema (zero LLM cost — injected as grounding context) ─────────────────
 
 CREATE FUNCTION sentiment_schema()
-RETURNS JSON
+RETURN JSON
 AS $$
 {
   "type": "array",
@@ -70,7 +70,8 @@ DO
 
     -- Step 3: Batch sentiment — one structured result per item (LLM)
     LOGGING 'Running batch sentiment ...' LEVEL INFO
-    GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) INTO @sentiment_results
+    GENERATE batch_sentiment(@item_list, sentiment_schema(), @domain) 
+        INTO @sentiment_results
 
     -- Step 4: Compute aggregate statistics (deterministic — no LLM)
     CALL compute_stats(@sentiment_results) INTO @stats_json
@@ -97,7 +98,7 @@ DO
     ) INTO @report
 
     LOGGING f'Sentiment report complete | domain={@domain}' LEVEL INFO
-    COMMIT @report WITH status = 'complete', domain = @domain
+    RETURN @report WITH status = 'complete', domain = @domain
 
 EXCEPTION
     WHEN ContextLengthExceeded THEN
@@ -106,5 +107,5 @@ EXCEPTION
         CALL find_extremes(@sentiment_results) INTO @extremes
         GENERATE summarize_sentiment_trends(@stats_json, @extremes, @domain) INTO @trend_summary
         SET @report = @trend_summary
-        COMMIT @report WITH status = 'stats_only', reason = 'context_length_exceeded'
+        RETURN @report WITH status = 'stats_only', reason = 'context_length_exceeded'
 END

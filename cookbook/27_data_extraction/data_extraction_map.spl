@@ -18,7 +18,7 @@
 --       model="claude-sonnet-4-6" \
 --       log_dir="cookbook/27_data_extraction/logs-map"
 
-CREATE FUNCTION extract_fields(text TEXT, fields TEXT) RETURNS TEXT
+CREATE FUNCTION extract_fields(text TEXT, fields TEXT) RETURN TEXT
 AS $$
 You are a data extraction specialist.
 
@@ -74,5 +74,5 @@ DO
 
   LOGGING f'Done — result written to {@log_dir}/result_{@format}.md' LEVEL INFO
 
-  COMMIT @output WITH status = 'complete', format = @format
+  RETURN @output WITH status = 'complete', format = @format
 END

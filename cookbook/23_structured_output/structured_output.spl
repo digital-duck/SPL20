@@ -11,7 +11,7 @@
 
 -- Define the extraction schema
 CREATE FUNCTION extract_entity_schema()
-RETURNS JSON
+RETURN JSON
 AS $$
 {
   "type": "object",

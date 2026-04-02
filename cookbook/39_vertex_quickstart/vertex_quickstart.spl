@@ -26,7 +26,7 @@ CREATE FUNCTION compare_tiers(
     model_pro   TEXT, answer_pro   TEXT,
     model_flash TEXT, answer_flash TEXT,
     model_lite  TEXT, answer_lite  TEXT
-) RETURNS TEXT
+) RETURN TEXT
 AS $$
 You are evaluating three Gemini model tiers on Vertex AI for the same prompt.
 
@@ -97,7 +97,7 @@ DO
         @model_lite,  @answer_lite
     ) INTO @comparison
 
-    COMMIT @comparison WITH
+    RETURN @comparison WITH
         status      = 'complete',
         model_pro   = @model_pro,
         model_flash = @model_flash,
@@ -105,6 +105,6 @@ DO
 
 EXCEPTION
     WHEN GenerationError THEN
-        COMMIT 'One or more Vertex AI models failed. Check project, IAM permissions, and API enablement.'
+        RETURN 'One or more Vertex AI models failed. Check project, IAM permissions, and API enablement.'
         WITH status = 'error'
 END

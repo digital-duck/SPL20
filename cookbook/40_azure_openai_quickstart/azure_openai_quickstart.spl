@@ -25,7 +25,7 @@ CREATE FUNCTION compare_deployments(
     deployment_1 TEXT, answer_1 TEXT,
     deployment_2 TEXT, answer_2 TEXT,
     deployment_3 TEXT, answer_3 TEXT
-) RETURNS TEXT
+) RETURN TEXT
 AS $$
 You are evaluating three Azure OpenAI deployments on the same prompt.
 
@@ -96,7 +96,7 @@ DO
         @deployment_3, @answer_3
     ) INTO @comparison
 
-    COMMIT @comparison WITH
+    RETURN @comparison WITH
         status       = 'complete',
         deployment_1 = @deployment_1,
         deployment_2 = @deployment_2,
@@ -104,6 +104,6 @@ DO
 
 EXCEPTION
     WHEN GenerationError THEN
-        COMMIT 'One or more Azure OpenAI deployments failed. Check endpoint, API key, and deployment names.'
+        RETURN 'One or more Azure OpenAI deployments failed. Check endpoint, API key, and deployment names.'
         WITH status = 'error'
 END

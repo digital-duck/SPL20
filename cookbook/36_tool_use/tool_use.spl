@@ -38,12 +38,13 @@ DO
   CALL format_currency(@avg)         INTO @avg_fmt
 
   -- Only the narrative goes to the LLM
-  GENERATE sales_report(@period, @sales, @total_fmt, @avg_fmt, @low, @high, @growth) INTO @report
+  GENERATE sales_report(@period, @sales, @total_fmt, @avg_fmt, @low, @high, @growth) 
+    INTO @report
 
-  COMMIT @report WITH status = 'complete'
+  RETURN @report WITH status = 'complete'
 
 EXCEPTION
   WHEN OTHERS THEN
     GENERATE error_summary(@period) INTO @report
-    COMMIT @report WITH status = 'error'
+    RETURN @report WITH status = 'error'
 END

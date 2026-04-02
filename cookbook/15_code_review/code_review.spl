@@ -3,9 +3,9 @@
 -- Demonstrates tool-augmented analysis, multi-criteria evaluation, and structured output.
 --
 -- Usage:
---   spl run cookbook/15_code_review/code_review.spl --adapter ollama -m gemma3 code="$(cat myfile.py)"
---   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="$(cat main.go)" language="Go"
---   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)" language="Python"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama -m gemma3 code="./myscript.py"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="$(cat main.go)"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)"
 --
 -- Logs written to @log_dir (default: cookbook/15_code_review/logs):
 --   security.md    — security audit findings
@@ -17,31 +17,49 @@
 WORKFLOW code_review
     INPUT:
         @code     TEXT,
-        @language TEXT,
         @log_dir  TEXT DEFAULT 'cookbook/15_code_review/logs'
     OUTPUT: @review TEXT
 DO
-    LOGGING f'Code review | language={@language}' LEVEL INFO
+    -- 1. Handle file path vs raw code
+    CALL read_file(@code) INTO @file_content
+    EVALUATE @file_content
+        WHEN != '' THEN
+            LOGGING f'Reading code from file: {@code}'
+            @code_to_review := @file_content
+        ELSE
+            LOGGING 'Reviewing raw code input'
+            @code_to_review := @code
+    END
+
+    -- 2. Auto-detect language
+    PROMPT detect_lang
+    SELECT
+        system_role('You are a polyglot programmer. Identify the programming language of the provided code.'),
+        @code_to_review AS code
+    GENERATE language(code) INTO @language
+    
+    @language := trim(@language)
+    LOGGING f'Detected language: {@language}' LEVEL INFO
 
     -- Pass 1: Security audit
-    GENERATE security_audit(@code, @language) INTO @security_findings
+    GENERATE security_audit(@code_to_review, @language) INTO @security_findings
     LOGGING f'Security findings:\n{@security_findings}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/security.md', @security_findings) INTO @_
+    CALL write_file(f'{@log_dir}/security.md', @security_findings) INTO NONE
 
     -- Pass 2: Performance analysis
-    GENERATE performance_review(@code, @language) INTO @perf_findings
+    GENERATE performance_review(@code_to_review, @language) INTO @perf_findings
     LOGGING f'Performance findings:\n{@perf_findings}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/performance.md', @perf_findings) INTO @_
+    CALL write_file(f'{@log_dir}/performance.md', @perf_findings) INTO NONE
 
     -- Pass 3: Code style and best practices
-    GENERATE style_review(@code, @language) INTO @style_findings
+    GENERATE style_review(@code_to_review, @language) INTO @style_findings
     LOGGING f'Style findings:\n{@style_findings}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/style.md', @style_findings) INTO @_
+    CALL write_file(f'{@log_dir}/style.md', @style_findings) INTO NONE
 
     -- Pass 4: Bug detection
-    GENERATE bug_detection(@code, @language) INTO @bug_findings
+    GENERATE bug_detection(@code_to_review, @language) INTO @bug_findings
     LOGGING f'Bug findings:\n{@bug_findings}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/bugs.md', @bug_findings) INTO @_
+    CALL write_file(f'{@log_dir}/bugs.md', @bug_findings) INTO NONE
 
     -- Severity scoring for each category
     GENERATE severity_score(@security_findings) INTO @sec_score
@@ -56,27 +74,27 @@ DO
         @style_findings,
         @bug_findings, @bug_score
     ) INTO @review
-    CALL write_file(f'{@log_dir}/review.md', @review) INTO @_
+    CALL write_file(f'{@log_dir}/review.md', @review) INTO NONE
 
     -- Determine overall verdict
     EVALUATE @sec_score
         WHEN > 8 THEN
             LOGGING f'Critical security issues | score={@sec_score}' LEVEL WARN
-            COMMIT @review WITH status = 'critical_issues', verdict = 'block'
+            RETURN @review WITH status = 'critical_issues', verdict = 'block'
         WHEN > 5 THEN
-            COMMIT @review WITH status = 'needs_fixes', verdict = 'request_changes'
+            RETURN @review WITH status = 'needs_fixes', verdict = 'request_changes'
         ELSE
-            COMMIT @review WITH status = 'approved', verdict = 'approve'
+            RETURN @review WITH status = 'approved', verdict = 'approve'
     END
 
 EXCEPTION
     WHEN ContextLengthExceeded THEN
         -- Code too large — review in chunks
-        GENERATE summarize_code(@code) INTO @summary
+        GENERATE summarize_code(@code_to_review) INTO @summary
         GENERATE quick_review(@summary, @language) INTO @review
-        CALL write_file(f'{@log_dir}/review.md', @review) INTO @_
-        COMMIT @review WITH status = 'partial_large_file'
+        CALL write_file(f'{@log_dir}/review.md', @review) INTO NONE
+        RETURN @review WITH status = 'partial_large_file'
     WHEN BudgetExceeded THEN
-        CALL write_file(f'{@log_dir}/security.md', @security_findings) INTO @_
-        COMMIT @security_findings WITH status = 'security_only'
+        CALL write_file(f'{@log_dir}/security.md', @security_findings) INTO NONE
+        RETURN @security_findings WITH status = 'security_only'
 END

@@ -12,7 +12,7 @@
 
 -- Gold-standard examples for tone/format calibration
 CREATE FUNCTION few_shot_examples(domain TEXT DEFAULT 'general')
-RETURNS TEXT
+RETURN TEXT
 AS $$
 SELECT CASE domain
   WHEN 'finance' THEN

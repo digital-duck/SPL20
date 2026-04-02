@@ -31,7 +31,7 @@
 -- ── Socratic persona (zero LLM cost — injected as system context) ───────────
 
 CREATE FUNCTION socratic_persona(student_level TEXT DEFAULT 'high school')
-RETURNS TEXT
+RETURN TEXT
 AS $$
 You are a Socratic tutor. Your role is to guide the student to discover answers themselves.
 
@@ -147,5 +147,5 @@ DO
     ) INTO @dialogue
 
     LOGGING f'Dialogue compiled | understanding_score={@understanding_score}' LEVEL INFO
-    COMMIT @dialogue WITH status = 'complete', understanding_score = @understanding_score
+    RETURN @dialogue WITH status = 'complete', understanding_score = @understanding_score
 END

@@ -6,7 +6,7 @@
 -- Usage:
 --   spl run cookbook/21_multi_model_pipeline/multi_model.spl --adapter ollama topic="climate change"
 
-CREATE FUNCTION research(topic TEXT) RETURNS TEXT 
+CREATE FUNCTION research(topic TEXT) RETURN TEXT 
 AS $$
 
 You are a research specialist.
@@ -14,7 +14,7 @@ Provide key facts, statistics, and recent developments about: {topic}
 Focus on factual accuracy. Be thorough but concise.
 $$;
 
-CREATE FUNCTION analyze(facts TEXT) RETURNS TEXT 
+CREATE FUNCTION analyze(facts TEXT) RETURN TEXT 
 AS $$
 
 You are a data analyst.
@@ -25,7 +25,7 @@ Analyze the following research and identify the 3 most significant insights:
 For each insight, explain why it matters and rate its significance (1-10).
 $$;
 
-CREATE FUNCTION write_summary(analysis TEXT) RETURNS TEXT 
+CREATE FUNCTION write_summary(analysis TEXT) RETURN TEXT 
 AS $$
 
 You are a professional writer.
@@ -37,7 +37,7 @@ The first paragraph should present the key findings.
 The second paragraph should discuss implications and outlook.
 $$;
 
-CREATE FUNCTION quality_check(text TEXT) RETURNS TEXT 
+CREATE FUNCTION quality_check(text TEXT) RETURN TEXT 
 AS $$
 
 You are a quality reviewer.
@@ -88,7 +88,7 @@ DO
       WHEN > 0.7 THEN
         LOGGING f'Quality threshold met | score={@quality}' LEVEL INFO
         CALL write_file(f'{@log_dir}/final.md', @draft) INTO @_
-        COMMIT @draft WITH status = 'high_quality', score = @quality
+        RETURN @draft WITH status = 'high_quality', score = @quality
       ELSE
         GENERATE write_summary(@analysis) INTO @draft
         @iteration := @iteration + 1
@@ -99,11 +99,11 @@ DO
   -- Fallback: commit whatever we have
   LOGGING f'Max iterations reached | final score={@quality}' LEVEL WARN
   CALL write_file(f'{@log_dir}/final.md', @draft) INTO @_
-  COMMIT @draft WITH status = 'max_iterations', score = @quality
+  RETURN @draft WITH status = 'max_iterations', score = @quality
 
 EXCEPTION
   WHEN MaxIterationsReached THEN
-    COMMIT @draft WITH status = 'partial'
+    RETURN @draft WITH status = 'partial'
   WHEN ModelOverloaded THEN
-    COMMIT @draft WITH status = 'model_overloaded'
+    RETURN @draft WITH status = 'model_overloaded'
 END

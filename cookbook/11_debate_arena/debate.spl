@@ -7,7 +7,8 @@
 --   spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
 --   spl run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
 
-CREATE FUNCTION pro_argument(topic TEXT, previous TEXT) RETURNS TEXT
+CREATE FUNCTION pro_argument(topic TEXT, previous TEXT) 
+RETURN TEXT
 AS $$
 You are a skilled debate champion arguing STRONGLY IN FAVOR of the following motion:
 
@@ -21,7 +22,8 @@ directly address and counter your opponent's points. Be concise (3-5 paragraphs)
 Do NOT offer balanced views — you are arguing one side.
 $$;
 
-CREATE FUNCTION con_argument(topic TEXT, previous TEXT) RETURNS TEXT
+CREATE FUNCTION con_argument(topic TEXT, previous TEXT) 
+RETURN TEXT
 AS $$
 You are a skilled debate champion arguing STRONGLY AGAINST the following motion:
 
@@ -35,7 +37,8 @@ directly address and counter your opponent's points. Be concise (3-5 paragraphs)
 Do NOT offer balanced views — you are arguing one side.
 $$;
 
-CREATE FUNCTION judge_debate(topic TEXT, pro_history TEXT, con_history TEXT) RETURNS TEXT
+CREATE FUNCTION judge_debate(topic TEXT, pro_history TEXT, con_history TEXT) 
+RETURN TEXT
 AS $$
 You are an impartial debate judge evaluating the following debate.
 
@@ -104,12 +107,12 @@ DO
 
     LOGGING f'Verdict ready | rounds={@round}' LEVEL INFO
     CALL write_file(f'{@log_dir}/verdict.md', @verdict) INTO @_
-    COMMIT @verdict WITH status = 'complete', rounds = @round
+    RETURN @verdict WITH status = 'complete', rounds = @round
 
 EXCEPTION
     WHEN MaxIterationsReached THEN
         GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
-        COMMIT @verdict WITH status = 'partial'
+        RETURN @verdict WITH status = 'partial'
     WHEN BudgetExceeded THEN
-        COMMIT @pro_history WITH status = 'budget_limit'
+        RETURN @pro_history WITH status = 'budget_limit'
 END

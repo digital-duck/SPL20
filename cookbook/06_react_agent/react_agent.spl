@@ -10,21 +10,22 @@
 --       country="France"
 
 -- Tight prompt for search_population: return only the number, no narration.
-CREATE FUNCTION search_population(country TEXT, year INT) RETURNS TEXT 
+CREATE FUNCTION search_population(country TEXT, year INT) RETURN TEXT 
 AS $$
 Use WebSearch to find the total population of {country} for the year {year}.
 
 Return ONLY the population as a plain integer with no commas, spaces, or text.
 Example of valid output: 1409670000
 No explanation. No units. No markdown. Just the number.
+
 $$;
 
 -- SPL PROCEDURE: search the web for a country's population in a specific year.
 PROCEDURE search_population(country TEXT, year INT)
-RETURNS TEXT
+RETURN TEXT
 DO
   GENERATE search_population(country, year) INTO @result
-  COMMIT @result
+  RETURN @result
 END
 
 -- calc_growth_rate is a Python tool registered from tools.py via --tools.
@@ -32,8 +33,9 @@ END
 
 -- Tight prompt for growth_report: plain narrative, no tool use, no file writes.
 CREATE FUNCTION growth_report(country TEXT, year_prev TEXT, pop_prev TEXT, year_curr TEXT, pop_curr TEXT, growth_rate TEXT) 
-RETURNS TEXT 
+RETURN TEXT 
 AS $$
+
 Write a concise 2-3 sentence population growth report for {country}.
 
 Data:
@@ -42,6 +44,7 @@ Data:
 - Year-over-year growth rate: {growth_rate}%
 
 Plain prose only. No markdown headers. No file creation. No tool use. Just the narrative.
+
 $$;
 
 WORKFLOW population_growth
@@ -64,12 +67,13 @@ DO
   LOGGING f'Growth rate computed: {@growth_rate}%' LEVEL INFO
 
   -- Step 3: Compose the final human-readable report
-  GENERATE growth_report(@country, @year_prev, @pop_prev, @year_curr, @pop_curr, @growth_rate) INTO @report
+  GENERATE growth_report(@country, @year_prev, @pop_prev, @year_curr, @pop_curr, @growth_rate) 
+    INTO @report
 
-  COMMIT @report WITH status = 'complete'
+  RETURN @report WITH status = 'complete'
 
 EXCEPTION
   WHEN SearchFailed THEN
     GENERATE search_error_report(@country) INTO @report
-    COMMIT @report WITH status = 'error'
+    RETURN @report WITH status = 'error'
 END

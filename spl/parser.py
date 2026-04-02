@@ -77,9 +77,10 @@ class Parser:
             return self._parse_while_statement()
         if self._check(TokenType.DO):
             return self._parse_do_block()
-        if self._check(TokenType.COMMIT):
+        if self._check_any(TokenType.COMMIT, TokenType.RETURN):
             return self._parse_commit_statement()
         if self._check(TokenType.RETRY):
+
             return self._parse_retry_statement()
         if self._check(TokenType.RAISE):
             return self._parse_raise_statement()
@@ -639,7 +640,10 @@ class Parser:
                 parameters.append(self._parse_parameter())
         self._expect(TokenType.RPAREN)
 
-        self._expect(TokenType.RETURNS)
+        if self._check(TokenType.RETURN):
+            self._advance()
+        else:
+            self._expect(TokenType.RETURNS)
         return_type = self._expect(TokenType.IDENTIFIER).value
 
         self._expect(TokenType.AS)
@@ -816,9 +820,9 @@ class Parser:
                 parameters.append(self._parse_parameter())
         self._expect(TokenType.RPAREN)
 
-        # Optional RETURNS type
+        # Optional RETURNS/RETURN type
         return_type = None
-        if self._check(TokenType.RETURNS):
+        if self._check(TokenType.RETURNS) or self._check(TokenType.RETURN):
             self._advance()
             return_type = self._expect(TokenType.IDENTIFIER).value
 
@@ -1060,12 +1064,15 @@ class Parser:
         return left
 
     # ================================================================
-    # SPL 2.0: COMMIT Statement
+    # SPL 2.0: RETURN Statement  (COMMIT is a deprecated alias)
     # ================================================================
 
     def _parse_commit_statement(self) -> CommitStatement:
-        """Parse COMMIT expr [WITH key=value, ...]"""
-        self._expect(TokenType.COMMIT)
+        """Parse RETURN expr [WITH key=value, ...]  (COMMIT accepted as deprecated alias)"""
+        if self._check(TokenType.COMMIT):
+            self._advance()
+        else:
+            self._expect(TokenType.RETURN)
         expression = self._parse_expression()
 
         options = {}
@@ -1206,14 +1213,18 @@ class Parser:
     # ================================================================
 
     def _parse_generate_into_statement(self) -> GenerateIntoStatement:
-        """Parse GENERATE func(args) [WITH options] INTO @var"""
+        """Parse GENERATE func(args) [WITH options] INTO @var|NONE"""
         gen_clause = self._parse_generate_clause()
 
         target = None
         if self._check(TokenType.INTO):
             self._advance()
-            self._expect(TokenType.AT)
-            target = self._expect_identifier_or_keyword().value
+            if self._check(TokenType.NONE):
+                self._advance()
+                target = "NONE"
+            else:
+                self._expect(TokenType.AT)
+                target = self._expect_identifier_or_keyword().value
 
         return GenerateIntoStatement(
             generate_clause=gen_clause,
@@ -1225,7 +1236,7 @@ class Parser:
     # ================================================================
 
     def _parse_call_statement(self) -> CallStatement:
-        """Parse CALL procedure(args) [INTO @var]"""
+        """Parse CALL procedure(args) [INTO @var|NONE]"""
         self._expect(TokenType.CALL)
         proc_name = self._expect(TokenType.IDENTIFIER).value
 
@@ -1241,8 +1252,12 @@ class Parser:
         target = None
         if self._check(TokenType.INTO):
             self._advance()
-            self._expect(TokenType.AT)
-            target = self._expect_identifier_or_keyword().value
+            if self._check(TokenType.NONE):
+                self._advance()
+                target = "NONE"
+            else:
+                self._expect(TokenType.AT)
+                target = self._expect_identifier_or_keyword().value
 
         return CallStatement(
             procedure_name=proc_name,
@@ -1255,7 +1270,7 @@ class Parser:
     # ================================================================
 
     def _parse_select_into_statement(self) -> SelectIntoStatement:
-        """Parse SELECT ... [FROM ...] [WHERE ...] INTO @var"""
+        """Parse SELECT ... [FROM ...] [WHERE ...] INTO @var|NONE"""
         select_items = self._parse_select_clause()
 
         from_clause = None
@@ -1269,8 +1284,12 @@ class Parser:
         target = None
         if self._check(TokenType.INTO):
             self._advance()
-            self._expect(TokenType.AT)
-            target = self._expect_identifier_or_keyword().value
+            if self._check(TokenType.NONE):
+                self._advance()
+                target = "NONE"
+            else:
+                self._expect(TokenType.AT)
+                target = self._expect_identifier_or_keyword().value
 
         return SelectIntoStatement(
             select_items=select_items,
@@ -1554,7 +1573,7 @@ class Parser:
             TokenType.ITERATIONS, TokenType.OTHERS, TokenType.TEMPERATURE,
             TokenType.WORKFLOW, TokenType.PROCEDURE, TokenType.EVALUATE,
             TokenType.RETRY, TokenType.RAISE, TokenType.CALL,
-            TokenType.DEFAULT, TokenType.INTO,
+            TokenType.DEFAULT, TokenType.INTO, TokenType.NONE, TokenType.RETURN,
         }
         if tok.type in keyword_as_ident:
             return self._advance()

@@ -1,0 +1,41 @@
+{
+  "name": "SPL 2.0 Cookbook v3.0 Preview",
+  "version": "2026.04.02",
+  "recipes": [
+    {
+      "id": 41,
+      "title": "Human Steering",
+      "category": "Interrogator",
+      "path": "41_human_steering/human_steering.spl",
+      "description": "Human-in-the-loop workflow for drafts and approvals."
+    },
+    {
+      "id": 42,
+      "title": "Knowledge Synthesis",
+      "category": "Librarian",
+      "path": "42_knowledge_synthesis/knowledge_synthesis.spl",
+      "description": "Evolve knowledge bases by contributing back insights."
+    },
+    {
+      "id": 43,
+      "title": "Prompt Self-Tuning",
+      "category": "Optimizer",
+      "path": "43_prompt_self_tuning/prompt_self_tuning.spl",
+      "description": "Meta-programming for automated prompt optimization."
+    },
+    {
+      "id": 44,
+      "title": "Adaptive Failover",
+      "category": "Resilience",
+      "path": "44_adaptive_failover/adaptive_failover.spl",
+      "description": "Dynamic model switching based on quality validation."
+    },
+    {
+      "id": 45,
+      "title": "Vision to Action",
+      "category": "Architect",
+      "path": "45_vision_to_action/vision_to_action.spl",
+      "description": "Vision-driven orchestration preview for SPL v3.0."
+    }
+  ]
+}

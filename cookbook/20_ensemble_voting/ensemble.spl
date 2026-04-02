@@ -52,7 +52,7 @@ DO
     GENERATE polish(@best_candidate, @consensus, @question) INTO @final_answer
 
     LOGGING 'Final answer ready' LEVEL INFO
-    COMMIT @final_answer WITH status = 'complete', candidates = 5
+    RETURN @final_answer WITH status = 'complete', candidates = 5
 
 EXCEPTION
     WHEN BudgetExceeded THEN
@@ -62,7 +62,7 @@ EXCEPTION
             @candidate_2, @score_2,
             @candidate_3, @score_3
         ) INTO @final_answer
-        COMMIT @final_answer WITH status = 'partial', candidates = 3
+        RETURN @final_answer WITH status = 'partial', candidates = 3
     WHEN HallucinationDetected THEN
         RETRY WITH temperature = 0.1 LIMIT 3
 END

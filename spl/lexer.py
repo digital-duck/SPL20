@@ -36,8 +36,12 @@ class Lexer:
 
             if ch == '$' and self._peek(1) == '$':
                 self._read_dollar_dollar()
+            elif ch in ('"', "'") and self._peek(1) == ch and self._peek(2) == ch:
+                self._read_triple_string(ch)
             elif ch in ('"', "'"):
                 self._read_string(ch)
+            elif (ch == 'f' or ch == 'F') and self._peek(1) == '"' and self._peek(2) == '"' and self._peek(3) == '"':
+                self._read_triple_fstring()
             elif (ch == 'f' or ch == 'F') and self._peek(1) in ('"', "'"):
                 self._read_fstring()
             elif ch.isdigit():
@@ -158,12 +162,12 @@ class Lexer:
         self.tokens.append(Token(token_type, value, self.line, self.column))
 
     def _skip_whitespace_and_comments(self):
-        """Skip whitespace and -- line comments."""
+        """Skip whitespace and line comments (-- or #)."""
         while self.pos < len(self.source):
             ch = self.source[self.pos]
             if ch in (' ', '\t', '\r', '\n'):
                 self._advance()
-            elif ch == '-' and self._peek(1) == '-':
+            elif (ch == '-' and self._peek(1) == '-') or ch == '#':
                 # Line comment: skip until end of line
                 while self.pos < len(self.source) and self.source[self.pos] != '\n':
                     self._advance()
@@ -245,6 +249,53 @@ class Lexer:
         # Check if it's a keyword
         token_type = KEYWORDS.get(lower, TokenType.IDENTIFIER)
         self.tokens.append(Token(token_type, value, start_line, start_col))
+
+    def _read_triple_string(self, quote: str):
+        """Read a triple-quoted string: '''...''' or \"\"\"...\"\"\"
+        Emits a STRING token. Content may span multiple lines.
+        """
+        start_line = self.line
+        start_col = self.column
+        self._advance()  # skip first quote
+        self._advance()  # skip second quote
+        self._advance()  # skip third quote
+        value_chars: list[str] = []
+        while self.pos < len(self.source):
+            if (self.source[self.pos] == quote
+                    and self._peek(1) == quote
+                    and self._peek(2) == quote):
+                self._advance()  # skip first closing quote
+                self._advance()  # skip second closing quote
+                self._advance()  # skip third closing quote
+                self.tokens.append(Token(TokenType.STRING, ''.join(value_chars), start_line, start_col))
+                return
+            value_chars.append(self.source[self.pos])
+            self._advance()
+        raise LexerError("Unterminated triple-quoted string", start_line, start_col)
+
+    def _read_triple_fstring(self):
+        """Read a triple-quoted f-string: f\"\"\"...\"\"\"
+        Emits an FSTRING token with raw template content.
+        """
+        start_line = self.line
+        start_col = self.column
+        self._advance()  # skip 'f' prefix
+        self._advance()  # skip first "
+        self._advance()  # skip second "
+        self._advance()  # skip third "
+        value_chars: list[str] = []
+        while self.pos < len(self.source):
+            if (self.source[self.pos] == '"'
+                    and self._peek(1) == '"'
+                    and self._peek(2) == '"'):
+                self._advance()
+                self._advance()
+                self._advance()
+                self.tokens.append(Token(TokenType.FSTRING, ''.join(value_chars), start_line, start_col))
+                return
+            value_chars.append(self.source[self.pos])
+            self._advance()
+        raise LexerError("Unterminated triple-quoted f-string", start_line, start_col)
 
     def _read_fstring(self):
         """Read an f-string literal: f'...' or f"..."

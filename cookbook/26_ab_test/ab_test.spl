@@ -25,7 +25,7 @@
 
 -- Scoring rubric as a reusable function
 CREATE FUNCTION scoring_rubric()
-RETURNS TEXT
+RETURN TEXT
 AS $$
 Rate the response on a scale of 0–10 for each criterion:
 1. Clarity (0-10): Is it easy to understand?
@@ -65,8 +65,10 @@ DO
     ) INTO @response_b
 
     -- Step 4: Score both variants against the rubric (LLM)
-    GENERATE evaluate_response(@response_a, @task, scoring_rubric()) INTO @score_a_json
-    GENERATE evaluate_response(@response_b, @task, scoring_rubric()) INTO @score_b_json
+    GENERATE evaluate_response(@response_a, @task, scoring_rubric()) 
+        INTO @score_a_json
+    GENERATE evaluate_response(@response_b, @task, scoring_rubric()) 
+        INTO @score_b_json
 
     -- Step 5: Extract numeric totals (deterministic — no LLM)
     CALL extract_score_total(@score_a_json) INTO @score_a
@@ -76,22 +78,23 @@ DO
     EVALUATE (@score_a - @score_b)
         WHEN > @winner_threshold THEN
             SET @winner_output = @response_a
-            COMMIT @winner_output WITH
+            RETURN @winner_output WITH
                 winner    = 'A',
                 score_a   = @score_a,
                 score_b   = @score_b,
                 margin    = (@score_a - @score_b)
         WHEN < (0 - @winner_threshold) THEN
             SET @winner_output = @response_b
-            COMMIT @winner_output WITH
+            RETURN @winner_output WITH
                 winner    = 'B',
                 score_a   = @score_a,
                 score_b   = @score_b,
                 margin    = (@score_b - @score_a)
         ELSE
             -- Scores too close — format both with explanation (deterministic — no LLM)
-            CALL format_tie_result(@response_a, @response_b, @score_a_json, @score_b_json) INTO @winner_output
-            COMMIT @winner_output WITH
+            CALL format_tie_result(@response_a, @response_b, @score_a_json, @score_b_json) 
+                INTO @winner_output
+            RETURN @winner_output WITH
                 winner  = 'tie',
                 score_a = @score_a,
                 score_b = @score_b
@@ -99,5 +102,5 @@ DO
 
 EXCEPTION
     WHEN GenerationError THEN
-        COMMIT 'A/B test failed during generation.' WITH status = 'error'
+        RETURN 'A/B test failed during generation.' WITH status = 'error'
 END

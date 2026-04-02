@@ -1,7 +1,7 @@
 -- SPL 2.0: Self-Refine Pattern
 -- Iteratively improves output through critique and refinement
 
-CREATE FUNCTION draft(task TEXT) RETURNS TEXT
+CREATE FUNCTION draft(task TEXT) RETURN TEXT
 AS $$
 You are an expert writer. Complete the following task thoroughly and well.
 
@@ -10,7 +10,7 @@ Task: {task}
 Write a high-quality response now.
 $$;
 
-CREATE FUNCTION critique(current TEXT) RETURNS TEXT
+CREATE FUNCTION critique(current TEXT) RETURN TEXT
 AS $$
 You are a strict critic reviewing written content.
 
@@ -24,7 +24,7 @@ Content to review:
 {current}
 $$;
 
-CREATE FUNCTION refined(current TEXT, feedback TEXT) RETURNS TEXT
+CREATE FUNCTION refined(current TEXT, feedback TEXT) RETURN TEXT
 AS $$
 You are an expert writer. Improve the following draft based on the feedback.
 
@@ -52,38 +52,44 @@ DO
   LOGGING f'Self-refine started | max_iterations={@max_iterations} for task:\n {@task}' LEVEL INFO
 
   -- Initial draft
-  GENERATE draft(@task) WITH OUTPUT BUDGET @output_budget TOKENS USING MODEL @writer_model INTO @current
+  GENERATE draft(@task) WITH OUTPUT BUDGET @output_budget TOKENS 
+    USING MODEL @writer_model 
+    INTO @current
   LOGGING 'Initial draft ready' LEVEL INFO
-  CALL write_file(f'{@log_dir}/draft_0.md', @current) INTO @_
+  CALL write_file(f'{@log_dir}/draft_0.md', @current) INTO NONE
 
   -- Iterative refinement loop
   WHILE @iteration < @max_iterations DO
     LOGGING f'Iteration {@iteration} | critiquing ...' LEVEL DEBUG
-    GENERATE critique(@current) WITH OUTPUT BUDGET @output_budget TOKENS USING MODEL @critic_model INTO @feedback
-    CALL write_file(f'{@log_dir}/feedback_{@iteration}.md', @feedback) INTO @_
+    GENERATE critique(@current) WITH OUTPUT BUDGET @output_budget TOKENS 
+      USING MODEL @critic_model 
+      INTO @feedback
+    CALL write_file(f'{@log_dir}/feedback_{@iteration}.md', @feedback) INTO NONE
 
     EVALUATE @feedback
       WHEN contains('[APPROVED]') THEN
         LOGGING f'Approved at iteration {@iteration}' LEVEL INFO
-        CALL write_file(f'{@log_dir}/final.md', @current) INTO @_
-        COMMIT @current WITH status = 'complete', iterations = @iteration
+        CALL write_file(f'{@log_dir}/final.md', @current) INTO NONE
+        RETURN @current WITH status = 'complete', iterations = @iteration
       ELSE
-        GENERATE refined(@current, @feedback) WITH OUTPUT BUDGET @output_budget TOKENS USING MODEL @writer_model INTO @current
+        GENERATE refined(@current, @feedback) WITH OUTPUT BUDGET @output_budget TOKENS 
+          USING MODEL @writer_model 
+          INTO @current
         @iteration := @iteration + 1
-        CALL write_file(f'{@log_dir}/draft_{@iteration}.md', @current) INTO @_
+        CALL write_file(f'{@log_dir}/draft_{@iteration}.md', @current) INTO NONE
         LOGGING f'Refined | iteration={@iteration}' LEVEL DEBUG
     END
   END
 
   -- If loop exhausted, commit best effort
   LOGGING f'Max iterations reached | iterations={@iteration}' LEVEL WARN
-  CALL write_file(f'{@log_dir}/final.md', @current) INTO @_
-  COMMIT @current WITH status = 'max_iterations', iterations = @iteration
+  CALL write_file(f'{@log_dir}/final.md', @current) INTO NONE
+  RETURN @current WITH status = 'max_iterations', iterations = @iteration
 
 EXCEPTION
   WHEN MaxIterationsReached THEN
-    CALL write_file(f'{@log_dir}/final.md', @current) INTO @_
-    COMMIT @current WITH status = 'partial'
+    CALL write_file(f'{@log_dir}/final.md', @current) INTO NONE
+    RETURN @current WITH status = 'partial'
   WHEN BudgetExceeded THEN
-    COMMIT @current WITH status = 'budget_limit'
+    RETURN @current WITH status = 'budget_limit'
 END

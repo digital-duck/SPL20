@@ -39,12 +39,12 @@ DO
         CALL extract_chunk(@document, @chunk_index, @chunk_count) INTO @chunk   -- deterministic, 0 tokens
 
         -- Save raw chunk to logs/
-        CALL write_file(f'{@log_dir}/chunk_{@chunk_index}.md', @chunk) INTO @_
+        CALL write_file(f'{@log_dir}/chunk_{@chunk_index}.md', @chunk) INTO NONE
 
         GENERATE summarize_chunk(@chunk, @chunk_index) INTO @chunk_summary
 
         -- Save chunk summary to logs/
-        CALL write_file(f'{@log_dir}/summary_{@chunk_index}.md', @chunk_summary) INTO @_
+        CALL write_file(f'{@log_dir}/summary_{@chunk_index}.md', @chunk_summary) INTO NONE
 
         LOGGING f'[Chunk {@chunk_index}/{@chunk_count}] summary saved'
 
@@ -61,25 +61,25 @@ DO
 
     EVALUATE @score
         WHEN > 0.7 THEN
-            CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO @_
+            CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO NONE
             LOGGING f'Final summary saved to {@log_dir}/final_summary.md (score={@score})'
-            COMMIT @final_summary WITH status = 'complete', chunks = @chunk_count
+            RETURN @final_summary WITH status = 'complete', chunks = @chunk_count
         ELSE
             GENERATE improve_summary(@final_summary, @summaries_text) INTO @final_summary
-            CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO @_
+            CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO NONE
             LOGGING f'Improved summary saved to {@log_dir}/final_summary.md (score={@score})'
-            COMMIT @final_summary WITH status = 'refined', chunks = @chunk_count
+            RETURN @final_summary WITH status = 'refined', chunks = @chunk_count
     END
 
 EXCEPTION
     WHEN ContextLengthExceeded THEN
         @summaries_text := list_concat(@summaries, '\n')
         GENERATE reduce_summaries(@summaries_text, @style) INTO @final_summary
-        CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO @_
-        COMMIT @final_summary WITH status = 'partial'
+        CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO NONE
+        RETURN @final_summary WITH status = 'partial'
     WHEN BudgetExceeded THEN
         @summaries_text := list_concat(@summaries, '\n')
         GENERATE reduce_summaries(@summaries_text, @style) INTO @final_summary
-        CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO @_
-        COMMIT @final_summary WITH status = 'budget_limit'
+        CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO NONE
+        RETURN @final_summary WITH status = 'budget_limit'
 END

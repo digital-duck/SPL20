@@ -306,7 +306,6 @@ def main() -> None:
         print("    Mode      : parallel (momagrid — recipes submitted concurrently)")
     print()
 
-    os.chdir(COOKBOOK_DIR)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Build the work list
@@ -325,7 +324,7 @@ def main() -> None:
                 print(f"[{rid}] {r['name']}  (skipping — {r.get('approval_status','').upper()})")
                 continue
         cmd_args = apply_overrides(r["args"], args.adapter, args.model)
-        log_path = COOKBOOK_DIR / r["dir"] / f"{r['log']}_{ts}.md"
+        log_path = COOKBOOK_DIR / r["dir"] / "logs" / f"{r['log']}_{ts}.md"
         active.append((r, cmd_args, log_path))
 
     if not active:

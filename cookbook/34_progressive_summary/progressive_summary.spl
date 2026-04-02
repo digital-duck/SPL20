@@ -10,7 +10,7 @@
 --       text="$(cat research_paper.txt)" audience="executive" layers=3
 
 CREATE FUNCTION summary_constraints(layer TEXT)
-RETURNS TEXT
+RETURN TEXT
 AS $$
 SELECT CASE layer
   WHEN 'sentence'  THEN 'One sentence only. Maximum 25 words. Capture the single most important idea.'
@@ -61,7 +61,8 @@ DO
     END
 
     -- Quality check: does each layer faithfully represent the original?
-    GENERATE verify_summary_fidelity(@text, @sentence_summary, @paragraph_summary) INTO @fidelity_score
+    GENERATE verify_summary_fidelity(@text, @sentence_summary, @paragraph_summary) 
+        INTO @fidelity_score
     LOGGING f'Fidelity score: {@fidelity_score}' LEVEL INFO
 
     -- Assemble all layers into a structured output
@@ -73,7 +74,7 @@ DO
         @audience
     ) INTO @summary_package
 
-    COMMIT @summary_package WITH
+    RETURN @summary_package WITH
         status = 'complete',
         layers_generated = @layers,
         audience = @audience,
@@ -82,8 +83,11 @@ DO
 EXCEPTION
     WHEN ContextLengthExceeded THEN
         -- Text too long — chunk first then summarize each chunk
-        GENERATE chunk_and_summarize(@text, summary_constraints('paragraph')) INTO @paragraph_summary
-        GENERATE summarize(@paragraph_summary, summary_constraints('sentence'), @audience) INTO @sentence_summary
-        GENERATE assemble_summary_package(@sentence_summary, @paragraph_summary, '', 'n/a', @audience) INTO @summary_package
-        COMMIT @summary_package WITH status = 'complete_chunked'
+        GENERATE chunk_and_summarize(@text, summary_constraints('paragraph')) 
+            INTO @paragraph_summary
+        GENERATE summarize(@paragraph_summary, summary_constraints('sentence'), @audience) 
+            INTO @sentence_summary
+        GENERATE assemble_summary_package(@sentence_summary, @paragraph_summary, '', 'n/a', @audience) 
+            INTO @summary_package
+        RETURN @summary_package WITH status = 'complete_chunked'
 END

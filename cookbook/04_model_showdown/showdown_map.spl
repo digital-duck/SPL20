@@ -1,0 +1,70 @@
+-- Recipe 04: Model Showdown (Iterative)
+-- Compares multiple models using a WHILE loop and a results MAP.
+--
+-- Usage:
+--   spl run cookbook/04_model_showdown/showdown_map.spl --adapter ollama \
+--       prompt="What is the meaning of life?"
+
+CREATE FUNCTION compare_all(
+    prompt TEXT,
+    results_map TEXT
+) RETURN TEXT
+AS $$
+You are a neutral evaluator comparing responses from multiple AI models.
+
+Prompt given to all models: "{prompt}"
+
+The responses are provided in a JSON map where keys are model names:
+{results_map}
+
+First, reproduce each model's raw response exactly as given.
+Then provide your evaluation. For each model briefly assess:
+- Response quality
+- Key strengths or weaknesses
+
+Conclude with which model gave the most helpful answer and why.
+$$;
+
+WORKFLOW model_showdown_map
+    INPUT:
+        @prompt TEXT DEFAULT 'What is the meaning of life?',
+        @models LIST DEFAULT ['gemma3', 'phi4', 'qwen2.5'],
+        @log_dir TEXT DEFAULT 'cookbook/04_model_showdown/logs'
+    OUTPUT: @comparison TEXT
+DO
+    @results := {}
+    @count := len(@models)
+    @i := 0
+
+    LOGGING f'Starting showdown for {@count} models...'
+
+    WHILE @i < @count DO
+        @current_model := @models[@i]
+        LOGGING f'Querying model {@i + 1}/{@count}: {@current_model}'
+        
+        PROMPT ask_model
+        SELECT
+            system_role('You are a helpful, knowledgeable assistant.'),
+            @prompt AS prompt
+        GENERATE answer(prompt) USING MODEL @current_model INTO @ans
+        
+        -- Log individual model response to file
+        CALL write_file(f'{@log_dir}/{@current_model}.md', @ans) INTO NONE
+        
+        -- Store in results map
+        @results[@current_model] := @ans
+        
+        @i := @i + 1
+    END
+
+    LOGGING 'All models responded. Generating comparison...'
+
+    -- Judge all responses together
+    GENERATE compare_all(@prompt, @results) INTO @comparison
+
+    CALL write_file(f'{@log_dir}/showdown_map_final.md', @comparison) INTO NONE
+    
+    RETURN @comparison WITH
+        status = 'complete',
+        model_count = @count
+END

@@ -53,7 +53,7 @@
 
 -- ─── Prompt Definitions ──────────────────────────────────────────────────────
 
-CREATE FUNCTION answer_candidate(question TEXT) RETURNS TEXT
+CREATE FUNCTION answer_candidate(question TEXT) RETURN TEXT
 AS $$
 
 You are an expert assistant. Answer the following question thoroughly and accurately.
@@ -62,7 +62,7 @@ Be specific, well-structured, and avoid vague generalities.
 Question: {question}
 $$;
 
-CREATE FUNCTION score_candidate(answer TEXT, question TEXT) RETURNS TEXT
+CREATE FUNCTION score_candidate(answer TEXT, question TEXT) RETURN TEXT
 AS $$
 
 You are a strict evaluator. Score the following answer to the question on three dimensions:
@@ -79,7 +79,7 @@ Return ONLY a single decimal number between 0.0 and 10.0 — the average of the 
 No explanation, no label, just the number.
 $$;
 
-CREATE FUNCTION find_consensus(candidates TEXT) RETURNS TEXT
+CREATE FUNCTION find_consensus(candidates TEXT) RETURN TEXT
 AS $$
 
 You are a synthesis expert. Read the following {n} independent answers to the same question,
@@ -95,7 +95,7 @@ Identify:
 Output a concise consensus summary (bullet points).
 $$;
 
-CREATE FUNCTION polish(best_answer TEXT, consensus TEXT, question TEXT) RETURNS TEXT
+CREATE FUNCTION polish(best_answer TEXT, consensus TEXT, question TEXT) RETURN TEXT
 AS $$
 
 You are a world-class editor. Refine the answer below, incorporating the consensus insights.
@@ -202,7 +202,7 @@ DO
     CALL write_file(f'{@log_dir}/final_answer.md', @final_answer) INTO @_
     LOGGING 'Final answer ready' LEVEL INFO
 
-    COMMIT @final_answer WITH
+    RETURN @final_answer WITH
         status       = 'complete',
         candidates        = @n_candidates,
         random_selection  = @random_selection,
@@ -217,7 +217,7 @@ EXCEPTION
         @scores_joined     := list_concat(@scores, '|||')
         CALL select_winner(@candidates_joined, @scores_joined) INTO @final_answer
         CALL write_file(f'{@log_dir}/final_answer_partial.md', @final_answer) INTO @_
-        COMMIT @final_answer WITH status = 'partial', candidates = @i
+        RETURN @final_answer WITH status = 'partial', candidates = @i
 
     WHEN HallucinationDetected THEN
         RETRY WITH temperature = 0.1

@@ -57,6 +57,7 @@ class TokenType(Enum):
     MATERIALIZED = auto()
     GRID = auto()
     VRAM = auto()
+    RETURN = auto()
 
     # === SPL 2.0 New Keywords ===
     EVALUATE = auto()
@@ -81,6 +82,7 @@ class TokenType(Enum):
     LEVEL = auto()
     TRUE = auto()
     FALSE = auto()
+    NONE = auto()
     FSTRING = auto()    # f'...' interpolated string literal
     PIPE = auto()       # | reserved for future pipe operator
     PIPE_PIPE = auto()  # || string concatenation (Oracle/PostgreSQL style)
@@ -186,6 +188,7 @@ KEYWORDS: dict[str, TokenType] = {
     "materialized": TokenType.MATERIALIZED,
     "grid": TokenType.GRID,
     "vram": TokenType.VRAM,
+    "return": TokenType.RETURN,
     # SPL 2.0 new keywords
     "evaluate": TokenType.EVALUATE,
     "when": TokenType.WHEN,
@@ -210,6 +213,7 @@ KEYWORDS: dict[str, TokenType] = {
     "level": TokenType.LEVEL,
     "true": TokenType.TRUE,
     "false": TokenType.FALSE,
+    "none": TokenType.NONE,
     "security": TokenType.SECURITY,
     "accounting": TokenType.ACCOUNTING,
     "classification": TokenType.CLASSIFICATION,

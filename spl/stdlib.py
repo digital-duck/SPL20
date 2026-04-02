@@ -115,8 +115,23 @@ def rtrim(value: str) -> str:
 
 @spl_tool
 def length(value: str) -> int:
-    """LEN / LENGTH(value) — number of characters."""
+    """LENGTH(value) — number of characters."""
     return len(str(value))
+
+
+@spl_tool
+def len_val(value: Any) -> int:
+    """LEN(value) — polymorphic length: string chars, JSON array items, or JSON object keys."""
+    s = str(value).strip()
+    # Try parsing as JSON first (array or object)
+    if (s.startswith('[') and s.endswith(']')) or (s.startswith('{') and s.endswith('}')):
+        try:
+            obj = json.loads(s)
+            return len(obj)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    # Fallback to string length
+    return len(s)
 
 
 @spl_tool
@@ -384,16 +399,6 @@ def json_keys(json_str: str) -> str:
         return ""
     except (json.JSONDecodeError, TypeError):
         return ""
-
-
-@spl_tool
-def json_length(json_str: str) -> int:
-    """JSON_LENGTH(json) — number of keys in object or items in array."""
-    try:
-        obj = json.loads(str(json_str))
-        return len(obj)
-    except (json.JSONDecodeError, TypeError):
-        return 0
 
 
 @spl_tool

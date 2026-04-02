@@ -26,7 +26,7 @@
 -- ── Schema (zero LLM cost — injected as grounding context) ─────────────────
 
 CREATE FUNCTION action_item_schema()
-RETURNS JSON
+RETURN JSON
 AS $$
 {
   "type": "object",
@@ -108,23 +108,27 @@ DO
     -- Step 7: Format and commit output
     EVALUATE @output_format
         WHEN = 'markdown' THEN
-            GENERATE format_as_markdown(@structured_json, @validation_notes) INTO @output
-            COMMIT @output WITH status = 'complete', format = 'markdown'
+            GENERATE format_as_markdown(@structured_json, @validation_notes) 
+              INTO @output
+            RETURN @output WITH status = 'complete', format = 'markdown'
         WHEN = 'email' THEN
-            GENERATE format_as_email(@structured_json, @validation_notes) INTO @output
-            COMMIT @output WITH status = 'complete', format = 'email'
+            GENERATE format_as_email(@structured_json, @validation_notes) 
+              INTO @output
+            RETURN @output WITH status = 'complete', format = 'email'
         ELSE
             SET @output = @structured_json
-            COMMIT @output WITH status = 'complete', format = 'json'
+            RETURN @output WITH status = 'complete', format = 'json'
     END
 
 EXCEPTION
     WHEN ContextLengthExceeded THEN
         -- Long transcript: summarise first, then extract from the summary
-        GENERATE summarize_transcript(@clean_transcript) INTO @summary
-        GENERATE extract_actions(@summary, action_item_schema(), @speakers_from_file, @speakers_from_inline) INTO @structured_json
+        GENERATE summarize_transcript(@clean_transcript) 
+          INTO @summary
+        GENERATE extract_actions(@summary, action_item_schema(), @speakers_from_file, @speakers_from_inline) 
+          INTO @structured_json
         CALL normalize_dates(@structured_json) INTO @structured_json
         CALL validate_ownership(@structured_json) INTO @validation_notes
         SET @output = @structured_json
-        COMMIT @output WITH status = 'complete_chunked'
+        RETURN @output WITH status = 'complete_chunked'
 END

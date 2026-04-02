@@ -41,7 +41,7 @@
 -- ── System context functions (zero LLM cost) ─────────────────────────────────
 
 CREATE FUNCTION spl_syntax_guide()
-RETURNS TEXT 
+RETURN TEXT 
 AS $$
 
 SPL 2.0 Workflow Syntax Reference:
@@ -57,7 +57,7 @@ DO
     GENERATE step_name(arg1, arg2, context_function()) INTO @variable
 
     -- Reusable system context (injected as LLM system prompt):
-    CREATE FUNCTION context_name() RETURNS TEXT 
+    CREATE FUNCTION context_name() RETURN TEXT 
     AS $$ 
         ... 
     $$;
@@ -70,11 +70,11 @@ DO
     END
 
     -- Commit output:
-    COMMIT @output WITH key = 'value', status = 'complete'
+    RETURN @output WITH key = 'value', status = 'complete'
 
 EXCEPTION
     WHEN GenerationError THEN
-        COMMIT 'error message' WITH status = 'error'
+        RETURN 'error message' WITH status = 'error'
 END
 
 Key rules:
@@ -85,7 +85,7 @@ Key rules:
 $$;
 
 CREATE FUNCTION tools_py_guide()
-RETURNS TEXT 
+RETURN TEXT 
 AS $$
 SPL 2.0 tools.py Pattern:
 
@@ -109,7 +109,7 @@ Rules:
 $$;
 
 CREATE FUNCTION recipe_quality_rubric()
-RETURNS TEXT 
+RETURN TEXT 
 AS $$
 A well-formed SPL recipe has ALL of the following:
 
@@ -118,7 +118,7 @@ A well-formed SPL recipe has ALL of the following:
    - CALL steps for all deterministic operations (data loading, parsing, formatting)
    - GENERATE steps only for tasks requiring LLM reasoning or generation
    - EXCEPTION handling for GenerationError at minimum
-   - Meaningful COMMIT with status metadata
+   - Meaningful RETURN with status metadata
 
 2. Tools file (tools.py):
    - load_X(id) — loads from the data catalog, returns structured text
@@ -214,7 +214,7 @@ DO
     -- v2: --feedback llm-judge will auto-validate and trigger iterate/reflect/publish.
     CALL notify_review(@output_dir, @artifact_list, @feedback) INTO @review_notification
 
-    COMMIT @review_notification WITH
+    RETURN @review_notification WITH
         status     = 'awaiting_review',
         concept    = @concept,
         output_dir = @output_dir,
@@ -233,14 +233,14 @@ DO
     --              -- PUBLISH: write publication docs + upload to registry
     --              GENERATE publish_writeup(@recipe_plan, @reflection, @concept) INTO @writeup
     --              CALL register_recipe(@output_dir, @writeup, @concept) INTO @registry_entry
-    --              COMMIT @registry_entry WITH status = 'published'
+    --              RETURN @registry_entry WITH status = 'published'
     --          WHEN 'fail' THEN
     --              RETRY (with corrected artifacts)
     -- [v2] END
 
 EXCEPTION
     WHEN GenerationError THEN
-        COMMIT 'Recipe generation failed. Check the concept description and try again.' WITH
+        RETURN 'Recipe generation failed. Check the concept description and try again.' WITH
             status  = 'error',
             concept = @concept
 END

@@ -24,7 +24,7 @@
 -- ── Helper functions (evaluated locally, zero LLM cost) ────────────────────
 
 CREATE FUNCTION support_categories()
-RETURNS TEXT
+RETURN TEXT
 AS $$
 Ticket categories and their routing:
 - billing:      finance team, SLA 4h,  high priority
@@ -44,7 +44,7 @@ Ticket categories and their routing:
 $$;
 
 CREATE FUNCTION response_tone_guide(tone TEXT DEFAULT 'professional')
-RETURNS TEXT
+RETURN TEXT
 AS $$
 SELECT CASE tone
   WHEN 'empathetic' THEN 'Warm and understanding. Acknowledge frustration. Use "I understand" and "I am sorry". Avoid jargon. Refer to the customer by first name.'
@@ -55,7 +55,7 @@ END
 $$;
 
 CREATE FUNCTION order_context_prompt(order_context TEXT)
-RETURNS TEXT
+RETURN TEXT
 AS $$
 SELECT CASE
   WHEN order_context = 'No order number found in this ticket.'
@@ -87,11 +87,13 @@ DO
     LOGGING f'Order context loaded | order_numbers={@order_numbers}' LEVEL DEBUG
 
     -- Step 3: Classify the ticket using categories + order data as grounding context
-    GENERATE classify_ticket(@ticket, support_categories(), order_context_prompt(@order_context)) INTO @classification_json
+    GENERATE classify_ticket(@ticket, support_categories(), order_context_prompt(@order_context)) 
+        INTO @classification_json
     LOGGING f'Classification: {@classification_json}' LEVEL DEBUG
 
     -- Step 4: Extract key structured details from the ticket
-    GENERATE extract_ticket_details(@ticket, @order_context) INTO @details_json
+    GENERATE extract_ticket_details(@ticket, @order_context) 
+        INTO @details_json
 
     -- Step 5: Score urgency 0-10 based on ticket text and classification
     GENERATE detect_urgency(@ticket, @classification_json) INTO @urgency_score
@@ -102,7 +104,7 @@ DO
         WHEN > 8 THEN
             LOGGING f'High urgency — escalating | score={@urgency_score}' LEVEL WARN
             GENERATE escalation_alert(@ticket, @classification_json, @order_context) INTO @alert
-            COMMIT @alert WITH status = 'escalated', priority = 'critical'
+            RETURN @alert WITH status = 'escalated', priority = 'critical'
         ELSE
             -- Step 7: Draft a grounded, tone-appropriate response
             GENERATE draft_response(
@@ -115,21 +117,23 @@ DO
             ) INTO @drafted_response
 
             -- Step 8: Quality-check the draft (0-10); revise once if score < 6
-            GENERATE check_response_quality(@drafted_response, @ticket, @order_context) INTO @quality_score
+            GENERATE check_response_quality(@drafted_response, @ticket, @order_context) 
+                INTO @quality_score
             LOGGING f'Draft quality score: {@quality_score}' LEVEL DEBUG
 
             EVALUATE @quality_score
                 WHEN < 6 THEN
                     LOGGING f'Quality below threshold — revising | score={@quality_score}' LEVEL WARN
                     GENERATE improve_response(@drafted_response, @ticket, @order_context) INTO @drafted_response
-                    COMMIT @drafted_response WITH status = 'drafted_revised'
+                    RETURN @drafted_response WITH status = 'drafted_revised'
                 ELSE
-                    COMMIT @drafted_response WITH status = 'drafted', quality = @quality_score
+                    RETURN @drafted_response WITH status = 'drafted', quality = @quality_score
             END
     END
 
 EXCEPTION
     WHEN GenerationError THEN
-        GENERATE fallback_response(@ticket, @product) INTO @drafted_response
-        COMMIT @drafted_response WITH status = 'fallback'
+        GENERATE fallback_response(@ticket, @product) 
+            INTO @drafted_response
+        RETURN @drafted_response WITH status = 'fallback'
 END

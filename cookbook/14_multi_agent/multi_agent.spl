@@ -14,31 +14,31 @@
 --   report.md     — final polished report from Writer agent
 
 -- Agent 1: Researcher — gathers key facts and sources
-PROCEDURE researcher(topic TEXT) RETURNS TEXT
+PROCEDURE researcher(topic TEXT) RETURN TEXT
 DO
     GENERATE research_facts(topic) INTO @facts
     GENERATE identify_key_themes(@facts) INTO @themes
     @result := @facts || '\n\nKey Themes:\n' || @themes
-    COMMIT @result
+    RETURN @result
 END
 
 -- Agent 2: Analyst — identifies trends, risks, and opportunities
-PROCEDURE analyst(research TEXT, topic TEXT) RETURNS TEXT
+PROCEDURE analyst(research TEXT, topic TEXT) RETURN TEXT
 DO
     GENERATE analyze_trends(research) INTO @trends
     GENERATE assess_risks(research, topic) INTO @risks
     GENERATE find_opportunities(research, topic) INTO @opportunities
     @result := 'Trends:\n' || @trends || '\n\nRisks:\n' || @risks || '\n\nOpportunities:\n' || @opportunities
-    COMMIT @result
+    RETURN @result
 END
 
 -- Agent 3: Writer — produces polished final report
-PROCEDURE writer(research TEXT, analysis TEXT, topic TEXT) RETURNS TEXT
+PROCEDURE writer(research TEXT, analysis TEXT, topic TEXT) RETURN TEXT
 DO
     GENERATE draft_report(topic, research, analysis) INTO @draft
     GENERATE critique(@draft) INTO @feedback
     GENERATE revise_report(@draft, @feedback) INTO @final
-    COMMIT @final
+    RETURN @final
 END
 
 -- Orchestrator workflow
@@ -65,11 +65,11 @@ DO
     CALL write_file(f'{@log_dir}/report.md', @report) INTO @_
 
     LOGGING 'Report complete' LEVEL INFO
-    COMMIT @report WITH status = 'complete'
+    RETURN @report WITH status = 'complete'
 
 EXCEPTION
     WHEN BudgetExceeded THEN
-        COMMIT @research WITH status = 'partial_research_only'
+        RETURN @research WITH status = 'partial_research_only'
     WHEN HallucinationDetected THEN
         RETRY WITH temperature = 0.1 LIMIT 3
 END

@@ -19,5 +19,5 @@ DO
     -- Step 3: Summarize
     GENERATE summarize(@analysis) INTO @summary
 
-    COMMIT @summary WITH status = 'complete'
+    RETURN @summary WITH status = 'complete'
 END

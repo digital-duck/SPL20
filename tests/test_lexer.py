@@ -64,6 +64,17 @@ class TestLexerSPL1Compat:
         types = [t.type for t in tokens if t.type != TokenType.EOF]
         assert types == [TokenType.PROMPT, TokenType.IDENTIFIER, TokenType.SELECT]
 
+    def test_hash_comments_skipped(self):
+        source = """
+        # This is a python-style comment
+        PROMPT hello
+        # Another comment
+        SELECT
+        """
+        tokens = Lexer(source).tokenize()
+        types = [t.type for t in tokens if t.type != TokenType.EOF]
+        assert types == [TokenType.PROMPT, TokenType.IDENTIFIER, TokenType.SELECT]
+
     def test_dollar_dollar(self):
         tokens = Lexer('$$ body $$').tokenize()
         assert tokens[0].type == TokenType.DOLLAR_DOLLAR

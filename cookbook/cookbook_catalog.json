@@ -13,7 +13,7 @@
       "args": [
         "spl",
         "run",
-        "./01_hello_world/hello.spl",
+        "./cookbook/cookbook/01_hello_world/hello.spl",
         "--adapter",
         "ollama"
       ],
@@ -30,7 +30,7 @@
       "args": [
         "spl",
         "run",
-        "./02_ollama_proxy/proxy.spl",
+        "./cookbook/02_ollama_proxy/proxy.spl",
         "--adapter",
         "ollama",
         "prompt=Explain quantum computing in one sentence"
@@ -48,7 +48,7 @@
       "args": [
         "spl",
         "run",
-        "./03_multilingual/multilingual.spl",
+        "./cookbook/03_multilingual/multilingual.spl",
         "--adapter",
         "ollama",
         "user_input=Hello Wen-Guang",
@@ -67,7 +67,7 @@
       "args": [
         "spl",
         "run",
-        "./04_model_showdown/showdown.spl",
+        "./cookbook/04_model_showdown/showdown.spl",
         "--adapter",
         "ollama",
         "prompt=Write a poem about Spring season"
@@ -85,7 +85,7 @@
       "args": [
         "spl",
         "run",
-        "./05_self_refine/self_refine.spl",
+        "./cookbook/05_self_refine/self_refine.spl",
         "--adapter",
         "ollama",
         "task=Write a haiku about coding"
@@ -103,7 +103,7 @@
       "args": [
         "spl",
         "run",
-        "./06_react_agent/react_agent.spl",
+        "./cookbook/06_react_agent/react_agent.spl",
         "--adapter",
         "claude_cli",
         "-m",
@@ -111,7 +111,7 @@
         "--claude-allowed-tools",
         "WebSearch",
         "--tools",
-        "./06_react_agent/tools.py",
+        "./cookbook/06_react_agent/tools.py",
         "country=France"
       ],
       "dir": "06_react_agent",
@@ -127,7 +127,7 @@
       "args": [
         "spl",
         "run",
-        "./07_safe_generation/safe_generation.spl",
+        "./cookbook/07_safe_generation/safe_generation.spl",
         "--adapter",
         "ollama",
         "prompt=Explain how encryption works"
@@ -145,7 +145,7 @@
       "args": [
         "spl",
         "run",
-        "./08_rag_query/rag_query.spl",
+        "./cookbook/08_rag_query/rag_query.spl",
         "--adapter",
         "ollama",
         "question=Who is Wen?"
@@ -163,7 +163,7 @@
       "args": [
         "spl",
         "run",
-        "./09_chain_of_thought/chain.spl",
+        "./cookbook/09_chain_of_thought/chain.spl",
         "--adapter",
         "ollama",
         "topic=distributed AI inference"
@@ -181,7 +181,7 @@
       "args": [
         "spl",
         "run",
-        "./10_batch_test/batch_test.spl",
+        "./cookbook/10_batch_test/batch_test.spl",
         "--adapter",
         "ollama"
       ],
@@ -198,7 +198,7 @@
       "args": [
         "spl",
         "run",
-        "./11_debate_arena/debate.spl",
+        "./cookbook/11_debate_arena/debate.spl",
         "--adapter",
         "ollama",
         "topic=AI should be open-sourced"
@@ -216,7 +216,7 @@
       "args": [
         "spl",
         "run",
-        "./12_plan_and_execute/plan_execute.spl",
+        "./cookbook/12_plan_and_execute/plan_execute.spl",
         "--adapter",
         "ollama",
         "task=Build a REST API for a todo app"
@@ -234,9 +234,9 @@
       "args": [
         "spl",
         "run",
-        "./13_map_reduce/map_reduce.spl",
+        "./cookbook/13_map_reduce/map_reduce.spl",
         "--tools",
-        "./13_map_reduce/tools.py",
+        "./cookbook/13_map_reduce/tools.py",
         "--adapter",
         "ollama",
         "document=The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization.",
@@ -255,7 +255,7 @@
       "args": [
         "spl",
         "run",
-        "./14_multi_agent/multi_agent.spl",
+        "./cookbook/14_multi_agent/multi_agent.spl",
         "--adapter",
         "ollama",
         "topic=Impact of AI on healthcare"
@@ -273,11 +273,10 @@
       "args": [
         "spl",
         "run",
-        "./15_code_review/code_review.spl",
+        "./cookbook/15_code_review/code_review.spl",
         "--adapter",
         "ollama",
-        "code=def foo(x): return eval(x)",
-        "language=Python"
+        "code=./cookbook/15_code_review/code_review.spl"
       ],
       "dir": "15_code_review",
       "log": "code_review",
@@ -292,7 +291,7 @@
       "args": [
         "spl",
         "run",
-        "./16_reflection/reflection.spl",
+        "./cookbook/16_reflection/reflection.spl",
         "--adapter",
         "ollama",
         "problem=Design a URL shortener system"
@@ -310,7 +309,7 @@
       "args": [
         "spl",
         "run",
-        "./17_tree_of_thought/tree_of_thought.spl",
+        "./cookbook/17_tree_of_thought/tree_of_thought.spl",
         "--adapter",
         "ollama",
         "problem=Should we rewrite the legacy system or incrementally refactor?"
@@ -328,7 +327,7 @@
       "args": [
         "spl",
         "run",
-        "./18_guardrails/guardrails.spl",
+        "./cookbook/18_guardrails/guardrails.spl",
         "--adapter",
         "ollama",
         "user_input=Explain how encryption works"
@@ -346,7 +345,7 @@
       "args": [
         "spl",
         "run",
-        "./19_memory_conversation/memory_chat.spl",
+        "./cookbook/19_memory_conversation/memory_chat.spl",
         "--adapter",
         "ollama",
         "user_input=My name is Alice and I am a data scientist"
@@ -364,7 +363,7 @@
       "args": [
         "spl",
         "run",
-        "./20_ensemble_voting/ensemble.spl",
+        "./cookbook/20_ensemble_voting/ensemble.spl",
         "--adapter",
         "ollama",
         "question=What causes inflation?"
@@ -382,7 +381,7 @@
       "args": [
         "spl",
         "run",
-        "./21_multi_model_pipeline/multi_model.spl",
+        "./cookbook/21_multi_model_pipeline/multi_model.spl",
         "--adapter",
         "ollama",
         "topic=climate change"
@@ -399,7 +398,7 @@
       "description": "Natural language to SPL 2.0 compiler \u2014 prompt, workflow, and auto modes",
       "args": [
         "bash",
-        "./22_text2spl_demo/text2spl_demo.sh"
+        "./cookbook/22_text2spl_demo/text2spl_demo.sh"
       ],
       "dir": "22_text2spl_demo",
       "log": "text2spl_demo",
@@ -414,7 +413,7 @@
       "args": [
         "spl",
         "run",
-        "./23_structured_output/structured_output.spl",
+        "./cookbook/23_structured_output/structured_output.spl",
         "--adapter",
         "ollama",
         "text=John Smith, 42, joined Acme Corp in March 2021 earning $95,000/year"
@@ -432,7 +431,7 @@
       "args": [
         "spl",
         "run",
-        "./24_few_shot/few_shot.spl",
+        "./cookbook/24_few_shot/few_shot.spl",
         "--adapter",
         "ollama",
         "text=The quarterly results exceeded all analyst forecasts by a significant margin",
@@ -451,7 +450,7 @@
       "args": [
         "spl",
         "run",
-        "./25_nested_procs/nested_procs.spl",
+        "./cookbook/25_nested_procs/nested_procs.spl",
         "--adapter",
         "ollama",
         "topic=quantum computing",
@@ -470,7 +469,7 @@
       "args": [
         "spl",
         "run",
-        "./26_ab_test/ab_test.spl",
+        "./cookbook/26_ab_test/ab_test.spl",
         "--adapter",
         "ollama",
         "task=Explain neural networks",
@@ -490,7 +489,7 @@
       "args": [
         "spl",
         "run",
-        "./27_data_extraction/data_extraction.spl",
+        "./cookbook/27_data_extraction/data_extraction.spl",
         "--adapter",
         "ollama",
         "text=Please process payment of USD 4,250.00 to Riverside Consulting (ref: PO-8821) by end of March.",
@@ -509,7 +508,7 @@
       "args": [
         "spl",
         "run",
-        "./28_support_triage/support_triage.spl",
+        "./cookbook/28_support_triage/support_triage.spl",
         "--adapter",
         "ollama",
         "ticket=My account has been charged twice for the same order #12345"
@@ -527,7 +526,7 @@
       "args": [
         "spl",
         "run",
-        "./29_meeting_actions/meeting_actions.spl",
+        "./cookbook/29_meeting_actions/meeting_actions.spl",
         "--adapter",
         "ollama",
         "transcript=Alice: we need to fix the login bug before Friday. Bob: I'll handle it. Alice: also need to update the docs",
@@ -546,7 +545,7 @@
       "args": [
         "spl",
         "run",
-        "./30_code_gen/code_gen.spl",
+        "./cookbook/30_code_gen/code_gen.spl",
         "--adapter",
         "ollama",
         "spec=A function that validates an email address",
@@ -565,7 +564,7 @@
       "args": [
         "spl",
         "run",
-        "./31_sentiment_pipeline/sentiment.spl",
+        "./cookbook/31_sentiment_pipeline/sentiment.spl",
         "--adapter",
         "ollama",
         "items=Great product, love it! | Terrible experience, never again | It was okay I guess",
@@ -584,7 +583,7 @@
       "args": [
         "spl",
         "run",
-        "./32_socratic_tutor/socratic_tutor.spl",
+        "./cookbook/32_socratic_tutor/socratic_tutor.spl",
         "--adapter",
         "ollama",
         "topic=Why does the sky appear blue?",
@@ -603,7 +602,7 @@
       "args": [
         "spl",
         "run",
-        "./33_interview_sim/interview_sim.spl",
+        "./cookbook/33_interview_sim/interview_sim.spl",
         "--adapter",
         "ollama",
         "role=Senior Software Engineer",
@@ -622,7 +621,7 @@
       "args": [
         "spl",
         "run",
-        "./34_progressive_summary/progressive_summary.spl",
+        "./cookbook/34_progressive_summary/progressive_summary.spl",
         "--adapter",
         "ollama",
         "text=Artificial intelligence has transformed industries from healthcare to finance, enabling automation of complex tasks that previously required human expertise. Machine learning models can now diagnose diseases from medical images, detect fraud in financial transactions, and generate human-like text. However, these advances raise important questions about bias, accountability, and the future of work.",
@@ -641,7 +640,7 @@
       "args": [
         "spl",
         "run",
-        "./35_hypothesis_tester/hypothesis.spl",
+        "./cookbook/35_hypothesis_tester/hypothesis.spl",
         "--adapter",
         "ollama",
         "observation=Remote teams show lower productivity in the first month after joining",
@@ -660,11 +659,11 @@
       "args": [
         "spl",
         "run",
-        "./36_tool_use/tool_use.spl",
+        "./cookbook/36_tool_use/tool_use.spl",
         "--adapter",
         "ollama",
         "--tools",
-        "./36_tool_use/tools.py",
+        "./cookbook/36_tool_use/tools.py",
         "sales=1200,1450,1380,1600,1750,1900",
         "prev_total=7800",
         "period=H1 2025"
@@ -682,7 +681,7 @@
       "args": [
         "spl",
         "run",
-        "./37_headline_news/headline_news.spl",
+        "./cookbook/37_headline_news/headline_news.spl",
         "--adapter",
         "claude_cli",
         "-m",
@@ -702,7 +701,7 @@
       "args": [
         "spl",
         "run",
-        "./38_bedrock_quickstart/bedrock_quickstart.spl",
+        "./cookbook/38_bedrock_quickstart/bedrock_quickstart.spl",
         "--adapter",
         "bedrock",
         "prompt=Explain the CAP theorem in two sentences."
@@ -720,7 +719,7 @@
       "args": [
         "spl",
         "run",
-        "./39_vertex_quickstart/vertex_quickstart.spl",
+        "./cookbook/39_vertex_quickstart/vertex_quickstart.spl",
         "--adapter",
         "vertex",
         "prompt=Explain the CAP theorem in two sentences."
@@ -738,7 +737,7 @@
       "args": [
         "spl",
         "run",
-        "./40_azure_openai_quickstart/azure_openai_quickstart.spl",
+        "./cookbook/40_azure_openai_quickstart/azure_openai_quickstart.spl",
         "--adapter",
         "azure_openai",
         "prompt=Explain the CAP theorem in two sentences."

@@ -305,7 +305,7 @@ class WhileStatement:
 
 @dataclass
 class CommitStatement:
-    """COMMIT <expr> WITH status='...'"""
+    """RETURN <expr> WITH status='...' (formerly COMMIT)"""
     expression: Expression
     options: dict[str, Expression] = field(default_factory=dict)
 

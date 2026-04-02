@@ -638,8 +638,11 @@ class Executor:
         # Assign to target variables (multi-var INTO)
         targets = stmt.target_variables or ([stmt.target_variable] if stmt.target_variable else [])
         for var, val in zip(targets, selected):
-            state.set_var(var, val)
-            _log.info("SELECT INTO: @%s (%d chars)", var, len(val) if val else 0)
+            if var not in ("NONE", "_"):
+                state.set_var(var, val)
+                _log.info("SELECT INTO: @%s (%d chars)", var, len(val) if val else 0)
+            else:
+                _log.info("SELECT INTO: [DISCARDED] (%d chars)", len(val) if val else 0)
 
     async def _exec_generate_into_prompt(self, prompt_stmt, state: WorkflowState) -> str:
         """Execute an inner PROMPT+GENERATE (from a CTE) and return the generated text."""
@@ -716,6 +719,7 @@ class Executor:
             budget = int(state.get_var(budget[1:]))
         max_tokens = int(budget) if budget else self.default_max_tokens
 
+        gen_function_name = gen.function_name
         self._check_budget(state)
         gen_result = await self.adapter.generate(
             prompt=prompt,
@@ -725,11 +729,14 @@ class Executor:
         )
         state.record_llm_call(gen_result)
 
-        if stmt.target_variable:
+        if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
             state.set_var(stmt.target_variable, gen_result.content)
             _log.info("GENERATE %s -> @%s (%d tokens, %.0fms)",
-                      gen.function_name, stmt.target_variable,
+                      gen_function_name, stmt.target_variable,
                       gen_result.output_tokens, gen_result.latency_ms)
+        else:
+            _log.info("GENERATE %s -> [DISCARDED] (%d tokens, %.0fms)",
+                      gen_function_name, gen_result.output_tokens, gen_result.latency_ms)
 
     async def _exec_evaluate(self, stmt: EvaluateStatement, state: WorkflowState):
         """Execute EVALUATE expr WHEN ... END"""
@@ -862,7 +869,7 @@ class Executor:
         state.committed_value = value
         state.committed_options = options
         opts_str = ", ".join(f"{k}={v}" for k, v in options.items()) if options else "none"
-        _log.info("COMMIT: %d chars | %s", len(value), opts_str)
+        _log.info("RETURN: %d chars | %s", len(value), opts_str)
 
     async def _exec_raise(self, stmt: RaiseStatement, state: WorkflowState):  # noqa: ARG002
         """Execute RAISE exception_type"""
@@ -936,18 +943,22 @@ class Executor:
                 result_str = await tool(*args_text)
             else:
                 result_str = tool(*args_text)
-            if stmt.target_variable:
+            if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
                 state.set_var(stmt.target_variable, str(result_str))
-            _log.debug("Tool '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
+                _log.debug("Tool '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
+            else:
+                _log.debug("Tool '%s' -> [DISCARDED]", stmt.procedure_name)
             return
 
         # 2. Built-in function — deterministic, no LLM cost
         if self.functions.is_builtin(stmt.procedure_name):
             args_text = [self._eval_expression(a, state) for a in stmt.arguments]
             result_str = self.functions.call_builtin(stmt.procedure_name, *args_text)
-            if stmt.target_variable:
+            if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
                 state.set_var(stmt.target_variable, str(result_str))
-            _log.debug("Builtin '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
+                _log.debug("Builtin '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
+            else:
+                _log.debug("Builtin '%s' -> [DISCARDED]", stmt.procedure_name)
             return
 
         # 3. SPL PROCEDURE
@@ -960,7 +971,7 @@ class Executor:
             self._check_budget(state)
             result = await self.adapter.generate(prompt=prompt, max_tokens=1000)
             state.record_llm_call(result)
-            if stmt.target_variable:
+            if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
                 state.set_var(stmt.target_variable, result.content)
             return
 
@@ -993,7 +1004,7 @@ class Executor:
         state.total_latency_ms += proc_state.total_latency_ms
         state.total_cost_usd += proc_state.total_cost_usd
 
-        if stmt.target_variable and proc_state.committed_value:
+        if stmt.target_variable and stmt.target_variable not in ("NONE", "_") and proc_state.committed_value:
             state.set_var(stmt.target_variable, proc_state.committed_value)
 
     async def _exec_do_block(self, stmt: DoBlock, state: WorkflowState):

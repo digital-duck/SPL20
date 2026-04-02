@@ -47,12 +47,12 @@ DO
     -- Phase 4: Synthesize final report
     GENERATE synthesize(@task, @results) INTO @final_report
 
-    COMMIT @final_report WITH status = 'complete', steps_executed = @step_index
+    RETURN @final_report WITH status = 'complete', steps_executed = @step_index
 
 EXCEPTION
     WHEN MaxIterationsReached THEN
         GENERATE synthesize(@task, @results) INTO @final_report
-        COMMIT @final_report WITH status = 'partial'
+        RETURN @final_report WITH status = 'partial'
     WHEN BudgetExceeded THEN
-        COMMIT @results WITH status = 'budget_limit'
+        RETURN @results WITH status = 'budget_limit'
 END

@@ -1,0 +1,49 @@
+-- Recipe 42: Knowledge Synthesis (RAG-Writer Pattern)
+-- Demonstrates how agents contribute back to the knowledge base.
+-- An LLM extracts structured insights from raw text; a deterministic CALL
+-- persists them to the vector store so future queries benefit.
+--
+-- Usage:
+--   spl run cookbook-v3.0/42_knowledge_synthesis/knowledge_synthesis.spl \
+--       --tools cookbook-v3.0/tools.py \
+--       raw_text="Recent advances in sparse attention reduce transformer memory..."
+
+CREATE FUNCTION synthesize(raw_text TEXT)
+RETURN TEXT
+AS $$
+You are a knowledge engineer. Extract exactly 3 core insights from the text below.
+Format each insight as a concise bullet point (one sentence, no sub-bullets).
+Focus on novel claims, methods, or results — not background knowledge.
+
+Text:
+{raw_text}
+$$;
+
+WORKFLOW knowledge_synthesis
+    INPUT: @raw_text TEXT
+    OUTPUT: @status TEXT
+DO
+    LOGGING 'Extracting insights from new information ...' LEVEL INFO
+
+    -- Step 1: Extract and synthesize insights (LLM)
+    GENERATE synthesize(@raw_text) INTO @insights
+    LOGGING f'Insights extracted: {@insights}' LEVEL DEBUG
+
+    -- Step 2: Persist to vector store (deterministic CALL — no LLM cost)
+    LOGGING 'Updating RAG vector store ...' LEVEL DEBUG
+    CALL rag_update(@insights, f'Source: {@raw_text}') INTO @status
+
+    -- Step 3: Log outcome
+    EVALUATE @status
+        WHEN contains('success') THEN
+            LOGGING 'Knowledge base successfully updated' LEVEL INFO
+        ELSE
+            LOGGING f'Knowledge base update returned unexpected status: {@status}' LEVEL WARN
+    END
+
+    RETURN f'Operation: {@status}' WITH status = @status
+
+EXCEPTION
+    WHEN GenerationError THEN
+        RETURN 'synthesis_failed' WITH status = 'error', reason = 'generation_error'
+END

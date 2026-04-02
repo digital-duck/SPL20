@@ -40,12 +40,12 @@ DO
 
     EVALUATE @keyword_class
         WHEN STARTSWITH 'harmful' THEN
-            COMMIT 'I cannot help with that request.' WITH
+            RETURN 'I cannot help with that request.' WITH
                 status        = 'blocked_harmful',
                 gate          = 'keyword_prescreen',
                 keyword_match = @keyword_class
         WHEN STARTSWITH 'off_topic' THEN
-            COMMIT 'That question is outside my scope. Please ask something relevant.' WITH
+            RETURN 'That question is outside my scope. Please ask something relevant.' WITH
                 status        = 'blocked_off_topic',
                 gate          = 'keyword_prescreen',
                 keyword_match = @keyword_class
@@ -58,11 +58,11 @@ DO
 
     EVALUATE @input_class
         WHEN 'harmful' THEN
-            COMMIT 'I cannot help with that request.' WITH
+            RETURN 'I cannot help with that request.' WITH
                 status = 'blocked_harmful',
                 gate   = 'llm_classifier'
         WHEN 'off_topic' THEN
-            COMMIT 'That question is outside my scope. Please ask something relevant.' WITH
+            RETURN 'That question is outside my scope. Please ask something relevant.' WITH
                 status = 'blocked_off_topic',
                 gate   = 'llm_classifier'
         ELSE
@@ -99,16 +99,16 @@ DO
             SET @safe_response = 'I was unable to generate a safe response. Please rephrase your question.'
     END
 
-    COMMIT @safe_response WITH
+    RETURN @safe_response WITH
         status       = 'complete',
         input_class  = @input_class,
         pii_detected = @pii_report
 
 EXCEPTION
     WHEN RefusalToAnswer THEN
-        COMMIT 'This request cannot be processed.' WITH status = 'refused'
+        RETURN 'This request cannot be processed.' WITH status = 'refused'
     WHEN HallucinationDetected THEN
-        COMMIT 'Unable to provide a verified response.' WITH status = 'hallucination_blocked'
+        RETURN 'Unable to provide a verified response.' WITH status = 'hallucination_blocked'
     WHEN BudgetExceeded THEN
-        COMMIT @safe_response WITH status = 'budget_limit'
+        RETURN @safe_response WITH status = 'budget_limit'
 END

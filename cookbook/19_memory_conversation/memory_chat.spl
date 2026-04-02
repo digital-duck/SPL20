@@ -17,7 +17,8 @@
 
 -- Extract any personal facts the user shared. Return the exact string 'no_new_facts'
 -- if nothing new was shared, otherwise return a bullet list of facts.
-CREATE FUNCTION extract_facts(user_input TEXT) RETURNS TEXT
+CREATE FUNCTION extract_facts(user_input TEXT) 
+RETURN TEXT
 AS $$
 
 You are a fact extractor. Read the user message and extract any personal facts they shared
@@ -33,7 +34,8 @@ User message: "{user_input}"
 $$;
 
 -- Merge new facts into an existing profile. Return the updated profile as a bullet list.
-CREATE FUNCTION merge_profile(existing_profile TEXT, new_facts TEXT) RETURNS TEXT
+CREATE FUNCTION merge_profile(existing_profile TEXT, new_facts TEXT) 
+RETURN TEXT
 AS $$
 
 You are maintaining a user profile as a concise bullet list.
@@ -50,7 +52,8 @@ New facts to merge:
 $$;
 
 -- Reply using full context: known profile + conversation history + current message.
-CREATE FUNCTION contextual_reply(user_input TEXT, profile TEXT, history TEXT) RETURNS TEXT
+CREATE FUNCTION contextual_reply(user_input TEXT, profile TEXT, history TEXT) 
+RETURN TEXT
 AS $$
 
 Known facts about the user: {profile}
@@ -98,9 +101,9 @@ DO
     @memory['chat_history'] := @chat_history
 
     LOGGING 'Response ready' LEVEL INFO
-    COMMIT @response WITH status = 'complete'
+    RETURN @response WITH status = 'complete'
 
 EXCEPTION
     WHEN BudgetExceeded THEN
-        COMMIT 'I remember you! But I ran out of budget for this response.' WITH status = 'budget_limit'
+        RETURN 'I remember you! But I ran out of budget for this response.' WITH status = 'budget_limit'
 END

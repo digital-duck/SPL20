@@ -13,25 +13,25 @@ DO
 
   EVALUATE @quality
     WHEN 'high_quality' THEN
-      COMMIT @result WITH status = 'high_quality'
+      RETURN @result WITH status = 'high_quality'
     WHEN 'acceptable' THEN
       GENERATE improved(@result, @prompt) INTO @result
-      COMMIT @result WITH status = 'refined'
+      RETURN @result WITH status = 'refined'
     ELSE
-      COMMIT @result WITH status = 'best_effort'
+      RETURN @result WITH status = 'best_effort'
   END
 
 EXCEPTION
   WHEN HallucinationDetected THEN
     GENERATE response(@prompt) INTO @result
-    COMMIT @result WITH status = 'conservative'
+    RETURN @result WITH status = 'conservative'
 
   WHEN ContextLengthExceeded THEN
     RETRY WITH temperature = 0.1 LIMIT 3
 
   WHEN RefusalToAnswer THEN
-    COMMIT @prompt WITH status = 'refused'
+    RETURN @prompt WITH status = 'refused'
 
   WHEN BudgetExceeded THEN
-    COMMIT @result WITH status = 'truncated'
+    RETURN @result WITH status = 'truncated'
 END

@@ -23,7 +23,7 @@ CREATE FUNCTION compare_models(
     model_1 TEXT, answer_1 TEXT,
     model_2 TEXT, answer_2 TEXT,
     model_3 TEXT, answer_3 TEXT
-) RETURNS TEXT
+) RETURN TEXT
 AS $$
 You are a neutral evaluator comparing responses from three AWS Bedrock models.
 
@@ -94,7 +94,7 @@ DO
         @model_3, @answer_3
     ) INTO @comparison
 
-    COMMIT @comparison WITH
+    RETURN @comparison WITH
         status  = 'complete',
         model_1 = @model_1,
         model_2 = @model_2,
@@ -102,6 +102,6 @@ DO
 
 EXCEPTION
     WHEN GenerationError THEN
-        COMMIT 'One or more Bedrock models failed. Check region, model access, and IAM permissions.'
+        RETURN 'One or more Bedrock models failed. Check region, model access, and IAM permissions.'
         WITH status = 'error'
 END

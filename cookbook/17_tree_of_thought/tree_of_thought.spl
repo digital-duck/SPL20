@@ -1,52 +1,103 @@
--- Recipe 17: Tree of Thought
--- Explores multiple reasoning paths in parallel, evaluates each, and selects the best.
--- Each path is explored by a different model, maximising reasoning diversity.
--- Demonstrates branching exploration, comparative evaluation, and path scoring.
---
--- Usage:
---   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem="How should a startup prioritize between growth and profitability?"
---   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Design a caching strategy for a high-traffic API"
---   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Should we rewrite the legacy system or incrementally refactor?"
---   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="..." model_a=gemma3 model_b=phi4 model_c=qwen2.5
+-- Recipe 17: Tree of Thought (Dynamic)
+-- Explores multiple reasoning paths in parallel using a list of models.
+-- Uses MAP and LIST for dynamic path management and evaluation.
+
+CREATE FUNCTION initial_approach(problem TEXT) RETURN TEXT
+AS $$
+Provide an initial high-level approach or reasoning path for the following problem:
+{problem}
+
+Focus on a unique perspective or specialized methodology.
+$$;
+
+CREATE FUNCTION develop(path TEXT, problem TEXT) RETURN TEXT
+AS $$
+Take the following initial approach and develop it one level deeper, adding specific steps and technical details:
+Approach: {path}
+Problem: {problem}
+$$;
+
+CREATE FUNCTION evaluate_path(path TEXT, problem TEXT) RETURN TEXT
+AS $$
+Score the following reasoning path on a scale of 1-10 based on its feasibility and depth.
+Problem: {problem}
+Path: {path}
+
+Output only the numeric score.
+$$;
+
+CREATE FUNCTION select_best(results_map TEXT, problem TEXT) RETURN TEXT
+AS $$
+Review the following developed reasoning paths and their scores provided in a JSON map:
+{results_map}
+
+Problem: {problem}
+
+Identify the path with the best reasoning and provide that path's content as the output.
+$$;
+
+CREATE FUNCTION refine_solution(path TEXT, problem TEXT) RETURN TEXT
+AS $$
+Refine the following reasoning path into a complete, polished solution for the problem.
+Problem: {problem}
+Path: {path}
+$$;
+
+CREATE FUNCTION verify(solution TEXT, problem TEXT) RETURN TEXT
+AS $$
+Verify if the following solution is sound and fully addresses the problem.
+Problem: {problem}
+Solution: {solution}
+
+Output 'sound' if it is correct, otherwise provide a brief critique.
+$$;
+
+CREATE FUNCTION synthesize_all(results_map TEXT, problem TEXT) RETURN TEXT
+AS $$
+Synthesize insights from all the following reasoning paths to create a comprehensive final solution.
+Problem: {problem}
+Paths: {results_map}
+$$;
 
 WORKFLOW tree_of_thought
     INPUT:
-        @problem TEXT,
-        @model_a TEXT DEFAULT 'gemma3',
-        @model_b TEXT DEFAULT 'phi4',
-        @model_c TEXT DEFAULT 'qwen2.5'
+        @problem TEXT DEFAULT 'Design a sustainable urban transport system.',
+        @models LIST DEFAULT ['gemma3', 'phi4', 'qwen2.5'],
+        @log_dir TEXT DEFAULT 'cookbook/17_tree_of_thought/logs'
     OUTPUT: @best_solution TEXT
 DO
-    LOGGING f'Tree of thought | problem: {@problem} | models: {@model_a}, {@model_b}, {@model_c}' LEVEL INFO
+    LOGGING f'Tree of thought | problem: {@problem} | models: {@models}' LEVEL INFO
 
-    -- Step 1: Generate multiple initial approaches — each model reasons independently
-    LOGGING f'Generating 3 initial approaches ({@model_a}, {@model_b}, {@model_c}) ...' LEVEL DEBUG
-    GENERATE approach_1(@problem) USING MODEL @model_a INTO @path_a
-    GENERATE approach_2(@problem) USING MODEL @model_b INTO @path_b
-    GENERATE approach_3(@problem) USING MODEL @model_c INTO @path_c
+    @results := {}
+    @count := len(@models)
+    @i := 0
 
-    -- Step 2: Develop each approach one level deeper (same model per path)
-    LOGGING 'Developing all 3 paths ...' LEVEL DEBUG
-    GENERATE develop(@path_a, @problem) USING MODEL @model_a INTO @path_a_developed
-    GENERATE develop(@path_b, @problem) USING MODEL @model_b INTO @path_b_developed
-    GENERATE develop(@path_c, @problem) USING MODEL @model_c INTO @path_c_developed
-
-    -- Step 3: Score each path on multiple criteria
-    LOGGING 'Scoring paths ...' LEVEL DEBUG
-    GENERATE evaluate_path(@path_a_developed, @problem) INTO @score_a
-    GENERATE evaluate_path(@path_b_developed, @problem) INTO @score_b
-    GENERATE evaluate_path(@path_c_developed, @problem) INTO @score_c
+    -- Step 1 & 2: Generate and Develop paths in a loop
+    WHILE @i < @count DO
+        @current_model := @models[@i]
+        LOGGING f'Exploring path {@i + 1}/{@count} using {@current_model}...'
+        
+        GENERATE initial_approach(@problem) USING MODEL @current_model INTO @init_path
+        GENERATE develop(@init_path, @problem) USING MODEL @current_model INTO @developed_path
+        GENERATE evaluate_path(@developed_path, @problem) INTO @score
+        
+        -- Store path and score in map
+        @path_data := {}
+        @path_data['content'] := @developed_path
+        @path_data['score'] := @score
+        @results[@current_model] := @path_data
+        
+        CALL write_file(f'{@log_dir}/path_{@current_model}.md', @developed_path) INTO NONE
+        
+        @i := @i + 1
+    END
 
     -- Step 4: Select the best path
-    LOGGING f'Scores: A={@score_a} B={@score_b} C={@score_c} — selecting best ...' LEVEL INFO
-    GENERATE select_best(
-        @path_a_developed, @score_a,
-        @path_b_developed, @score_b,
-        @path_c_developed, @score_c
-    ) INTO @best_path
+    LOGGING 'Evaluating all paths to select the best...'
+    GENERATE select_best(@results, @problem) INTO @best_path
 
     -- Step 5: Refine the winning path into a final solution
-    LOGGING 'Refining winning path ...' LEVEL DEBUG
+    LOGGING 'Refining winning path...'
     GENERATE refine_solution(@best_path, @problem) INTO @best_solution
 
     -- Step 6: Verify the solution holds up
@@ -55,20 +106,19 @@ DO
 
     EVALUATE @verification
         WHEN 'sound' THEN
-            COMMIT @best_solution WITH status = 'complete', paths_explored = 3
+            RETURN @best_solution WITH status = 'complete', paths_explored = @count
         ELSE
             -- If verification fails, combine insights from all paths
             LOGGING 'Verification failed — synthesizing all paths' LEVEL WARN
-            GENERATE synthesize_all(
-                @path_a_developed, @path_b_developed, @path_c_developed, @problem
-            ) INTO @best_solution
-            COMMIT @best_solution WITH status = 'synthesized', paths_explored = 3
+            GENERATE synthesize_all(@results, @problem) INTO @best_solution
+            RETURN @best_solution WITH status = 'synthesized', paths_explored = @count
     END
+
+    CALL write_file(f'{@log_dir}/final_solution.md', @best_solution) INTO NONE
 
 EXCEPTION
     WHEN BudgetExceeded THEN
-        -- Return whatever path was scored highest so far
-        COMMIT @best_path WITH status = 'budget_limit'
+        RETURN @best_solution WITH status = 'budget_limit'
     WHEN HallucinationDetected THEN
         RETRY WITH temperature = 0.1 LIMIT 3
 END
