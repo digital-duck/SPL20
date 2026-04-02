@@ -33,7 +33,8 @@ $$;
 WORKFLOW prompt_self_tuning
     INPUT:
         @baseline_prompt TEXT DEFAULT 'Summarize this technical document.',
-        @failed_case     TEXT DEFAULT 'The document describes a complex quantum algorithm.'
+        @failed_case     TEXT DEFAULT 'The document describes a complex quantum algorithm.',
+        @log_dir TEXT DEFAULT 'cookbook-v3.0/43_prompt_self_tuning/logs'
     OUTPUT: @winning_prompt TEXT
 DO
     LOGGING f'Generating prompt variations for failed case: {@failed_case}' LEVEL INFO
@@ -70,6 +71,8 @@ DO
                     @winning_prompt := @baseline_prompt
             END
     END
+
+    CALL write_file(f'{@log_dir}/winning_prompt.md', @winning_prompt) INTO NONE
 
     RETURN @winning_prompt WITH status = 'complete'
 

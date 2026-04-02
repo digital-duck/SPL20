@@ -31,17 +31,20 @@ Reviewer feedback:
 $$;
 
 WORKFLOW human_steering
-    INPUT: @topic TEXT DEFAULT 'The future of SPL'
+    INPUT: @topic TEXT DEFAULT 'The future of decentralized AI inference',
+    @log_dir TEXT DEFAULT 'cookbook-v3.0/41_human_steering/logs'
     OUTPUT: @final_article TEXT
 DO
-    LOGGING f'Drafting article on topic: {@topic}' LEVEL INFO
+    LOGGING f'Drafting article on topic:\n {@topic}' LEVEL INFO
 
     -- Step 1: Generate initial draft (LLM)
     GENERATE draft(@topic) INTO @draft
     LOGGING 'Draft generated — requesting human feedback' LEVEL INFO
+    CALL write_file(f'{@log_dir}/draft.md', @draft) INTO NONE
 
     -- Step 2: Pause for human steering (deterministic CALL — no LLM cost)
     CALL wait_for_human_feedback(f'Review this draft:\n\n{@draft}') INTO @feedback
+    CALL write_file(f'{@log_dir}/feedback.md', @feedback) INTO NONE
 
     -- Step 3: Branch on whether feedback was provided
     EVALUATE @feedback
@@ -53,6 +56,7 @@ DO
             @final_article := @draft
     END
 
+    CALL write_file(f'{@log_dir}/final_article.md', @final_article) INTO NONE
     RETURN @final_article WITH status = 'complete'
 
 EXCEPTION

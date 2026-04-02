@@ -23,10 +23,13 @@ WORKFLOW adaptive_failover
     INPUT:
         @query          TEXT DEFAULT 'Write a detailed technical summary of quantum entanglement.',
         @primary_model  TEXT DEFAULT 'gemini-1.5-flash',
-        @fallback_model TEXT DEFAULT 'gemini-1.5-pro'
+        @fallback_model TEXT DEFAULT 'gemini-1.5-pro',
+        @log_dir TEXT DEFAULT 'cookbook-v3.0/44_adaptive_failover/logs'
     OUTPUT: @final_response TEXT
 DO
     LOGGING f'Attempting generation with primary model: {@primary_model}' LEVEL INFO
+
+    CALL write_file(f'{@log_dir}/query.md', @query) INTO NONE
 
     -- Step 1: Generate with cheap/fast primary model
     GENERATE summarize(@query) USING MODEL @primary_model INTO @primary_output
@@ -43,10 +46,14 @@ DO
             @final_response := @primary_output
         ELSE
             LOGGING f'Quality insufficient — failing over to {@fallback_model}' LEVEL WARN
-            GENERATE summarize(@query) USING MODEL @fallback_model INTO @final_response
+            GENERATE summarize(@query) USING MODEL @fallback_model 
+                INTO @final_response
             LOGGING 'Fallback model generation complete' LEVEL INFO
     END
 
+    CALL write_file(f'{@log_dir}/query.md', @query) INTO NONE
+    CALL write_file(f'{@log_dir}/response.md', @final_response) INTO NONE
+    
     RETURN @final_response WITH
         status  = 'complete',
         quality = @quality_status,

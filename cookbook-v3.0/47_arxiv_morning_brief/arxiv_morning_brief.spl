@@ -16,9 +16,11 @@
 IMPORT 'summarize_paper.spl'
 
 WORKFLOW arxiv_morning_brief
-    INPUT:  @urls         TEXT,
-            @date         TEXT DEFAULT '',
-            @brief_tokens INT  DEFAULT 1024
+    INPUT:
+        @urls         TEXT,
+        @date         TEXT DEFAULT '',
+        @brief_tokens INT  DEFAULT 1024,
+        @log_dir TEXT DEFAULT 'cookbook-v3.0/47_arxiv_morning_brief/logs'
     OUTPUT: @brief TEXT
 DO
     CALL parse_urls(@urls) INTO @urls          -- normalise: JSON / delimited / file path

@@ -20,7 +20,9 @@ Text:
 $$;
 
 WORKFLOW knowledge_synthesis
-    INPUT: @raw_text TEXT
+    INPUT: 
+        @raw_text TEXT,
+        @log_dir TEXT DEFAULT 'cookbook-v3.0/42_knowledge_synthesis/logs'
     OUTPUT: @status TEXT
 DO
     LOGGING 'Extracting insights from new information ...' LEVEL INFO
@@ -28,6 +30,7 @@ DO
     -- Step 1: Extract and synthesize insights (LLM)
     GENERATE synthesize(@raw_text) INTO @insights
     LOGGING f'Insights extracted: {@insights}' LEVEL DEBUG
+    CALL write_file(f'{@log_dir}/insights.md', @insights) INTO NONE
 
     -- Step 2: Persist to vector store (deterministic CALL — no LLM cost)
     LOGGING 'Updating RAG vector store ...' LEVEL DEBUG
