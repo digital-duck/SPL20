@@ -1,4 +1,4 @@
--- Recipe 30: Code Generator + Tests
+-- Recipe Name: Code Generator + Tests
 -- Generate a function, then generate its unit tests — in a single workflow.
 -- Demonstrates sequential generation where output of step N is input to step N+1.
 --

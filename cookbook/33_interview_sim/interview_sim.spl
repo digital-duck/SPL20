@@ -1,4 +1,4 @@
--- Recipe 33: Interview Simulator
+-- Recipe Name: Interview Simulator
 -- Two-persona structured Q&A with evaluation.
 -- Interviewer persona asks questions, candidate persona answers, evaluator scores.
 -- Uses deterministic tools for role/candidate loading, question extraction,
@@ -45,7 +45,7 @@ Rules:
 - Be professional and neutral — neither warm nor hostile.
 - Ask exactly one question at a time.
 - Do not reveal what a good answer looks like before hearing the response.
-- If the candidate's answer is incomplete, push deeper with a follow-up.
+- If the answer by candidate is incomplete, push deeper with a follow-up.
 $$;
 
 CREATE FUNCTION candidate_persona(role TEXT, experience TEXT DEFAULT '5 years')

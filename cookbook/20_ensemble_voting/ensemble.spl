@@ -1,4 +1,4 @@
--- Recipe 20: Ensemble Voting
+-- Recipe Name: Ensemble Voting
 -- Generates multiple independent answers, then uses majority voting to pick the best.
 -- Demonstrates ensemble methods, comparative scoring, and consensus-driven output.
 --

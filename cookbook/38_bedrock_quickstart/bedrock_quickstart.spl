@@ -1,4 +1,4 @@
--- Recipe 38: Bedrock Quickstart
+-- Recipe Name: Bedrock Quickstart
 -- Fan out the same prompt across three Bedrock model families and compare.
 -- Default models: Claude Sonnet 4 (Anthropic), Claude Haiku 4.5 (Anthropic), Nova Pro (Amazon).
 --
@@ -29,7 +29,7 @@ You are a neutral evaluator comparing responses from three AWS Bedrock models.
 
 Prompt given to all models: "{prompt}"
 
-Reproduce each model's raw response exactly as given:
+Reproduce raw response by each model exactly as given:
 
 === {model_1} ===
 {answer_1}

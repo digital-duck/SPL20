@@ -1,4 +1,4 @@
--- Recipe 29: Meeting Notes → Action Items
+-- Recipe Name: Meeting Notes → Action Items
 -- Transcript in, structured TODO list + owners out.
 -- Demonstrates multi-step extraction + structured output from long-form text,
 -- with deterministic tool calls for file loading, speaker extraction,

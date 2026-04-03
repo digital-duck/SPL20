@@ -1,4 +1,4 @@
--- Recipe 32: Socratic Tutor
+-- Recipe Name: Socratic Tutor
 -- Ask guiding questions rather than giving answers directly.
 -- Demonstrates persona-constrained generation + iterative dialogue simulation,
 -- with deterministic tools for topic loading, level guidance, and dialogue formatting.

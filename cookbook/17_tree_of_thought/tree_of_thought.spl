@@ -2,7 +2,8 @@
 -- Explores multiple reasoning paths in parallel using a list of models.
 -- Uses MAP and LIST for dynamic path management and evaluation.
 
-CREATE FUNCTION initial_approach(problem TEXT) RETURN TEXT
+CREATE FUNCTION initial_approach(problem TEXT) 
+RETURN TEXT
 AS $$
 Provide an initial high-level approach or reasoning path for the following problem:
 {problem}
@@ -10,14 +11,16 @@ Provide an initial high-level approach or reasoning path for the following probl
 Focus on a unique perspective or specialized methodology.
 $$;
 
-CREATE FUNCTION develop(path TEXT, problem TEXT) RETURN TEXT
+CREATE FUNCTION develop(path TEXT, problem TEXT) 
+RETURN TEXT
 AS $$
 Take the following initial approach and develop it one level deeper, adding specific steps and technical details:
 Approach: {path}
 Problem: {problem}
 $$;
 
-CREATE FUNCTION evaluate_path(path TEXT, problem TEXT) RETURN TEXT
+CREATE FUNCTION evaluate_path(path TEXT, problem TEXT) 
+RETURN TEXT
 AS $$
 Score the following reasoning path on a scale of 1-10 based on its feasibility and depth.
 Problem: {problem}
@@ -26,14 +29,15 @@ Path: {path}
 Output only the numeric score.
 $$;
 
-CREATE FUNCTION select_best(results_map TEXT, problem TEXT) RETURN TEXT
+CREATE FUNCTION select_best(results_map TEXT, problem TEXT) 
+RETURN TEXT
 AS $$
 Review the following developed reasoning paths and their scores provided in a JSON map:
 {results_map}
 
 Problem: {problem}
 
-Identify the path with the best reasoning and provide that path's content as the output.
+Identify the path with the best reasoning and provide the content of that path as the output.
 $$;
 
 CREATE FUNCTION refine_solution(path TEXT, problem TEXT) RETURN TEXT
@@ -63,7 +67,7 @@ WORKFLOW tree_of_thought
     INPUT:
         @problem TEXT DEFAULT 'Design a sustainable urban transport system.',
         @models LIST DEFAULT ['gemma3', 'phi4', 'qwen2.5'],
-        @log_dir TEXT DEFAULT 'cookbook/17_tree_of_thought/logs'
+        @log_dir TEXT DEFAULT 'cookbook/17_tree_of_thought/logs-spl'
     OUTPUT: @best_solution TEXT
 DO
     LOGGING f'Tree of thought | problem: {@problem} | models: {@models}' LEVEL INFO
@@ -77,9 +81,14 @@ DO
         @current_model := @models[@i]
         LOGGING f'Exploring path {@i + 1}/{@count} using {@current_model}...'
         
-        GENERATE initial_approach(@problem) USING MODEL @current_model INTO @init_path
-        GENERATE develop(@init_path, @problem) USING MODEL @current_model INTO @developed_path
-        GENERATE evaluate_path(@developed_path, @problem) INTO @score
+        GENERATE initial_approach(@problem) 
+            USING MODEL @current_model 
+            INTO @init_path
+        GENERATE develop(@init_path, @problem) 
+            USING MODEL @current_model 
+            INTO @developed_path
+        GENERATE evaluate_path(@developed_path, @problem) 
+            INTO @score
         
         -- Store path and score in map
         @path_data := {}
@@ -110,7 +119,8 @@ DO
         ELSE
             -- If verification fails, combine insights from all paths
             LOGGING 'Verification failed — synthesizing all paths' LEVEL WARN
-            GENERATE synthesize_all(@results, @problem) INTO @best_solution
+            GENERATE synthesize_all(@results, @problem) 
+                INTO @best_solution
             RETURN @best_solution WITH status = 'synthesized', paths_explored = @count
     END
 

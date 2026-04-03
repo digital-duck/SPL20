@@ -1,4 +1,4 @@
--- Recipe 27: Data Extraction
+-- Recipe Name: Data Extraction
 -- Pull structured fields from messy text: names, dates, amounts, references.
 -- Demonstrates schema-constrained extraction on real-world noisy input.
 --

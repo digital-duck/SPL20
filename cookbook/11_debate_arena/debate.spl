@@ -1,4 +1,4 @@
--- Recipe 11: Debate Arena
+-- Recipe Name: Debate Arena
 -- Two LLM personas argue opposing sides of a topic, then a judge picks the winner.
 -- Demonstrates multi-perspective reasoning, adversarial generation, and semantic evaluation.
 --
@@ -62,7 +62,7 @@ WORKFLOW debate_arena
     INPUT:
         @topic TEXT,
         @max_rounds INTEGER DEFAULT 3,
-        @log_dir TEXT DEFAULT 'cookbook/11_debate_arena/logs'
+        @log_dir TEXT DEFAULT 'cookbook/11_debate_arena/logs-spl'
     OUTPUT: @verdict TEXT
 DO
     @round := 0
@@ -79,8 +79,8 @@ DO
     @con_history := @con
 
     LOGGING 'Opening statements complete' LEVEL INFO
-    CALL write_file(f'{@log_dir}/opening_pro.md', @pro) INTO @_
-    CALL write_file(f'{@log_dir}/opening_con.md', @con) INTO @_
+    CALL write_file(f'{@log_dir}/opening_pro.md', @pro) INTO NONE
+    CALL write_file(f'{@log_dir}/opening_con.md', @con) INTO NONE
 
     -- Rebuttal rounds
     WHILE @round < @max_rounds DO
@@ -88,13 +88,13 @@ DO
         -- Pro rebuts Con's latest point
         GENERATE pro_argument(@topic, @con_history) INTO @pro_rebuttal
         @pro_history := @pro_history || '\n---\n' || @pro_rebuttal
-        CALL write_file(f'{@log_dir}/round_{@round}_pro.md', @pro_rebuttal) INTO @_
+        CALL write_file(f'{@log_dir}/round_{@round}_pro.md', @pro_rebuttal) INTO NONE
 
         LOGGING f'Round {@round} | con rebuttal ...' LEVEL DEBUG
         -- Con rebuts Pro's latest point
         GENERATE con_argument(@topic, @pro_history) INTO @con_rebuttal
         @con_history := @con_history || '\n---\n' || @con_rebuttal
-        CALL write_file(f'{@log_dir}/round_{@round}_con.md', @con_rebuttal) INTO @_
+        CALL write_file(f'{@log_dir}/round_{@round}_con.md', @con_rebuttal) INTO NONE
 
         @round := @round + 1
         LOGGING f'Round {@round} complete' LEVEL INFO
@@ -106,7 +106,7 @@ DO
     GENERATE judge_debate(@topic, @pro_history, @con_history) INTO @verdict
 
     LOGGING f'Verdict ready | rounds={@round}' LEVEL INFO
-    CALL write_file(f'{@log_dir}/verdict.md', @verdict) INTO @_
+    CALL write_file(f'{@log_dir}/verdict.md', @verdict) INTO NONE
     RETURN @verdict WITH status = 'complete', rounds = @round
 
 EXCEPTION

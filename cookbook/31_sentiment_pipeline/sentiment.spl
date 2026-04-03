@@ -1,4 +1,4 @@
--- Recipe 31: Sentiment Pipeline
+-- Recipe Name: Sentiment Pipeline
 -- Batch sentiment over a list of inputs, aggregate trend statistics.
 -- Demonstrates iteration over a list with per-item structured output + aggregation,
 -- with deterministic tool calls for loading, splitting, stats, and extreme detection.

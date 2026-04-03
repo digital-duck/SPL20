@@ -1,4 +1,4 @@
--- Recipe 01: Hello World
+-- Recipe Name: Hello World
 -- Minimal SPL program — verify spl + adapter + model work.
 --
 -- Usage:

@@ -1,4 +1,4 @@
--- Recipe 39: Vertex AI Quickstart
+-- Recipe Name: Vertex AI Quickstart
 -- Run the same prompt across Gemini model tiers on Google Cloud Vertex AI
 -- and compare quality, speed, and cost characteristics.
 --

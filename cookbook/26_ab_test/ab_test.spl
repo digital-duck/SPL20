@@ -1,5 +1,5 @@
 
--- Recipe 26: Prompt A/B Test
+-- Recipe Name: Prompt A/B Test
 -- Compare two prompt variants using EVALUATE scoring. Pick the winner automatically.
 -- Demonstrates data-driven prompt engineering built into the workflow itself.
 -- Supports pre-built experiments from experiments.json or ad-hoc task + prompt_a + prompt_b.

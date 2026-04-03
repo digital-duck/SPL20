@@ -1,4 +1,4 @@
--- Recipe 36: Tool-Use / Function-Call
+-- Recipe Name: Tool-Use / Function-Call
 -- Demonstrates registering Python functions as CALL-able tools in SPL 2.0.
 --
 -- Pattern:

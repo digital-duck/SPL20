@@ -1,4 +1,4 @@
--- Recipe 19: Memory-Augmented Conversation
+-- Recipe Name: Memory-Augmented Conversation
 -- A conversational agent that remembers facts from prior turns using persistent memory.
 -- Demonstrates STORAGE-typed workflow inputs, context accumulation, and stateful interactions.
 --

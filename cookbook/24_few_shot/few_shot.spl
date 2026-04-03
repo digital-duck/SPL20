@@ -1,4 +1,4 @@
--- Recipe 24: Few-Shot Prompting
+-- Recipe Name: Few-Shot Prompting
 -- Embed gold-standard examples directly in the SELECT context to guide output format and style.
 -- Demonstrates in-context learning — no fine-tuning required.
 --

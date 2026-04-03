@@ -1,4 +1,4 @@
--- Recipe 14: Multi-Agent Collaboration
+-- Recipe Name: Multi-Agent Collaboration
 -- Specialized agents (Researcher, Analyst, Writer) collaborate on a report.
 -- Each agent has a distinct role and passes results to the next.
 -- Demonstrates procedural decomposition, CALL-based delegation, and role specialization.
@@ -45,7 +45,7 @@ END
 WORKFLOW multi_agent_report
     INPUT: 
         @topic TEXT,
-        @log_dir TEXT DEFAULT 'cookbook/14_multi_agent/logs'
+        @log_dir TEXT DEFAULT 'cookbook/14_multi_agent/logs-spl'
     OUTPUT: @report TEXT
 DO
     LOGGING f'Multi-agent report | topic={@topic}' LEVEL INFO
@@ -54,15 +54,15 @@ DO
     LOGGING 'Agent 1: Researcher ...' LEVEL DEBUG
     CALL researcher(@topic) INTO @research
     LOGGING f'Research:\n{@research}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/research.md', @research) INTO @_
+    CALL write_file(f'{@log_dir}/research.md', @research) INTO NONE
     LOGGING 'Agent 2: Analyst ...' LEVEL DEBUG
     CALL analyst(@research, @topic) INTO @analysis
     LOGGING f'Analysis:\n{@analysis}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/analysis.md', @analysis) INTO @_
+    CALL write_file(f'{@log_dir}/analysis.md', @analysis) INTO NONE
     LOGGING 'Agent 3: Writer ...' LEVEL DEBUG
     CALL writer(@research, @analysis, @topic) INTO @report
     LOGGING f'Report:\n{@report}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/report.md', @report) INTO @_
+    CALL write_file(f'{@log_dir}/report.md', @report) INTO NONE
 
     LOGGING 'Report complete' LEVEL INFO
     RETURN @report WITH status = 'complete'

@@ -1,4 +1,4 @@
--- Recipe 25: Nested Procedures
+-- Recipe Name: Nested Procedures
 -- Demonstrates PROCEDURE calling PROCEDURE — deep composability without external orchestration.
 -- Pattern: a high-level workflow delegates subtasks to reusable PROCEDURE units.
 --

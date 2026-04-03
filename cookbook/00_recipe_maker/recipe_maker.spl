@@ -229,7 +229,7 @@ DO
     --          WHEN 'pass' THEN
     --              -- REFLECT: document lessons learned
     --              GENERATE reflect(@recipe_plan, @artifact_list, @concept) INTO @reflection
-    --              CALL write_artifact(@output_dir, 'reflection.md', @reflection) INTO @_
+    --              CALL write_artifact(@output_dir, 'reflection.md', @reflection) INTO NONE
     --              -- PUBLISH: write publication docs + upload to registry
     --              GENERATE publish_writeup(@recipe_plan, @reflection, @concept) INTO @writeup
     --              CALL register_recipe(@output_dir, @writeup, @concept) INTO @registry_entry

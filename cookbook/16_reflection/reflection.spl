@@ -12,7 +12,7 @@ WORKFLOW reflection_agent
     INPUT:
         @problem TEXT,
         @max_reflections Number DEFAULT 3,
-        @log_dir TEXT DEFAULT 'cookbook/16_reflection/logs'
+        @log_dir TEXT DEFAULT 'cookbook/16_reflection/logs-spl'
     OUTPUT: @answer TEXT
 DO
     @iteration := 0
@@ -23,14 +23,14 @@ DO
     -- Initial attempt at solving the problem
     GENERATE solve(@problem) INTO @answer
     LOGGING 'Initial solution ready' LEVEL INFO
-    CALL write_file(f'{@log_dir}/answer_0.md', @answer) INTO @_
+    CALL write_file(f'{@log_dir}/answer_0.md', @answer) INTO NONE
 
     -- Reflection loop: assess and improve
     WHILE @iteration < @max_reflections DO
         LOGGING f'Reflection iteration {@iteration} ...' LEVEL DEBUG
         -- Reflect: identify errors, gaps, or weak reasoning
         GENERATE reflect(@problem, @answer) INTO @reflection
-        CALL write_file(f'{@log_dir}/reflection_{@iteration}.md', @reflection) INTO @_
+        CALL write_file(f'{@log_dir}/reflection_{@iteration}.md', @reflection) INTO NONE
 
         -- Score confidence in the answer
         GENERATE confidence_score(@answer, @reflection) INTO @confidence
@@ -39,7 +39,7 @@ DO
         EVALUATE @confidence
             WHEN > 0.85 THEN
                 LOGGING f'Confident at iteration {@iteration} | score={@confidence}' LEVEL INFO
-                CALL write_file(f'{@log_dir}/final.md', @answer) INTO @_
+                CALL write_file(f'{@log_dir}/final.md', @answer) INTO NONE
                 RETURN @answer WITH status = 'confident', confidence = @confidence, reflections = @iteration
             ELSE
                 -- Extract specific issues to fix
@@ -48,18 +48,18 @@ DO
                 -- Correct the answer based on identified issues
                 GENERATE correct(@answer, @issues, @problem) INTO @answer
                 @iteration := @iteration + 1
-                CALL write_file(f'{@log_dir}/answer_{@iteration}.md', @answer) INTO @_
+                CALL write_file(f'{@log_dir}/answer_{@iteration}.md', @answer) INTO NONE
         END
     END
 
     -- If loop exhausted, commit best effort with final confidence
     LOGGING f'Max reflections reached | confidence={@confidence}' LEVEL WARN
-    CALL write_file(f'{@log_dir}/final.md', @answer) INTO @_
+    CALL write_file(f'{@log_dir}/final.md', @answer) INTO NONE
     RETURN @answer WITH status = 'best_effort', confidence = @confidence, reflections = @iteration
 
 EXCEPTION
     WHEN MaxIterationsReached THEN
-        CALL write_file(f'{@log_dir}/final.md', @answer) INTO @_
+        CALL write_file(f'{@log_dir}/final.md', @answer) INTO NONE
         RETURN @answer WITH status = 'max_reflections', confidence = @confidence
     WHEN HallucinationDetected THEN
         GENERATE solve(@problem) INTO @answer

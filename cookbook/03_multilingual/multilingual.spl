@@ -1,4 +1,4 @@
--- Recipe 03: Multilingual Greeting
+-- Recipe Name: Multilingual Greeting
 -- Greet in any language — demonstrates parametric context with lang.
 --
 -- Usage:

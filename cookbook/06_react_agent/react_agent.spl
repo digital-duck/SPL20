@@ -1,4 +1,4 @@
--- SPL 2.0: ReAct Agent — Population Growth
+-- Recipe Name: ReAct Agent — Population Growth
 -- Fetch a country's population for the past two years via WebSearch,
 -- then compute year-over-year growth rate using a Python tool (no LLM math).
 --
@@ -10,7 +10,8 @@
 --       country="France"
 
 -- Tight prompt for search_population: return only the number, no narration.
-CREATE FUNCTION search_population(country TEXT, year INT) RETURN TEXT 
+CREATE FUNCTION search_population(country TEXT, year INT) 
+RETURN TEXT 
 AS $$
 Use WebSearch to find the total population of {country} for the year {year}.
 
@@ -19,14 +20,6 @@ Example of valid output: 1409670000
 No explanation. No units. No markdown. Just the number.
 
 $$;
-
--- SPL PROCEDURE: search the web for a country's population in a specific year.
-PROCEDURE search_population(country TEXT, year INT)
-RETURN TEXT
-DO
-  GENERATE search_population(country, year) INTO @result
-  RETURN @result
-END
 
 -- calc_growth_rate is a Python tool registered from tools.py via --tools.
 -- CALL routes to Python directly — deterministic, zero LLM cost.
@@ -46,6 +39,15 @@ Data:
 Plain prose only. No markdown headers. No file creation. No tool use. Just the narrative.
 
 $$;
+
+-- SPL PROCEDURE: search the web for a country's population in a specific year.
+PROCEDURE search_population(country TEXT, year INT)
+RETURN TEXT
+DO
+  GENERATE search_population(country, year) INTO @result
+  RETURN @result
+END
+
 
 WORKFLOW population_growth
   INPUT:

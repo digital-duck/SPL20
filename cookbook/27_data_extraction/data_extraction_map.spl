@@ -1,4 +1,4 @@
--- Recipe 27b: Data Extraction with MAP Configuration
+-- Recipe Name: Data Extraction with MAP Configuration
 -- Demonstrates the MAP type for runtime configuration lookup and result annotation.
 --
 -- Key idea: instead of IF/ELSE chains per format, a single MAP routes each
@@ -70,7 +70,7 @@ DO
   @output := map_merge(@meta, {'data': @extracted})
 
   -- Persist extracted data
-  CALL write_file(f'{@log_dir}/result_{@format}.md', @extracted) INTO @_
+  CALL write_file(f'{@log_dir}/result_{@format}.md', @extracted) INTO NONE
 
   LOGGING f'Done — result written to {@log_dir}/result_{@format}.md' LEVEL INFO
 

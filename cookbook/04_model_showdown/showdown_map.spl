@@ -1,4 +1,4 @@
--- Recipe 04: Model Showdown (Iterative)
+-- Recipe Name: Model Showdown (Iterative)
 -- Compares multiple models using a WHILE loop and a results MAP.
 --
 -- Usage:
@@ -29,14 +29,14 @@ WORKFLOW model_showdown_map
     INPUT:
         @prompt TEXT DEFAULT 'What is the meaning of life?',
         @models LIST DEFAULT ['gemma3', 'phi4', 'qwen2.5'],
-        @log_dir TEXT DEFAULT 'cookbook/04_model_showdown/logs'
+        @log_dir TEXT DEFAULT 'cookbook/04_model_showdown/logs-spl'
     OUTPUT: @comparison TEXT
 DO
     @results := {}
     @count := len(@models)
     @i := 0
 
-    LOGGING f'Starting showdown for {@count} models...'
+    LOGGING f'Starting showdown for {@count} models on prompt:\n  {@prompt}'
 
     WHILE @i < @count DO
         @current_model := @models[@i]

@@ -1,4 +1,4 @@
--- Recipe 09: Chain of Thought
+-- Recipe Name: Chain of Thought
 -- Multi-step reasoning: Research → Analyze → Summarize
 -- Each GENERATE feeds into the next via workflow variables.
 --

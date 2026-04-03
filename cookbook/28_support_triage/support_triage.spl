@@ -1,4 +1,4 @@
--- Recipe 28: Customer Support Triage
+-- Recipe Name: Customer Support Triage
 -- Classify → route → draft response in a single workflow.
 -- Demonstrates multi-step pipeline with branching, deterministic tool calls for
 -- order lookup, and LLM generation grounded in real order data.

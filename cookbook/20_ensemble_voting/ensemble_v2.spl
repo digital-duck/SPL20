@@ -1,4 +1,4 @@
--- Recipe 20 v2: Ensemble Voting — Multi-Model Edition
+-- Recipe Name: Ensemble Voting — Multi-Model Edition
 -- Extends Recipe 20 with three key improvements inspired by Recipe 21 (Multi-Model Pipeline):
 --
 --   1. MODELS AS INPUT LIST    — pool of models to draw from (llama, qwen, gemma3, mistral, deepseek, ...)
@@ -122,7 +122,7 @@ WORKFLOW ensemble_voting_v2
         @random_selection  BOOL    DEFAULT TRUE,
         @consensus_model   TEXT    DEFAULT 'qwen2.5',
         @polish_model      TEXT    DEFAULT 'deepseek-r1',
-        @log_dir           TEXT    DEFAULT 'cookbook/20_ensemble_voting/logs'
+        @log_dir           TEXT    DEFAULT 'cookbook/20_ensemble_voting/logs-spl'
     OUTPUT: @final_answer TEXT
 DO
     LOGGING f'Ensemble v2 | question={@question} | n={@n_candidates} | random={@random_selection} | models={@models}' LEVEL INFO
@@ -148,7 +148,7 @@ DO
         CALL write_file(
             f'{@log_dir}/candidate_{@i}.md',
             f'# Candidate {@i} — model: {@gen_model}\n\n{@candidate}'
-        ) INTO @_
+        ) INTO NONE
 
         -- Pick scorer model — always excludes the generator to avoid self-grading
         CALL pick_model(@models, @gen_model, @random_selection, @i) INTO @score_model
@@ -160,7 +160,7 @@ DO
         CALL write_file(
             f'{@log_dir}/score_{@i}.md',
             f'# Score for candidate {@i}\nGenerator: {@gen_model} | Scorer: {@score_model}\n\nScore: {@score}'
-        ) INTO @_
+        ) INTO NONE
 
         LOGGING f'[Candidate {@i}] score={@score}' LEVEL DEBUG
 
@@ -178,7 +178,7 @@ DO
     GENERATE find_consensus(@candidates_text) USING MODEL @consensus_model INTO @consensus
     CALL clean_output(@consensus) INTO @consensus
 
-    CALL write_file(f'{@log_dir}/consensus.md', @consensus) INTO @_
+    CALL write_file(f'{@log_dir}/consensus.md', @consensus) INTO NONE
     LOGGING 'Consensus saved' LEVEL DEBUG
 
     -- ── Step 3: Select winner — deterministic Python argmax, zero LLM tokens ─
@@ -190,7 +190,7 @@ DO
 
     CALL select_winner(@candidates_joined, @scores_joined) INTO @best_candidate
 
-    CALL write_file(f'{@log_dir}/winner.md', @best_candidate) INTO @_
+    CALL write_file(f'{@log_dir}/winner.md', @best_candidate) INTO NONE
     LOGGING 'Winner selected' LEVEL INFO
 
     -- ── Step 4: Polish with the designated high-quality model ─────────────────
@@ -199,7 +199,7 @@ DO
     GENERATE polish(@best_candidate, @consensus, @question) USING MODEL @polish_model INTO @final_answer
     CALL clean_output(@final_answer) INTO @final_answer
 
-    CALL write_file(f'{@log_dir}/final_answer.md', @final_answer) INTO @_
+    CALL write_file(f'{@log_dir}/final_answer.md', @final_answer) INTO NONE
     LOGGING 'Final answer ready' LEVEL INFO
 
     RETURN @final_answer WITH
@@ -216,7 +216,7 @@ EXCEPTION
         @candidates_joined := list_concat(@candidates, '|||')
         @scores_joined     := list_concat(@scores, '|||')
         CALL select_winner(@candidates_joined, @scores_joined) INTO @final_answer
-        CALL write_file(f'{@log_dir}/final_answer_partial.md', @final_answer) INTO @_
+        CALL write_file(f'{@log_dir}/final_answer_partial.md', @final_answer) INTO NONE
         RETURN @final_answer WITH status = 'partial', candidates = @i
 
     WHEN HallucinationDetected THEN

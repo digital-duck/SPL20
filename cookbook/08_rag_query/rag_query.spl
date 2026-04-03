@@ -1,4 +1,4 @@
--- Recipe 08: RAG Query
+-- Recipe Name: RAG Query
 -- Retrieval-augmented generation over indexed documents.
 --
 -- Setup:

@@ -1,4 +1,4 @@
--- Recipe 18: Guardrails Pipeline
+-- Recipe Name: Guardrails Pipeline
 -- Input validation → safe generation → output validation → response.
 -- Demonstrates safety-first patterns: content filtering, PII detection, and output sanitization.
 -- Four gates before a response is committed.

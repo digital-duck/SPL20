@@ -1,4 +1,4 @@
--- Recipe 37: Headline News Aggregator
+-- Recipe Name: Headline News Aggregator
 -- Generate, expand, and evaluate a daily news digest for a given topic area.
 -- Uses claude_cli adapter with Opus model for broad knowledge synthesis.
 --
@@ -138,7 +138,7 @@ DO
         perspective_guide(@perspective)
     ) INTO @headlines
     LOGGING f'Headlines generated: {@max_headlines} items on topic:\n {@topic}' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/01_headlines.md', @headlines) INTO @_
+    CALL write_file(f'{@log_dir}/01_headlines.md', @headlines) INTO NONE
 
     -- Step 2: Expand each headline into a brief summary with key facts
     GENERATE expand_headlines(
@@ -147,7 +147,7 @@ DO
         perspective_guide(@perspective)
     ) INTO @expanded
     LOGGING 'Headlines expanded' LEVEL DEBUG
-    CALL write_file(f'{@log_dir}/02_expanded.md', @expanded) INTO @_
+    CALL write_file(f'{@log_dir}/02_expanded.md', @expanded) INTO NONE
 
     -- Step 3: Evaluate coverage — are major angles represented?
     GENERATE evaluate_coverage(
@@ -156,7 +156,7 @@ DO
         perspective_guide(@perspective)
     ) INTO @coverage_score
     LOGGING f'Coverage score: {@coverage_score}' LEVEL INFO
-    CALL write_file(f'{@log_dir}/03_coverage_score.txt', @coverage_score) INTO @_
+    CALL write_file(f'{@log_dir}/03_coverage_score.txt', @coverage_score) INTO NONE
 
     -- Step 4: Refine if coverage gaps detected
     EVALUATE @coverage_score
@@ -168,7 +168,7 @@ DO
                 @date,
                 news_format_guide(@style)
             ) INTO @digest
-            CALL write_file(f'{@log_dir}/final_digest.md', @digest) INTO @_
+            CALL write_file(f'{@log_dir}/final_digest.md', @digest) INTO NONE
             RETURN @digest WITH status = 'complete', coverage = @coverage_score
 
         ELSE
@@ -180,7 +180,7 @@ DO
                 @coverage_score,
                 perspective_guide(@perspective)
             ) INTO @expanded
-            CALL write_file(f'{@log_dir}/04_expanded_refined.md', @expanded) INTO @_
+            CALL write_file(f'{@log_dir}/04_expanded_refined.md', @expanded) INTO NONE
 
             GENERATE format_digest(
                 @expanded,
@@ -188,7 +188,7 @@ DO
                 @date,
                 news_format_guide(@style)
             ) INTO @digest
-            CALL write_file(f'{@log_dir}/final_digest.md', @digest) INTO @_
+            CALL write_file(f'{@log_dir}/final_digest.md', @digest) INTO NONE
             RETURN @digest WITH status = 'refined', coverage = @coverage_score
     END
 
@@ -201,7 +201,7 @@ EXCEPTION
             @date,
             news_format_guide(@style)
         ) INTO @digest
-        CALL write_file(f'{@log_dir}/final_digest_partial.md', @digest) INTO @_
+        CALL write_file(f'{@log_dir}/final_digest_partial.md', @digest) INTO NONE
         RETURN @digest WITH status = 'partial'
 
     WHEN BudgetExceeded THEN

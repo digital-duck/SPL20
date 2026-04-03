@@ -1,7 +1,8 @@
--- SPL 2.0: Self-Refine Pattern
+-- Recipe Name: Self-Refine Pattern
 -- Iteratively improves output through critique and refinement
 
-CREATE FUNCTION draft(task TEXT) RETURN TEXT
+CREATE FUNCTION draft(task TEXT) 
+RETURN TEXT
 AS $$
 You are an expert writer. Complete the following task thoroughly and well.
 
@@ -10,7 +11,8 @@ Task: {task}
 Write a high-quality response now.
 $$;
 
-CREATE FUNCTION critique(current TEXT) RETURN TEXT
+CREATE FUNCTION critique(current TEXT) 
+RETURN TEXT
 AS $$
 You are a strict critic reviewing written content.
 
@@ -24,7 +26,8 @@ Content to review:
 {current}
 $$;
 
-CREATE FUNCTION refined(current TEXT, feedback TEXT) RETURN TEXT
+CREATE FUNCTION refined(current TEXT, feedback TEXT) 
+RETURN TEXT
 AS $$
 You are an expert writer. Improve the following draft based on the feedback.
 
@@ -44,7 +47,7 @@ WORKFLOW self_refine
     @max_iterations INTEGER DEFAULT 5,
     @writer_model TEXT DEFAULT 'gemma3',
     @critic_model TEXT DEFAULT 'llama3.2',
-    @log_dir TEXT DEFAULT 'cookbook/05_self_refine/logs'
+    @log_dir TEXT DEFAULT 'cookbook/05_self_refine/logs-spl'
   OUTPUT: @result TEXT
 DO
   @iteration := 0

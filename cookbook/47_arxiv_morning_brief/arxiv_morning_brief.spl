@@ -1,4 +1,4 @@
--- Recipe 47: arXiv Morning Brief (SPL 2.0)
+-- Recipe Name: arXiv Morning Brief (SPL 2.0)
 -- Downloads arXiv PDFs, chunks and summarizes each paper, assembles a Markdown brief.
 --
 -- SPL 2.0 port of the SPL 3.0 recipe (cookbook-v3.0/47_arxiv_morning_brief).

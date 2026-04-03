@@ -23,4 +23,4 @@ This document tracks which cookbook recipes have alternative implementations in 
 
 ## ToDo
 
-- (All priority recipes completed)
+- /home/papagame/projects/digital-duck/SPL20/cookbook/12_plan_and_execute

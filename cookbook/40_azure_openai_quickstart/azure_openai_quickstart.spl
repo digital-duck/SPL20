@@ -1,4 +1,4 @@
--- Recipe 40: Azure OpenAI Quickstart
+-- Recipe Name: Azure OpenAI Quickstart
 -- Run the same prompt across multiple Azure OpenAI deployments and compare.
 -- Useful for validating model quality differences between GPT tiers
 -- deployed in your own Azure subscription.

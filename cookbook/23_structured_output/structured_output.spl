@@ -1,4 +1,4 @@
--- Recipe 23: Structured Output
+-- Recipe Name: Structured Output
 -- Extract typed, structured data from free-form text using CREATE FUNCTION with JSON schema.
 -- Demonstrates schema-constrained generation — the LLM must return valid JSON matching the spec.
 --

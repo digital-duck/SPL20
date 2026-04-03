@@ -1,4 +1,4 @@
--- Recipe 34: Progressive Summarizer
+-- Recipe Name: Progressive Summarizer
 -- Layered summary: sentence → paragraph → page.
 -- Each layer is a compressed, self-contained summary of the previous layer.
 --

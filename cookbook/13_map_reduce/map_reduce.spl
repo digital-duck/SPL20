@@ -1,4 +1,4 @@
--- Recipe 13: Map-Reduce Summarizer
+-- Recipe Name: Map-Reduce Summarizer
 -- Splits a large document into chunks, summarizes each chunk (map),
 -- then combines all summaries into a final summary (reduce).
 -- Demonstrates the map-reduce pattern for handling content beyond context limits.
@@ -21,7 +21,7 @@ WORKFLOW map_reduce_summarizer
     INPUT:  
         @document TEXT, 
         @style TEXT,
-        @log_dir TEXT DEFAULT 'cookbook/13_map_reduce/logs'
+        @log_dir TEXT DEFAULT 'cookbook/13_map_reduce/logs-spl'
     OUTPUT: @final_summary TEXT
 DO
     @chunk_index := 0
@@ -54,10 +54,12 @@ DO
 
     -- Step 3: REDUCE — concat all chunk summaries, then combine into final
     @summaries_text := list_concat(@summaries, '\n')
-    GENERATE reduce_summaries(@summaries_text, @style) INTO @final_summary
+    GENERATE reduce_summaries(@summaries_text, @style) 
+        INTO @final_summary
 
     -- Step 4: Quality check the final summary
-    GENERATE quality_score(@final_summary, @document) INTO @score
+    GENERATE quality_score(@final_summary, @document) 
+        INTO @score
 
     EVALUATE @score
         WHEN > 0.7 THEN
@@ -74,12 +76,14 @@ DO
 EXCEPTION
     WHEN ContextLengthExceeded THEN
         @summaries_text := list_concat(@summaries, '\n')
-        GENERATE reduce_summaries(@summaries_text, @style) INTO @final_summary
+        GENERATE reduce_summaries(@summaries_text, @style) 
+            INTO @final_summary
         CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO NONE
         RETURN @final_summary WITH status = 'partial'
     WHEN BudgetExceeded THEN
         @summaries_text := list_concat(@summaries, '\n')
-        GENERATE reduce_summaries(@summaries_text, @style) INTO @final_summary
+        GENERATE reduce_summaries(@summaries_text, @style) 
+            INTO @final_summary
         CALL write_file(f'{@log_dir}/final_summary.md', @final_summary) INTO NONE
         RETURN @final_summary WITH status = 'budget_limit'
 END

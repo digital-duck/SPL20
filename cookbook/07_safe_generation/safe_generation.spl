@@ -1,4 +1,4 @@
--- SPL 2.0: Safe Generation with Exception Handling
+-- Recipe Name: Safe Generation with Exception Handling
 -- Demonstrates LLM-specific error handling patterns
 
 WORKFLOW safe_generation

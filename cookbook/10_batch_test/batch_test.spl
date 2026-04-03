@@ -1,4 +1,4 @@
--- Recipe 10: Batch Test
+-- Recipe Name: Batch Test
 -- Automated testing of key cookbook recipes across multiple models.
 -- Uses parallel CTEs to fan out all recipe × model combinations at once,
 -- then generates a structured PASS/FAIL report.

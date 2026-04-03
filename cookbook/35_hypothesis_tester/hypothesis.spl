@@ -1,4 +1,4 @@
--- Recipe 35: Hypothesis Tester
+-- Recipe Name: Hypothesis Tester
 -- Generate hypothesis → design test → evaluate evidence → conclude.
 -- Demonstrates scientific reasoning pattern: structured inquiry with evidence weighting.
 --

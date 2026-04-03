@@ -1,4 +1,4 @@
--- Recipe 04: Model Showdown
+-- Recipe Name: Model Showdown
 -- Same prompt to multiple Ollama models — compare responses side-by-side.
 -- Uses parallel CTEs instead of a bash loop for a pure-SPL implementation.
 --
