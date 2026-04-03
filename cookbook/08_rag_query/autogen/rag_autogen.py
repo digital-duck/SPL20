@@ -16,7 +16,7 @@ Usage:
         --model llama3.2 --embed-model nomic-embed-text
 """
 
-import argparse
+import click
 from pathlib import Path
 
 from autogen import ConversableAgent
@@ -92,18 +92,18 @@ def run(doc: str, question: str, model: str, embed_model: str, log_dir: str) -> 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="RAG Query — AutoGen edition")
-    p.add_argument("--doc",         required=True,              help="Path to document to index")
-    p.add_argument("--question",    required=True,              help="Question to answer")
-    p.add_argument("--model",       default="gemma3",           help="Ollama chat model")
-    p.add_argument("--embed-model", default="nomic-embed-text", help="Ollama embedding model")
-    p.add_argument("--log-dir",     default="cookbook/08_rag_query/autogen/logs")
-    args = p.parse_args()
-
-    answer = run(args.doc, args.question, args.model, args.embed_model, args.log_dir)
+@click.command()
+@click.option("--doc", required=True, help="Path to document to index")
+@click.option("--question", required=True, help="Question to answer")
+@click.option("--model", default="gemma3", help="Ollama chat model")
+@click.option("--embed-model", default="nomic-embed-text", help="Ollama embedding model")
+@click.option("--log-dir", default="cookbook/08_rag_query/autogen/logs", help="Log directory")
+def main(doc, question, model, embed_model, log_dir):
+    """RAG Query — AutoGen edition"""
+    result = run(doc, question, model, embed_model, log_dir)
     print("\n" + "=" * 60)
-    print(answer)
+    print(result)
+
 
 if __name__ == "__main__":
     main()

@@ -36,7 +36,9 @@ def _run_task(agent: Agent, description: str, expected_output: str) -> str:
 # ── Main runner ───────────────────────────────────────────────────────────────
 
 def run(task: str, max_iterations: int, model: str, log_dir: str) -> str:
-    llm = ChatOllama(model=model)
+    # Standardize to the 'ollama/' prefix for more robust local model support
+    # and to avoid Pydantic validation errors in newer CrewAI versions.
+    llm = f"ollama/{model}"
 
     # SPL: GENERATE draft(@task) via Writer
     writer = Agent(

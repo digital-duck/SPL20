@@ -16,7 +16,7 @@ Usage:
         --country India --year 2023 --model llama3.2
 """
 
-import argparse
+import click
 import re
 from pathlib import Path
 
@@ -128,15 +128,14 @@ def run(country: str, year_curr: int, model: str, log_dir: str) -> str:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="ReAct Agent — AutoGen edition")
-    p.add_argument("--country", default="China")
-    p.add_argument("--year",    type=int, default=2023)
-    p.add_argument("--model",   default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/06_react_agent/autogen/logs")
-    args = p.parse_args()
-
-    result = run(args.country, args.year, args.model, args.log_dir)
+@click.command()
+@click.option("--country", default="China", help="Country to analyze")
+@click.option("--year", type=int, default=2023, help="Year to analyze")
+@click.option("--model", default="gemma3", help="LLM model name")
+@click.option("--log-dir", default="cookbook/06_react_agent/autogen/logs", help="Log directory")
+def main(country, year, model, log_dir):
+    """ReAct Agent — AutoGen edition"""
+    result = run(country, year, model, log_dir)
     print("\n" + "=" * 60)
     print(result)
 

@@ -16,7 +16,7 @@ Usage:
         --country India --year 2023 --model llama3.2
 """
 
-import argparse
+import click
 import re
 from pathlib import Path
 from typing import Any, TypedDict
@@ -174,20 +174,19 @@ def build_graph():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="ReAct Agent — LangGraph edition")
-    p.add_argument("--country", default="China")
-    p.add_argument("--year",    type=int, default=2023)
-    p.add_argument("--model",   default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/06_react_agent/langgraph/logs")
-    args = p.parse_args()
-
+@click.command()
+@click.option("--country", default="China", help="Country to analyze")
+@click.option("--year", type=int, default=2023, help="Year to analyze")
+@click.option("--model", default="gemma3", help="LLM model name")
+@click.option("--log-dir", default="cookbook/06_react_agent/langgraph/logs", help="Log directory")
+def main(country, year, model, log_dir):
+    """ReAct Agent — LangGraph edition"""
     result = build_graph().invoke({
-        "country":     args.country,
-        "year_curr":   args.year,
-        "year_prev":   args.year - 1,
-        "model":       args.model,
-        "log_dir":     args.log_dir,
+        "country":     country,
+        "year_curr":   year,
+        "year_prev":   year - 1,
+        "model":       model,
+        "log_dir":     log_dir,
         "pop_prev":    "", "pop_curr":    "",
         "growth_rate": "", "report":      "", "error": "",
     })

@@ -1,0 +1,23 @@
+# Requirements for Recipe 36: Tool-Use / Function-Call
+# This file covers dependencies for the alternative framework implementations.
+
+# ── SPL (Native) ─────────────────────────────────────────────────────────────
+# Local project dependency
+-e .
+click>=8.0
+
+# ── LangGraph Edition ────────────────────────────────────────────────────────
+langgraph>=0.0.10
+langchain-ollama>=0.0.1
+# Note: Requires 'ollama' to be installed and running locally.
+
+# ── AutoGen Edition ──────────────────────────────────────────────────────────
+pyautogen>=0.2.0,<0.3.0
+# Note: Uses the OpenAI-compatible endpoint provided by Ollama.
+
+# ── CrewAI Edition ───────────────────────────────────────────────────────────
+crewai>=0.1.0
+# langchain-ollama is also used here.
+
+# ── Common Utilities ─────────────────────────────────────────────────────────
+pathlib

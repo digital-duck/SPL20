@@ -17,7 +17,7 @@ Usage:
         --model llama3.2 --embed-model nomic-embed-text
 """
 
-import argparse
+import click
 from pathlib import Path
 from typing import TypedDict
 
@@ -100,21 +100,20 @@ def build_graph():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="RAG Query — LangGraph edition")
-    p.add_argument("--doc",         required=True,             help="Path to document to index")
-    p.add_argument("--question",    required=True,             help="Question to answer")
-    p.add_argument("--model",       default="gemma3",          help="Ollama chat model")
-    p.add_argument("--embed-model", default="nomic-embed-text", help="Ollama embedding model")
-    p.add_argument("--log-dir",     default="cookbook/08_rag_query/langgraph/logs")
-    args = p.parse_args()
-
+@click.command()
+@click.option("--doc", required=True, help="Path to document to index")
+@click.option("--question", required=True, help="Question to answer")
+@click.option("--model", default="gemma3", help="Ollama chat model")
+@click.option("--embed-model", default="nomic-embed-text", help="Ollama embedding model")
+@click.option("--log-dir", default="cookbook/08_rag_query/langgraph/logs", help="Log directory")
+def main(doc, question, model, embed_model, log_dir):
+    """RAG Query — LangGraph edition"""
     result = build_graph().invoke({
-        "doc":         args.doc,
-        "question":    args.question,
-        "model":       args.model,
-        "embed_model": args.embed_model,
-        "log_dir":     args.log_dir,
+        "doc":         doc,
+        "question":    question,
+        "model":       model,
+        "embed_model": embed_model,
+        "log_dir":     log_dir,
         "context":     "",
         "answer":      "",
     })
