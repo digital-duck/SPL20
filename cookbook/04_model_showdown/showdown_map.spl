@@ -17,7 +17,7 @@ Prompt given to all models: "{prompt}"
 The responses are provided in a JSON map where keys are model names:
 {results_map}
 
-First, reproduce each model's raw response exactly as given.
+First, reproduce each model raw response exactly as given.
 Then provide your evaluation. For each model briefly assess:
 - Response quality
 - Key strengths or weaknesses

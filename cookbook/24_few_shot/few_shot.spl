@@ -16,31 +16,31 @@ RETURN TEXT
 AS $$
 SELECT CASE domain
   WHEN 'finance' THEN
-    '### Examples
+    """### Examples
 
 Input: "Revenue grew 12% YoY despite headwinds in APAC."
 Output: {"sentiment": "positive", "magnitude": 0.7, "topics": ["revenue", "growth", "APAC"], "summary": "Revenue up 12% YoY."}
 
 Input: "Write-downs of $2.3B drove a net loss for Q3."
-Output: {"sentiment": "negative", "magnitude": 0.9, "topics": ["write-downs", "net loss", "Q3"], "summary": "Q3 net loss from $2.3B write-downs."}'
+Output: {"sentiment": "negative", "magnitude": 0.9, "topics": ["write-downs", "net loss", "Q3"], "summary": "Q3 net loss from $2.3B write-downs."}"""
 
   WHEN 'ops' THEN
-    '### Examples
+    """### Examples
 
 Input: "Deployment succeeded. All health checks passing. P99 latency 45ms."
 Output: {"status": "healthy", "severity": "none", "action_required": false, "summary": "Deploy OK, latency nominal."}
 
 Input: "Pod crash-loop in prod-east. OOMKilled. Restarted 7 times in 10 min."
-Output: {"status": "incident", "severity": "high", "action_required": true, "summary": "OOM crash-loop in prod-east, immediate attention needed."}'
+Output: {"status": "incident", "severity": "high", "action_required": true, "summary": "OOM crash-loop in prod-east, immediate attention needed."}"""
 
   ELSE
-    '### Examples
+    """### Examples
 
 Input: "The new feature launched today and users are loving it!"
 Output: {"sentiment": "positive", "magnitude": 0.8, "summary": "Successful feature launch with positive user reception."}
 
 Input: "We encountered several critical bugs that delayed the release by two weeks."
-Output: {"sentiment": "negative", "magnitude": 0.7, "summary": "Critical bugs caused two-week release delay."}'
+Output: {"sentiment": "negative", "magnitude": 0.7, "summary": "Critical bugs caused two-week release delay."}"""
 END
 $$;
 

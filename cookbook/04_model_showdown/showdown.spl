@@ -20,7 +20,7 @@ You are a neutral evaluator comparing responses from three AI models.
 
 Prompt given to all models: "{prompt}"
 
-First, reproduce each model's raw response exactly as given, formatted like this:
+First, reproduce model raw response exactly as given, formatted like this:
 
 === {model_1} ===
 {answer_1}

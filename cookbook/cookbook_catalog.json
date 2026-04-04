@@ -13,7 +13,7 @@
       "args": [
         "spl",
         "run",
-        "./cookbook/cookbook/01_hello_world/hello.spl",
+        "./cookbook/01_hello_world/hello.spl",
         "--adapter",
         "ollama"
       ],

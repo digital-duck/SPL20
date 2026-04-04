@@ -17,7 +17,7 @@ ollama serve                     # start ollama (if not running)
 
 ## Batch Runner — `run_all.py`
 
-`run_all.py` uses a Click CLI with three subcommands: `run`, `list`, `catalog`.
+`run_all.py` uses a Click CLI with three subcommands: `list`, `catalog`.
 
 ### Run recipes
 
@@ -25,17 +25,19 @@ ollama serve                     # start ollama (if not running)
 cd ~/projects/digital-duck/SPL20
 
 # Run all active recipes (sequential, ollama adapter)
-python cookbook/run_all.py run 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md
+python cookbook/run_all.py \
+  --adapter ollama --model gemma3 \
+  2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S).md
 
 # Override adapter and model
-python cookbook/run_all.py run --adapter ollama --model gemma3
+python cookbook/run_all.py  --adapter ollama --model gemma3
 
 # Run specific recipes or ranges
-python cookbook/run_all.py run --ids "04,10,23-35"
-python cookbook/run_all.py run --ids "04,10,25,26,29,30,32,33"
+python cookbook/run_all.py  --ids "04,10,23-35"
+python cookbook/run_all.py  --ids "04,10,25,26,29,30,32,33"
 
 # Run recipes in a category
-python cookbook/run_all.py run --category agentic
+python cookbook/run_all.py  --category agentic
 ```
 
 ### Run on momagrid (parallel mode)
@@ -47,13 +49,13 @@ dispatcher sees multiple tasks in the queue at once and distributes work across 
 export MOMAGRID_HUB_URL=http://192.168.1.10:9000
 
 # All active recipes in parallel
-python cookbook/run_all.py run --adapter momagrid --model llama3.2
+python cookbook/run_all.py  --adapter momagrid --model llama3.2
 
 # Limit concurrency (default: one worker per recipe)
-python cookbook/run_all.py run --adapter momagrid --model llama3.2 --workers 4
+python cookbook/run_all.py  --adapter momagrid --model llama3.2 --workers 4
 
 # Subset in parallel
-python cookbook/run_all.py run --adapter momagrid --ids "01-10,13"
+python cookbook/run_all.py  --adapter momagrid --ids "01-10,13"
 ```
 
 In parallel mode, each recipe logs to its own file under `<recipe_dir>/`. Completion
@@ -103,7 +105,7 @@ Or run directly:
 
 ```bash
 export MOMAGRID_HUB_URL=http://192.168.0.235:9000
-python cookbook/run_all.py run --adapter momagrid --workers 10 2>&1 \
+python cookbook/run_all.py  --adapter momagrid --workers 10 2>&1 \
   | tee cookbook/out/run_laptop_$(date +%Y%m%d_%H%M%S).md
 ```
 

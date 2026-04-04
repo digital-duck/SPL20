@@ -270,8 +270,8 @@ def print_summary(results: list[dict], start_all: datetime) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="SPL 2.0 Cookbook batch runner")
-    parser.add_argument("--adapter", "-a", default="", help="Override LLM adapter for all recipes (e.g. ollama, momagrid)")
-    parser.add_argument("--model", "-m", default="", help="Override model for all recipes")
+    parser.add_argument("--adapter", "-a", default="ollama", help="Override LLM adapter for all recipes (e.g. ollama, momagrid)")
+    parser.add_argument("--model", "-m", default="gemma3", help="Override model for all recipes")
     parser.add_argument("--ids", default="", help="Comma-separated recipe IDs or ranges to run (e.g. '04,08,10-13')")
     parser.add_argument("--workers", "-w", default=0, type=int, help="Max parallel workers for momagrid (default: 5)")
     parser.add_argument("--category", default="", help="Only run recipes in this category")

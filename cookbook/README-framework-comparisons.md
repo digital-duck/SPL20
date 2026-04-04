@@ -23,4 +23,10 @@ This document tracks which cookbook recipes have alternative implementations in 
 
 ## ToDo
 
+- /home/papagame/projects/digital-duck/SPL20/cookbook/11_debate_arena
 - /home/papagame/projects/digital-duck/SPL20/cookbook/12_plan_and_execute
+- /home/papagame/projects/digital-duck/SPL20/cookbook/17_tree_of_thought
+- /home/papagame/projects/digital-duck/SPL20/cookbook/18_guardrails
+- /home/papagame/projects/digital-duck/SPL20/cookbook/27_data_extraction
+- /home/papagame/projects/digital-duck/SPL20/cookbook/28_support_triage
+- /home/papagame/projects/digital-duck/SPL20/cookbook/31_sentiment_pipeline
