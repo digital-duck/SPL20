@@ -1,0 +1,50 @@
+-- Recipe 49: Regulatory News Monitor
+-- Demonstrates: WHILE loops, CREATE FUNCTION (Persona injection), iterative logging
+CREATE FUNCTION regulatory_auditor()
+RETURNS TEXT AS$$
+You are a senior compliance officer at a G-SIB. 
+Identify regulatory risks in financial news. Focus on: Sanctions, AML, Market Manipulation, AI Ethics.
+Output STRICTLY valid JSON: { "risk_level": "low|medium|high", "flags": ["list"], "summary": "one sentence" }
+$$
+
+PROMPT audit_news
+SELECT
+  context.persona AS system_role,
+  context.news_text AS news
+GENERATE audit(news)
+
+WORKFLOW news_sentiment_monitor
+INPUT:
+  @news_batch TEXT,
+  @log_dir TEXT DEFAULT 'logs/compliance'
+OUTPUT: @compliance_report TEXT
+DO
+  @batch_id := 1
+  LOGGING 'Starting compliance scan...' LEVEL INFO
+
+  -- Simulate chunked processing
+  WHILE @batch_id <= 5 DO
+    LOGGING f'Scanning batch {@batch_id}...' LEVEL DEBUG
+    
+    -- Inject persona + news into GENERATE
+    GENERATE audit_news(regulatory_auditor(), @news_batch) INTO @audit_result
+    
+    -- Persist raw output
+    CALL write_log(f'{@log_dir}/batch_{@batch_id}.json', @audit_result) INTO @_
+    
+    -- Extract risk level deterministically
+    CALL extract_json_field(@audit_result, 'risk_level') INTO @current_risk
+    
+    EVALUATE @current_risk
+    WHEN 'high' THEN
+      LOGGING f'🚨 CRITICAL ALERT in batch {@batch_id}!' LEVEL ERROR
+      CALL send_alert(@audit_result) INTO @_
+    ELSE
+      LOGGING f'Batch {@batch_id} clear' LEVEL INFO
+    END
+
+    @batch_id := @batch_id + 1
+  END
+
+  COMMIT 'Scan Complete' WITH total_batches = @batch_id - 1
+END

@@ -333,13 +333,15 @@ def main() -> None:
 
     results: list[dict] = []
 
+    PROJECT_ROOT = COOKBOOK_DIR.parent
+
     if use_parallel:
         n_workers = args.workers or len(active)
         print(f"Submitting {len(active)} recipe(s) with {n_workers} parallel worker(s)...\n")
         futures: dict = {}
         with ThreadPoolExecutor(max_workers=n_workers) as pool:
             for r, cmd_args, log_path in active:
-                f = pool.submit(run_recipe_parallel, r, cmd_args, log_path, COOKBOOK_DIR)
+                f = pool.submit(run_recipe_parallel, r, cmd_args, log_path, PROJECT_ROOT)
                 futures[f] = r
         for f in as_completed(futures):
             results.append(f.result())
@@ -350,7 +352,7 @@ def main() -> None:
             print(f"[{rid}] {r['name']}")
             print(f"     cmd : {' '.join(cmd_args)}")
             print(f"     log : {log_path}")
-            ok, elapsed = run_recipe_sequential(cmd_args, log_path, COOKBOOK_DIR)
+            ok, elapsed = run_recipe_sequential(cmd_args, log_path, PROJECT_ROOT)
             print(f"     result: {'SUCCESS' if ok else 'FAILED'}  ({elapsed:.1f}s)\n")
             results.append({"id": rid, "name": r["name"], "ok": ok, "elapsed": elapsed})
 

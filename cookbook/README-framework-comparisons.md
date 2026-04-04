@@ -8,13 +8,20 @@ This document tracks which cookbook recipes have alternative implementations in 
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/06_react_agent`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/08_rag_query`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/09_chain_of_thought`
+- `/home/papagame/projects/digital-duck/SPL20/cookbook/11_debate_arena`
+- `/home/papagame/projects/digital-duck/SPL20/cookbook/12_plan_and_execute`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/13_map_reduce`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/14_multi_agent`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/15_code_review`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/16_reflection`
+- `/home/papagame/projects/digital-duck/SPL20/cookbook/17_tree_of_thought`
+- `/home/papagame/projects/digital-duck/SPL20/cookbook/18_guardrails`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/21_multi_model_pipeline`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/25_nested_procs`
+- `/home/papagame/projects/digital-duck/SPL20/cookbook/27_data_extraction`
+- `/home/papagame/projects/digital-duck/SPL20/cookbook/28_support_triage`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/30_code_gen`
+- `/home/papagame/projects/digital-duck/SPL20/cookbook/31_sentiment_pipeline`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/32_socratic_tutor`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/36_tool_use`
 - `/home/papagame/projects/digital-duck/SPL20/cookbook/37_headline_news`
@@ -23,10 +30,4 @@ This document tracks which cookbook recipes have alternative implementations in 
 
 ## ToDo
 
-- /home/papagame/projects/digital-duck/SPL20/cookbook/11_debate_arena
-- /home/papagame/projects/digital-duck/SPL20/cookbook/12_plan_and_execute
-- /home/papagame/projects/digital-duck/SPL20/cookbook/17_tree_of_thought
-- /home/papagame/projects/digital-duck/SPL20/cookbook/18_guardrails
-- /home/papagame/projects/digital-duck/SPL20/cookbook/27_data_extraction
-- /home/papagame/projects/digital-duck/SPL20/cookbook/28_support_triage
-- /home/papagame/projects/digital-duck/SPL20/cookbook/31_sentiment_pipeline
+(All recipes from the registry now have cross-framework implementations)
