@@ -1,0 +1,6 @@
+WORKFLOW repro_workflow
+DO
+  CALL read_news_feed('cookbook/49_regulatory_news_audit/data/news_feed.txt') INTO @news_batch
+  CALL get_list_length(@news_batch) INTO @batch_size
+  COMMIT @batch_size
+END

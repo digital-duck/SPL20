@@ -1,0 +1,21 @@
+
+```bash
+spl run repro_issue.spl --adapter echo
+```
+
+```spl
+-- Repro for batch_size issue
+CALL read_news_feed('cookbook/49_regulatory_news_audit/data/news_feed.txt') INTO @news_batch
+CALL get_list_length(@news_batch) INTO @batch_size
+LOGGING f'Batch size: {@batch_size}' LEVEL INFO
+LOGGING f'News batch: {@news_batch}' LEVEL INFO
+
+@batch_id := 0
+WHILE @batch_id < @batch_size DO
+    @news := @news_batch[@batch_id]
+    LOGGING f'Item {@batch_id}: {@news}' LEVEL INFO
+    @batch_id := @batch_id + 1
+END
+```
+
+Log: /home/papagame/.spl/logs/repro_issue-echo-20260405-081455.md

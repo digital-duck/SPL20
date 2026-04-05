@@ -1,0 +1,64 @@
+Okay, I understand. You're setting up a task called "audit_news" and you're providing two inputs.  Based on the input format, it looks like you're building a system to analyze news stories, likely with a regulatory focus.
+
+**Here's a breakdown of what I'm inferring and how I can help, given this setup:**
+
+* **Input 1: `[regulatory_auditor(...)]`**: This suggests you're starting with an object or data structure representing a "regulatory auditor." This likely contains information about the auditor – their role, expertise, or perhaps even access to regulatory databases.  The `(...)` indicates that this object likely has further properties and/or methods.
+
+* **Input 2: (Empty)**: This is the crucial part. You're indicating that the second input is currently empty. This implies that you want me (or a system built around this task) to *receive* a news story as input.
+
+
+
+**What I can do, and what I need from you to do it effectively:**
+
+1. **Define the "news story" format:**  I need to know the structure of the news story you'll be feeding me.  For example, will it be:
+   * A simple text string?
+   * A JSON object with fields like:
+      * `title`: (string)
+      * `source`: (string - e.g., "Reuters", "The Wall Street Journal")
+      * `date`: (string - e.g., "2023-10-27")
+      * `body`: (string - the main text of the article)
+   * A more complex Python object with similar fields?
+
+2. **Specify the Audit Criteria:**  What does the "audit" involve?  This is the heart of the task.  I need to know *what* the regulatory auditor is looking for.  Examples:
+   * **Compliance:** Is the news story related to regulations (e.g., financial, environmental, healthcare)?
+   * **Risk Assessment:** Is the story identifying potential risks or vulnerabilities?
+   * **Reputational Impact:**  Is the story potentially damaging to a company or individual?
+   * **Specific Regulations:**  Are there particular regulations that need to be checked against the story? (e.g., GDPR, Dodd-Frank)
+
+3. **Desired Output:**  What do you want me to *do* with the news story and the auditor? Examples:
+   * **Summarization:** Provide a brief summary of the story, highlighting relevant aspects based on the audit criteria.
+   * **Risk Score:** Assign a risk score (e.g., low, medium, high) based on the story's potential impact.
+   * **Flagging:**  Identify sentences or sections of the story that require further investigation.
+   * **Report Generation:** Create a structured report summarizing the audit findings.
+
+
+**Example Scenario (Illustrative):**
+
+Let's say you've defined the news story format as a Python dictionary:
+
+```python
+news_story = {
+    "title": "TechCorp Announces New AI Investment",
+    "source": "Bloomberg",
+    "date": "2023-10-27",
+    "body": "TechCorp announced a significant investment in artificial intelligence research and development, citing potential benefits for its products and services..."
+}
+```
+
+And you've defined that the regulatory auditor is focused on *financial regulations* and *potential conflicts of interest*.
+
+Then, I could potentially:
+
+* Extract keywords related to finance (e.g., "investment," "research," "development").
+* Analyze the body of the article for statements that might indicate a conflict of interest (e.g., if TechCorp is investing in a competitor's technology).
+* Generate a preliminary report flagging the article for further review by a human auditor.
+
+---
+
+**To help me complete this task, please provide:**
+
+1.  The structure of the news story you'll be feeding me.
+2.  The specific criteria the regulatory auditor is using.
+3.  What you want me to do with the news story and the auditor (the desired output).
+
+Once you give me this information, I can start to build a more concrete solution for the `audit_news` task.

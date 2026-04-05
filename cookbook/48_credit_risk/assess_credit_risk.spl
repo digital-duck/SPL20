@@ -1,5 +1,6 @@
--- Recipe 48: Credit Risk Assessment
+-- Recipe Name: Credit Risk Assessment
 -- Demonstrates: EVALUATE branching, CALL/GENERATE split, deterministic routing
+
 PROMPT analyze_risk_factors
 SELECT
   system_role('You are a senior credit risk analyst at a Tier-1 bank.'),
@@ -9,7 +10,8 @@ GENERATE analyze(data)
 WORKFLOW credit_risk_assessment
 INPUT:
   @applicant_data TEXT,
-  @credit_score INTEGER
+  @credit_score INTEGER,
+  @log_dir TEXT DEFAULT 'cookbook/48_credit_risk/logs-spl'
 OUTPUT: @decision TEXT
 DO
   LOGGING f'Assessing applicant | score={@credit_score}' LEVEL INFO
@@ -18,34 +20,36 @@ DO
   EVALUATE @credit_score
   WHEN < 600 THEN
     LOGGING 'Auto-reject: Low credit score' LEVEL WARN
-    COMMIT 'REJECTED' WITH reason = 'score_below_threshold', score = @credit_score
+    RETURN 'REJECTED' WITH reason = 'score_below_threshold', score = @credit_score
   WHEN >= 750 THEN
     LOGGING 'Auto-approve: High credit score' LEVEL INFO
-    COMMIT 'APPROVED' WITH reason = 'score_excellent', score = @credit_score
+    RETURN 'APPROVED' WITH reason = 'score_excellent', score = @credit_score
   ELSE
     LOGGING 'Score in gray zone → triggering qualitative review' LEVEL INFO
   END
 
   -- Step 2: Qualitative LLM Analysis (SELECT equivalent)
   GENERATE analyze_risk_factors(@applicant_data) INTO @risk_report
+  CALL write_file(f'{@log_dir}/risk_report.md', @risk_report) INTO NONE
   
   -- Step 3: Deterministic Extraction (Zero token cost)
-  CALL extract_risk_rating(@risk_report) INTO @risk_rating
-  
+  CALL extract_risk_rating(@risk_report) INTO @risk_rating 
   LOGGING f'Extracted risk rating: {@risk_rating}' LEVEL DEBUG
+  CALL write_file(f'{@log_dir}/risk_rating.md', @risk_rating) INTO NONE
 
   -- Step 4: Final Routing
   EVALUATE @risk_rating
   WHEN 'high' THEN
-    COMMIT 'REJECTED' WITH reason = 'qualitative_risk_high', report = @risk_report
+    RETURN @risk_report WITH reason = 'REJECTED: qualitative_risk_high'
   WHEN 'medium' THEN
-    COMMIT 'MANUAL_REVIEW' WITH reason = 'qualitative_risk_medium', report = @risk_report
+    RETURN @risk_report WITH reason = 'MANUAL_REVIEW: qualitative_risk_medium'
   ELSE
-    COMMIT 'APPROVED' WITH reason = 'qualitative_risk_low', report = @risk_report
+    RETURN @risk_report WITH reason = 'APPROVED: qualitative_risk_low'
   END
 
 EXCEPTION
-  WHEN ConnectionError THEN
-    LOGGING 'External data source unavailable' LEVEL ERROR
-    COMMIT 'PENDING' WITH reason = 'system_error'
+  WHEN ConnectionError THEN 
+    @error_message := 'Failed to connect to external data source'
+    LOGGING @error_message LEVEL ERROR
+    RETURN @error_message WITH reason = 'PENDING: system_error'
 END

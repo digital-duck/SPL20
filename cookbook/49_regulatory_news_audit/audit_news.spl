@@ -1,10 +1,16 @@
 -- Recipe 49: Regulatory News Monitor
 -- Demonstrates: WHILE loops, CREATE FUNCTION (Persona injection), iterative logging
 CREATE FUNCTION regulatory_auditor()
-RETURNS TEXT AS$$
+RETURNS TEXT 
+AS $$
+
 You are a senior compliance officer at a G-SIB. 
-Identify regulatory risks in financial news. Focus on: Sanctions, AML, Market Manipulation, AI Ethics.
+Identify regulatory risks in financial news. 
+
+Focus on: Sanctions, AML, Market Manipulation, AI Ethics.
+
 Output STRICTLY valid JSON: { "risk_level": "low|medium|high", "flags": ["list"], "summary": "one sentence" }
+
 $$
 
 PROMPT audit_news
@@ -15,22 +21,34 @@ GENERATE audit(news)
 
 WORKFLOW news_sentiment_monitor
 INPUT:
-  @news_batch TEXT,
-  @log_dir TEXT DEFAULT 'logs/compliance'
+  @news_batch_path TEXT DEFAULT 'cookbook/49_regulatory_news_audit/data/news_feed.txt',
+  @log_dir TEXT DEFAULT 'cookbook/49_regulatory_news_audit/logs-spl'
 OUTPUT: @compliance_report TEXT
 DO
-  @batch_id := 1
-  LOGGING 'Starting compliance scan...' LEVEL INFO
+  LOGGING f'Starting compliance feed from "{@news_batch_path}" ...' LEVEL INFO
 
-  -- Simulate chunked processing
-  WHILE @batch_id <= 5 DO
-    LOGGING f'Scanning batch {@batch_id}...' LEVEL DEBUG
-    
+  CALL read_news_feed(@news_batch_path) INTO @news_batch
+  CALL get_list_length(@news_batch) INTO @batch_size  
+  LOGGING f'News batch loaded:\n {@news_batch}' LEVEL INFO
+  LOGGING f'News batch loaded with {@batch_size} items.' LEVEL INFO
+
+  EVALUATE @batch_size
+  WHEN = 0 THEN
+    LOGGING f'No news data found at the specified path: {@news_batch_path}.' LEVEL ERROR
+    RETURN 'No data' WITH reason = 'feed_empty'
+  END
+
+  @batch_id := 0
+  WHILE @batch_id < @batch_size DO
+    LOGGING f'Processing batch {@batch_id}...' LEVEL INFO
+    @news := @news_batch[@batch_id]
+    LOGGING f'Processing news item:\n {@news}' LEVEL INFO
+
     -- Inject persona + news into GENERATE
-    GENERATE audit_news(regulatory_auditor(), @news_batch) INTO @audit_result
+    GENERATE audit_news(regulatory_auditor(), @news) INTO @audit_result
     
     -- Persist raw output
-    CALL write_log(f'{@log_dir}/batch_{@batch_id}.json', @audit_result) INTO @_
+    CALL write_file(f'{@log_dir}/batch_{@batch_id}.json', @audit_result) INTO NONE
     
     -- Extract risk level deterministically
     CALL extract_json_field(@audit_result, 'risk_level') INTO @current_risk
@@ -46,5 +64,5 @@ DO
     @batch_id := @batch_id + 1
   END
 
-  COMMIT 'Scan Complete' WITH total_batches = @batch_id - 1
+  COMMIT 'Scan Complete' WITH total_batches = @batch_id
 END
