@@ -169,6 +169,117 @@ END
 
 See `examples/` for more patterns (ReAct agent, safe generation with exception handling).
 
+## Cookbook
+
+48 ready-to-run recipes covering every major agentic pattern. Run the full suite against your Momagrid cluster or any adapter:
+
+```bash
+# Run all active recipes (45) against a local Ollama instance
+python cookbook/run_all.py run --adapter ollama --model gemma3
+
+# Run all active recipes in parallel across a 4-node Momagrid cluster
+python cookbook/run_all.py run --adapter momagrid --model llama3.2 --workers 4
+
+# Run a single recipe
+spl run cookbook/41_human_steering/human_steering.spl \
+    --tools cookbook/41_human_steering/tools.py \
+    --adapter ollama topic="The future of decentralized AI inference"
+```
+
+### Basics
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 01 | Hello World | Minimal SPL program — verify adapter + model work |
+| 02 | Ollama Proxy | General-purpose LLM query — proxy any Ollama model |
+| 03 | Multilingual Greeting | Parametric context demo — greet in any language |
+| 23 | Structured Output | `CREATE FUNCTION` with JSON schema — typed extraction from free text |
+| 24 | Few-Shot Prompting | Gold-standard examples in `SELECT` context — in-context learning |
+
+### Agentic & Control Flow
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 05 | Self-Refine | Iterative improvement: draft → critique → refine loop |
+| 12 | Plan and Execute | Planner decomposes task; executor runs each step |
+| 16 | Reflection Agent | Meta-cognitive loop: solve → reflect → correct until confident |
+| 21 | Multi-Model Pipeline | Per-step model selection with `GENERATE … USING MODEL` |
+| 25 | Nested Procedures | `PROCEDURE` calling `PROCEDURE` — deep composability |
+| 36 | Tool-Use / Function-Call | Python functions as `CALL`-able tools — zero LLM cost |
+| 41 ⭐ | Human Steering | Human-in-the-loop: pause for stdin feedback → conditional refinement |
+| 43 ⭐ | Prompt Self-Tuning | Meta-programming: generate two prompt variants, A/B test, auto-select winner |
+| 44 ⭐ | Adaptive Failover | Try primary model → quality gate → auto-failover to stronger model |
+
+### Reasoning
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 09 | Chain of Thought | Multi-step: Research → Analyze → Summarize |
+| 17 | Tree of Thought | Explore multiple reasoning paths, score and pick the best |
+| 26 | Prompt A/B Test | CTEs + `EVALUATE` scoring — compare two prompt variants |
+| 35 | Hypothesis Tester | Generate hypothesis → design test → evaluate evidence → conclude |
+
+### Multi-Agent & Collaboration
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 04 | Model Showdown | Same prompt to multiple models — compare output and latency |
+| 11 | Debate Arena | Adversarial debate between two LLM personas with a judge |
+| 14 | Multi-Agent Collaboration | Researcher → Analyst → Writer via `PROCEDURE` |
+| 20 | Ensemble Voting | Generate multiple answers, score and vote for consensus |
+| 32 | Socratic Tutor | Ask guiding questions — persona-constrained generation |
+| 33 | Interview Simulator | Two-persona structured Q&A with per-question scoring |
+
+### Safety & Guardrails
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 07 | Safe Generation | Exception handling for production LLM safety |
+| 18 | Guardrails Pipeline | Input/output safety pipeline with PII detection and filtering |
+
+### Retrieval (RAG)
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 08 | RAG Query | Retrieval-augmented generation over indexed documents |
+| 42 ⭐ | Knowledge Synthesis | RAG-writer: extract insights via LLM → persist to vector store |
+
+### Application Patterns
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 13 | Map-Reduce Summarizer | Split large docs into chunks, summarize each, combine |
+| 15 | Code Review | Multi-pass review: security, performance, style, bugs |
+| 19 | Memory Conversation | Persistent memory across conversations |
+| 22 | Text2SPL Demo | Natural language → SPL 2.0 compiler |
+| 27 | Data Extraction | Pull structured fields from messy text |
+| 28 | Customer Support Triage | Classify → route → draft response in one workflow |
+| 29 | Meeting Notes to Actions | Transcript in, structured TODO list + owners out |
+| 30 | Code Generator + Tests | Generate a function then generate its unit tests |
+| 31 | Sentiment Pipeline | Batch sentiment over a list, aggregate trend statistics |
+| 34 | Progressive Summarizer | Layered summary: sentence → paragraph → page |
+| 37 | Headline News Aggregator | Generate → expand → evaluate coverage → daily digest |
+| 45 ⭐ | Vision to Action | LLM classifies image description → deterministic action routing |
+| 47 ⭐ | arXiv Morning Brief | Download PDFs → chunk → summarize → assemble Markdown brief |
+| 48 ⭐ | Credit Risk Assessment | **Fin-service**: score gate → LLM risk review → APPROVED / MANUAL / REJECTED |
+| 49 ⭐ | Regulatory News Audit | **Fin-service**: WHILE loop over news feed → compliance audit → CRITICAL ALERT on high risk |
+
+### Cloud Provider Quickstarts *(adapter smoke tests, inactive by default)*
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 38 | Bedrock Quickstart | Fan out to Claude + Nova models on AWS Bedrock |
+| 39 | Vertex AI Quickstart | Fan out to Gemini Pro / Flash / Lite on GCP Vertex AI |
+| 40 | Azure OpenAI Quickstart | Fan out to GPT-4o / GPT-4o mini / GPT-3.5 on Azure |
+
+> ⭐ = added in the 2026-04-05 release (recipes 41–45, 47–49)
+
+### Benchmarking
+
+| ID | Recipe | Description |
+|----|--------|-------------|
+| 10 | Batch Test | Automated testing of cookbook recipes across models |
+
 ## CLI
 
 ```bash

@@ -14,6 +14,16 @@
 --   bugs.md        — bug detection findings
 --   review.md      — final synthesized review
 
+CREATE FUNCTION detect_lang(code TEXT)
+RETURN TEXT
+AS $$
+You are a polyglot programmer. Identify the programming language of the provided code.
+Reply with only the language name — nothing else.
+
+Code:
+{code}
+$$;
+
 WORKFLOW code_review
     INPUT:
         @code     TEXT,
@@ -31,13 +41,8 @@ DO
             @code_to_review := @code
     END
 
-    -- 2. Auto-detect language
-    PROMPT detect_lang
-    SELECT
-        system_role('You are a polyglot programmer. Identify the programming language of the provided code.'),
-        @code_to_review AS code
-    GENERATE language(code) INTO @language
-    
+    -- 2. Auto-detect language (deterministic-style LLM call: bounded output)
+    GENERATE detect_lang(@code_to_review) INTO @language
     @language := trim(@language)
     LOGGING f'Detected language: {@language}' LEVEL INFO
 

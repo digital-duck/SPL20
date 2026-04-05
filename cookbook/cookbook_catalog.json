@@ -747,6 +747,168 @@
       "is_active": false,
       "approval_status": "new",
       "category": "basics"
+    },
+    {
+      "id": "41",
+      "name": "Human Steering",
+      "description": "Human-in-the-loop: draft \u2192 pause for stdin feedback \u2192 conditionally refine \u2014 demonstrates EVALUATE on human input",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/41_human_steering/human_steering.spl",
+        "--adapter",
+        "ollama",
+        "--tools",
+        "./cookbook/41_human_steering/tools.py",
+        "topic=The future of agentic AI"
+      ],
+      "dir": "41_human_steering",
+      "log": "human_steering",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "agentic"
+    },
+    {
+      "id": "42",
+      "name": "Knowledge Synthesis",
+      "description": "RAG-writer pattern: extract 3 insights via LLM, persist to vector store via CALL rag_update \u2014 agents that write back to the knowledge base",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/42_knowledge_synthesis/knowledge_synthesis.spl",
+        "--adapter",
+        "ollama",
+        "--tools",
+        "./cookbook/42_knowledge_synthesis/tools.py",
+        "raw_text=Recent advances in sparse attention mechanisms dramatically reduce transformer memory footprint while preserving model quality on long-context tasks."
+      ],
+      "dir": "42_knowledge_synthesis",
+      "log": "knowledge_synthesis",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "retrieval"
+    },
+    {
+      "id": "43",
+      "name": "Prompt Self-Tuning",
+      "description": "Meta-programming: generate two improved prompt variants, A/B test via check_quality, select winner \u2014 automated prompt optimization",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/43_prompt_self_tuning/prompt_self_tuning.spl",
+        "--adapter",
+        "ollama",
+        "--tools",
+        "./cookbook/43_prompt_self_tuning/tools.py",
+        "baseline_prompt=Summarize this technical document.",
+        "failed_case=The document describes a complex quantum algorithm."
+      ],
+      "dir": "43_prompt_self_tuning",
+      "log": "prompt_self_tuning",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "agentic"
+    },
+    {
+      "id": "44",
+      "name": "Adaptive Failover",
+      "description": "Resilience: try primary model \u2192 quality gate \u2192 auto-failover to stronger model if needed \u2014 GENERATE USING MODEL @var",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/44_adaptive_failover/adaptive_failover.spl",
+        "--adapter",
+        "ollama",
+        "--tools",
+        "./cookbook/44_adaptive_failover/tools.py",
+        "query=Explain quantum entanglement for a technical audience.",
+        "primary_model=phi4",
+        "fallback_model=gemma3"
+      ],
+      "dir": "44_adaptive_failover",
+      "log": "adaptive_failover",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "agentic"
+    },
+    {
+      "id": "45",
+      "name": "Vision to Action",
+      "description": "LLM classifies image description into DELIVERY/INTRUSION/IGNORE \u2014 deterministic EVALUATE decision tree, zero-cost routing",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/45_vision_to_action/vision_to_action.spl",
+        "--adapter",
+        "ollama",
+        "image_description=Image shows a package being delivered to the front door."
+      ],
+      "dir": "45_vision_to_action",
+      "log": "vision_to_action",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "47",
+      "name": "arXiv Morning Brief",
+      "description": "Download arXiv PDFs \u2192 chunk \u2192 summarize each \u2192 reduce \u2192 assemble Markdown brief \u2014 WHILE loop, list tools, WITH OUTPUT BUDGET",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/47_arxiv_morning_brief/arxiv_morning_brief.spl",
+        "--tools",
+        "./cookbook/47_arxiv_morning_brief/tools.py",
+        "--adapter",
+        "ollama",
+        "urls=cookbook/47_arxiv_morning_brief/arxiv-papers.txt"
+      ],
+      "dir": "47_arxiv_morning_brief",
+      "log": "arxiv_morning_brief",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "48",
+      "name": "Credit Risk Assessment",
+      "description": "Fin-service: deterministic score gate \u2192 LLM qualitative review \u2192 EVALUATE routing \u2014 APPROVED / MANUAL_REVIEW / REJECTED",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/48_credit_risk/assess_credit_risk.spl",
+        "--adapter",
+        "ollama",
+        "--tools",
+        "./cookbook/48_credit_risk/tools.py",
+        "applicant_data=Applicant: Jane Doe | Income: $72,000 | Debt: $18,000 | Employment: 5 years | Prior defaults: none",
+        "credit_score=680"
+      ],
+      "dir": "48_credit_risk",
+      "log": "credit_risk",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
+    },
+    {
+      "id": "49",
+      "name": "Regulatory News Audit",
+      "description": "Fin-service: WHILE loop over news feed \u2014 LLM compliance audit per item, JSON risk extraction, CRITICAL ALERT on high-risk findings",
+      "args": [
+        "spl",
+        "run",
+        "./cookbook/49_regulatory_news_audit/audit_news.spl",
+        "--adapter",
+        "ollama",
+        "--tools",
+        "./cookbook/49_regulatory_news_audit/tools.py",
+        "news_batch_path=cookbook/49_regulatory_news_audit/data/news_feed.txt"
+      ],
+      "dir": "49_regulatory_news_audit",
+      "log": "audit_news",
+      "is_active": true,
+      "approval_status": "new",
+      "category": "application"
     }
   ]
 }

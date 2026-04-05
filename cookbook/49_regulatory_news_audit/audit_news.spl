@@ -1,23 +1,29 @@
 -- Recipe 49: Regulatory News Monitor
--- Demonstrates: WHILE loops, CREATE FUNCTION (Persona injection), iterative logging
-CREATE FUNCTION regulatory_auditor()
-RETURNS TEXT 
-AS $$
+-- Demonstrates: WHILE loops, CREATE FUNCTION (persona injection), iterative logging
+--
+-- Usage:
+--   spl run cookbook/49_regulatory_news_audit/audit_news.spl \
+--       --adapter ollama \
+--       --tools cookbook/49_regulatory_news_audit/tools.py \
+--       news_batch_path=cookbook/49_regulatory_news_audit/data/news_feed.txt
 
-You are a senior compliance officer at a G-SIB. 
-Identify regulatory risks in financial news. 
+-- Compliance persona + audit instruction combined in one function.
+-- (regulatory_auditor() persona is inlined here so GENERATE receives it
+--  as a rendered template argument — avoids non-builtin function call in expressions.)
+CREATE FUNCTION audit_news(news TEXT)
+RETURN TEXT
+AS $$
+You are a senior compliance officer at a G-SIB.
+Identify regulatory risks in the financial news item below.
 
 Focus on: Sanctions, AML, Market Manipulation, AI Ethics.
 
-Output STRICTLY valid JSON: { "risk_level": "low|medium|high", "flags": ["list"], "summary": "one sentence" }
+Output STRICTLY valid JSON:
+{ "risk_level": "low|medium|high", "flags": ["list"], "summary": "one sentence" }
 
-$$
-
-PROMPT audit_news
-SELECT
-  context.persona AS system_role,
-  context.news_text AS news
-GENERATE audit(news)
+News item:
+{news}
+$$;
 
 WORKFLOW news_sentiment_monitor
 INPUT:
@@ -28,37 +34,36 @@ DO
   LOGGING f'Starting compliance feed from "{@news_batch_path}" ...' LEVEL INFO
 
   CALL read_news_feed(@news_batch_path) INTO @news_batch
-  CALL get_list_length(@news_batch) INTO @batch_size  
-  LOGGING f'News batch loaded:\n {@news_batch}' LEVEL INFO
+  CALL get_list_length(@news_batch) INTO @batch_size
   LOGGING f'News batch loaded with {@batch_size} items.' LEVEL INFO
 
   EVALUATE @batch_size
   WHEN = 0 THEN
-    LOGGING f'No news data found at the specified path: {@news_batch_path}.' LEVEL ERROR
+    LOGGING f'No news data found at: {@news_batch_path}' LEVEL ERROR
     RETURN 'No data' WITH reason = 'feed_empty'
   END
 
   @batch_id := 0
   WHILE @batch_id < @batch_size DO
     LOGGING f'Processing batch {@batch_id}...' LEVEL INFO
-    @news := @news_batch[@batch_id]
-    LOGGING f'Processing news item:\n {@news}' LEVEL INFO
+    CALL get_item(@news_batch, @batch_id) INTO @news
+    LOGGING f'News item:\n{@news}' LEVEL DEBUG
 
-    -- Inject persona + news into GENERATE
-    GENERATE audit_news(regulatory_auditor(), @news) INTO @audit_result
-    
-    -- Persist raw output
+    -- Audit the news item (LLM call)
+    GENERATE audit_news(@news) INTO @audit_result
+
+    -- Persist raw audit output
     CALL write_file(f'{@log_dir}/batch_{@batch_id}.json', @audit_result) INTO NONE
-    
+
     -- Extract risk level deterministically
     CALL extract_json_field(@audit_result, 'risk_level') INTO @current_risk
-    
+
     EVALUATE @current_risk
     WHEN 'high' THEN
-      LOGGING f'🚨 CRITICAL ALERT in batch {@batch_id}!' LEVEL ERROR
-      CALL send_alert(@audit_result) INTO @_
+      LOGGING f'CRITICAL ALERT in batch {@batch_id}!' LEVEL ERROR
+      CALL send_alert(@audit_result) INTO NONE
     ELSE
-      LOGGING f'Batch {@batch_id} clear' LEVEL INFO
+      LOGGING f'Batch {@batch_id} clear ({@current_risk})' LEVEL INFO
     END
 
     @batch_id := @batch_id + 1

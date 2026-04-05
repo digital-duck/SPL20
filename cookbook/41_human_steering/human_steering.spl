@@ -1,0 +1,66 @@
+-- Recipe 41: Human Steering (Human-in-the-Loop)
+-- Demonstrates the "Pause for Approval" pattern.
+-- A workflow pauses for human feedback via a deterministic CALL, then conditionally
+-- refines its output based on what the human said.
+--
+-- Usage:
+--   spl run cookbook/41_human_steering/human_steering.spl \
+--       --tools cookbook/41_human_steering/tools.py \
+--       --adapter ollama \
+--       topic="The future of agentic AI"
+
+CREATE FUNCTION draft(topic TEXT)
+RETURN TEXT
+AS $$
+You are a professional tech writer. Draft a concise 3-sentence article about the provided topic.
+Focus on a clear opening claim, a supporting example, and a forward-looking conclusion.
+
+Topic: {topic}
+$$;
+
+CREATE FUNCTION refine(draft TEXT, feedback TEXT)
+RETURN TEXT
+AS $$
+You are a senior editor. Revise the draft below to address the reviewer's feedback.
+Preserve the structure (opening claim, example, conclusion) unless the feedback explicitly changes it.
+
+Draft:
+{draft}
+
+Reviewer feedback:
+{feedback}
+$$;
+
+WORKFLOW human_steering
+    INPUT: @topic TEXT DEFAULT 'The future of decentralized AI inference',
+    @log_dir TEXT DEFAULT 'cookbook/41_human_steering/logs-spl'
+    OUTPUT: @final_article TEXT
+DO
+    LOGGING f'Drafting article on topic:\n {@topic}' LEVEL INFO
+
+    -- Step 1: Generate initial draft (LLM)
+    GENERATE draft(@topic) INTO @draft
+    LOGGING 'Draft generated — requesting human feedback' LEVEL INFO
+    CALL write_file(f'{@log_dir}/draft.md', @draft) INTO NONE
+
+    -- Step 2: Pause for human steering (deterministic CALL — no LLM cost)
+    CALL wait_for_human_feedback(f'Review this draft:\n\n{@draft}') INTO @feedback
+    CALL write_file(f'{@log_dir}/feedback.md', @feedback) INTO NONE
+
+    -- Step 3: Branch on whether feedback was provided
+    EVALUATE @feedback
+        WHEN != '' THEN
+            LOGGING 'Human feedback received — refining draft' LEVEL INFO
+            GENERATE refine(@draft, @feedback) INTO @final_article
+        ELSE
+            LOGGING 'No feedback received — using initial draft as-is' LEVEL DEBUG
+            @final_article := @draft
+    END
+
+    CALL write_file(f'{@log_dir}/final_article.md', @final_article) INTO NONE
+    RETURN @final_article WITH status = 'complete'
+
+EXCEPTION
+    WHEN GenerationError THEN
+        RETURN @draft WITH status = 'draft_only', reason = 'generation_error'
+END
