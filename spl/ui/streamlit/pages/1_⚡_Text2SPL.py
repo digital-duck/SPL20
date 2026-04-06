@@ -24,6 +24,7 @@ from streamlit_ace import st_ace
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import db
 import code_rag_bridge as rag
+import spl3_rag_bridge as spl3_rag
 
 db.init_db()
 
@@ -331,29 +332,38 @@ with right:
 
         with c2:
 
+            # Determine which RAG sources are available
+            _rag_sources: list[tuple[str, list[dict]]] = []
             if rag.is_available() and rag.count() > 0:
-                with st.expander("Code-RAG context used for compilation", expanded=False):
-                    hits = rag.query(desc_val, top_k=4)
-                    if not hits:
-                        st.caption("No similar examples found in the store.")
-                    else:
-                        for i, h in enumerate(hits, 1):
-                            sim = max(0.0, (1.0 - h["score"]) * 100)
-                            st.markdown(
-                                f"**#{i}** · similarity {sim:.1f}% · `{h['source']}`  \n"
-                                f"{h['description']}"
-                            )
-                            st_ace(
-                                value=h["spl_source"],
-                                language="sql",
-                                theme="monokai",
-                                readonly=True,
-                                height=200,
-                                key=f"ace_rag_{i}",
-                                auto_update=True,
-                            )
-                            if i < len(hits):
-                                st.divider()
+                _rag_sources.append(("knowledge.db Code-RAG", rag.query(desc_val, top_k=4)))
+            if spl3_rag.is_available():
+                _rag_sources.append(("SPL3 Cookbook RAG", spl3_rag.query(desc_val, top_k=3)))
+
+            if _rag_sources:
+                with st.expander("RAG context used for compilation", expanded=False):
+                    for src_label, hits in _rag_sources:
+                        st.caption(f"**Source: {src_label}**")
+                        if not hits:
+                            st.caption("No similar examples found.")
+                        else:
+                            for i, h in enumerate(hits, 1):
+                                sim = max(0.0, (1.0 - h["score"]) * 100)
+                                st.markdown(
+                                    f"**#{i}** · similarity {sim:.1f}% · `{h['source']}`  \n"
+                                    f"{h['description']}"
+                                )
+                                st_ace(
+                                    value=h["spl_source"],
+                                    language="sql",
+                                    theme="monokai",
+                                    readonly=True,
+                                    height=200,
+                                    key=f"ace_rag_{src_label}_{i}",
+                                    auto_update=True,
+                                )
+                                if i < len(hits):
+                                    st.divider()
+                        st.divider()
     else:
         st.info("Generated SPL will appear here after compilation.")
 

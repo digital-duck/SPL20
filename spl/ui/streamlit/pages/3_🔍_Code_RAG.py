@@ -12,6 +12,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import code_rag_bridge as rag
 import db
+import spl3_rag_bridge as spl3_rag
 
 db.init_db()
 
@@ -47,7 +48,7 @@ with st.sidebar:
 
     st.divider()
     with st.expander("Seed & Export", expanded=False):
-        st.markdown("**Seed from Cookbook**")
+        st.markdown("**Seed from Cookbook (knowledge.db)**")
         st.caption("Index all 37 cookbook recipes as few-shot examples.")
         if st.button("Import Cookbook", use_container_width=True, key="btn_import_cookbook"):
             with st.spinner("Indexing cookbook recipes…"):
@@ -70,11 +71,80 @@ with st.sidebar:
             key="btn_download_jsonl",
         )
 
+# ── SPL3 Cookbook RAG ─────────────────────────────────────────────────────────
+
+st.subheader("SPL3 Cookbook RAG")
+st.caption(
+    "SPL3's dedicated RAG store (ChromaDB) populated from SPL v2.0 cookbook recipes. "
+    "Used by `splc` for few-shot compilation context."
+)
+
+spl3_col1, spl3_col2 = st.columns([2, 3])
+with spl3_col1:
+    if spl3_rag.is_available():
+        n_spl3 = spl3_rag.count()
+        st.metric("SPL3 Cookbook recipes", n_spl3)
+        st.caption(f"Store: `{spl3_rag.chroma_dir()}`")
+    else:
+        st.warning("SPL3 RAG store not indexed.")
+        err = spl3_rag.import_error()
+        if err:
+            st.caption(f"Error: {err}")
+
+with spl3_col2:
+    if not spl3_rag.is_available():
+        if st.button("Index SPL3 Cookbook", key="btn_spl3_seed"):
+            with st.spinner("Indexing cookbook recipes into SPL3 RAG store…"):
+                c, msg = spl3_rag.seed_cookbook()
+            if c >= 0:
+                st.success(msg)
+            else:
+                st.error(msg)
+            st.rerun()
+    else:
+        spl3_q_col, spl3_k_col = st.columns([4, 1])
+        with spl3_q_col:
+            spl3_query = st.text_input(
+                "Search SPL3 cookbook",
+                placeholder="e.g. iterative self-improvement",
+                key="spl3_search_query",
+                label_visibility="collapsed",
+            )
+        with spl3_k_col:
+            spl3_k = st.slider("k", 1, 10, 5, key="spl3_k")
+
+        if spl3_query.strip():
+            spl3_hits = spl3_rag.query(spl3_query.strip(), top_k=spl3_k)
+            if not spl3_hits:
+                st.info("No results.")
+            else:
+                for h in spl3_hits:
+                    sim = max(0.0, (1.0 - h["score"]) * 100)
+                    with st.expander(
+                        f"**{h['name']}**  · {h['category']}  · similarity {sim:.1f}%",
+                        expanded=False,
+                    ):
+                        st.caption(h["description"])
+                        st.code(h["spl_source"], language="sql")
+
+        col_rseed, _ = st.columns([2, 4])
+        with col_rseed:
+            if st.button("Re-index SPL3 Cookbook", key="btn_spl3_reseed"):
+                with st.spinner("Re-indexing…"):
+                    c, msg = spl3_rag.seed_cookbook()
+                if c >= 0:
+                    st.success(msg)
+                else:
+                    st.error(msg)
+                st.rerun()
+
+st.divider()
+
 # ── Search ─────────────────────────────────────────────────────────────────────
 
-st.subheader("Search")
+st.subheader("knowledge.db Code-RAG")
 st.caption(
-    "Find similar examples from the Code-RAG store. "
+    "Find similar examples from the knowledge.db Code-RAG store. "
     "Lower score = more similar (cosine distance)."
 )
 
