@@ -1,40 +1,7 @@
-Okay, let's analyze these inputs for a potential audit news scenario.
-
-**Understanding the Inputs:**
-
-*   **Input 1: `[regulatory_auditor(...)]`**: This represents the entity conducting the audit - a regulatory auditor. The ellipsis (`...`) indicates further details about the auditor (e.g., the specific regulator, the audit team, the audit scope) are missing but implied.
-*   **Input 2: "5: Major commercial bank settles $200M penalty for sanctions violations linked to cross-border payment routing in 2022."**: This is a headline or summary of a news event – a significant regulatory settlement involving a bank.
-
-**Audit Implications & Analysis:**
-
-Given these inputs, the regulatory auditor is likely conducting an audit related to:
-
-1.  **Sanctions Compliance:** The core issue is a $200M penalty for sanctions violations. This immediately points to the auditor's focus on whether the bank adhered to international sanctions regulations.
-
-2.  **Cross-Border Payment Routing:** The audit will investigate *how* the bank was facilitating these payments.  This is a critical area because cross-border payments are frequently used to circumvent sanctions or launder money. Key areas of investigation will include:
-    *   **KYC/AML Procedures:** Were adequate Know Your Customer (KYC) and Anti-Money Laundering (AML) procedures in place?  Were they effectively implemented?
-    *   **Transaction Monitoring:** Did the bank have robust systems for monitoring transactions for suspicious activity related to sanctioned countries or entities?
-    *   **Correspondent Banking Relationships:**  The nature of the bank's relationships with correspondent banks in relevant jurisdictions will be scrutinized.
-    *   **Due Diligence on Customers:** Did the bank perform sufficient due diligence on its customers to identify and mitigate sanctions risks?
-
-3.  **Timing (2022):** The fact that this settlement occurred in 2022 is important. It suggests that the violations likely occurred over a period of time, requiring the auditor to examine historical records and potentially conduct forensic analysis.
-
-**Potential Audit Scope:**
-
-Based on this information, a likely audit scope would include:
-
-*   Review of the bank's sanctions compliance program.
-*   Examination of transaction records related to the identified cross-border payments.
-*   Assessment of the bank's controls and procedures for preventing sanctions violations.
-*   Investigation into the root causes of the violations.
-*   Review of the bank’s reporting mechanisms and internal controls.
-
-**In short, this news snippet represents a significant finding that warrants a detailed and potentially lengthy audit to determine the extent of the bank's wrongdoing and to implement corrective measures to prevent future violations.**
-
----
-
-Do you want me to:
-
-*   Expand on a specific aspect of the audit (e.g., the types of documentation the auditor would examine)?
-*   Simulate a follow-up question an auditor might ask?
-*   Consider a different scenario (e.g., a different type of regulatory violation)?
+```json
+{
+  "risk_level": "high",
+  "flags": ["sanctions", "AML", "Market Manipulation"],
+  "summary": "The bank’s settlement for sanctions violations highlights significant regulatory risk related to cross-border payments and potential facilitation of illicit financial activities."
+}
+```

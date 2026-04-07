@@ -73,7 +73,7 @@ DO
     LOGGING f'Tree of thought | problem: {@problem} | models: {@models}' LEVEL INFO
 
     @results := {}
-    @count := len(@models)
+    @count := COUNT(@models)
     @i := 0
 
     -- Step 1 & 2: Generate and Develop paths in a loop

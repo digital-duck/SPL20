@@ -33,7 +33,7 @@ WORKFLOW model_showdown_map
     OUTPUT: @comparison TEXT
 DO
     @results := {}
-    @count := len(@models)
+    @count := COUNT(@models)
     @i := 0
 
     LOGGING f'Starting showdown for {@count} models on prompt:\n  {@prompt}'

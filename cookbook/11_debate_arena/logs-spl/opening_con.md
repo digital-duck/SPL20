@@ -1,0 +1,1 @@
+Please provide me with the opponent’s opening statement! I need to know what they’ve said before I can effectively rebut it. Once you paste it here, I’ll craft a powerful argument against open-sourcing AI.

@@ -1,0 +1,23 @@
+WORKFLOW classify_intent
+  INPUT @text TEXT
+  OUTPUT @label TEXT
+  INPUT @models TEXT
+  OUTPUT @selected_model TEXT
+DO
+  GENERATE extract_entities(@text) INTO @entities;
+  GENERATE classify_entities(@entities, @models) INTO @intent;
+  @selected_model := @models[SELECT * FROM entities WHERE label = @intent];
+  COMMIT @selected_model;
+END;
+
+CREATE FUNCTION classify_entities(entities TEXT, models TEXT)
+RETURNS TEXT AS $$
+  SELECT model
+  FROM entities
+  WHERE label IN (SELECT label FROM models)
+$$;
+
+CREATE FUNCTION extract_entities(text TEXT)
+RETURNS TEXT AS $$
+  summarize(text) WITH OUTPUT BUDGET 100 TOKENS;
+$$;
