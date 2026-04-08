@@ -1,66 +1,60 @@
-Okay, here’s a combined response incorporating all three inputs, aiming to synthesize them into a focused design document and discussion points. This combines the detailed original design with the extracted issues and questions, and then expands on them with actionable considerations.
+Okay, let's synthesize these three inputs into a refined design document. This will incorporate the feedback from both the initial design and the critical assessment, aiming for a robust, scalable, and maintainable system.
 
-**URL Shortener System Design - ShortLink**
+**Design Document: URL Shortener System – Version 1.2**
 
-**I. System Overview**
+**I. Overview & Goals**
 
-ShortLink is a robust and scalable URL shortening system prioritizing uniqueness, performance, and extensibility. It utilizes a multi-layered architecture with asynchronous processing and caching to handle high request volumes. The system will consist of a client-side web application (React), a server-side API (Python/Django), a database (PostgreSQL), a caching system (Redis), and an asynchronous message queue (RabbitMQ).
+The goal remains to create a robust, scalable system that takes a long URL and generates a shorter, manageable URL for sharing. This system prioritizes efficiency, collision avoidance, and scalability, while also being easily maintainable.  The system should handle potential collisions gracefully and provide a foundation for future features like analytics.
 
-**II. Core Functionality & Requirements (Expanded)**
+**II. Key Components (Same as Initial Design, with Enhancements)**
 
-*   **Shortening:** Take a long URL and generate a shorter, unique URL.
-*   **Redirection:** Automatically redirect users to the original URL.
-*   **Uniqueness:**  Crucial; ensure no short URL conflicts.
-*   **Scalability:** Handle a large number of URLs and requests.
-*   **Analytics:** Track clicks to measure URL popularity.
-*   **Custom Short URLs:** Allow users to specify prefixes (e.g., `myurl.com/xyz`).
-*   **Rate Limiting:** Limit requests per IP address/user to mitigate abuse.
-*   **URL Expiration/Purging:** Implement expiration and manual deletion.
-*   **Redirection TTL:** Configure TTL for redirects.
+*   **Input Handler (API Endpoint - `/shorten`)**: POST method, receives long URL in JSON. Response: Short URL in JSON.
+*   **Short URL Generator**: Core component – responsible for creating short URLs.
+*   **Database**: Stores mapping between short URLs and long URLs. (PostgreSQL recommended for reliability and indexing).
+*   **Redirect Service**: Handles redirection from short URL to long URL.
+*   **Caching Service**: (Redis) – Caches frequently accessed short URLs for performance.
+*   **Analytics Service**: Tracks click-through rates (initial implementation deferred, with Kafka integration planned for future scalability).
+*   **Rate Limiting Service**: Enforces limits on requests to prevent abuse and ensure stability.
 
-**III. Architecture & Components (Detailed)**
+**III. Detailed Design (Revised & Expanded)**
 
-*   **Presentation Tier:**  React web application.
-*   **Application Tier:**
-    *   **API Gateway:**  Handles routing, authentication, rate limiting, caching.
-    *   **Short URL Generation Service:** Hashing (SHA-256) + Base62 encoding, collision resolution.
-    *   **Redirection Service:** Fetches URL, manages TTL.
-    *   **Analytics Service:** Captures click data.
-    *   **Custom URL Service:** Manages user prefixes & authentication.
-    *   **URL Management Service:** Handles expiration/purging.
-*   **Data Tier:**
-    *   **PostgreSQL (Sharded):**  URL mappings, user data, metadata.
-    *   **Redis:**  Caching (Write-Through, TTL).
-    *   **RabbitMQ:** Asynchronous tasks (analytics, expiration).
-    *   **S3:**  Storage for analytics data.
+**A. Input Handler (API Endpoint)**
 
-**IV. Technology Choices (Refined)**
+*   **Method:** POST
+*   **Request Body:** JSON { “long_url”: “...” }
+*   **Response:** JSON { “short_url”: “...” }
+*   **Validation:** Strict validation of long URL format. Max length: 33 characters.  Consider adding validation for URL scheme (http/https).
 
-*   **Languages:** Python (Django/Flask), JavaScript (React)
-*   **Database:** PostgreSQL (Sharded)
-*   **Caching:** Redis
-*   **Message Queue:** RabbitMQ
-*   **Web Server:** Nginx
-*   **CDN:** Cloudflare/AWS CloudFront
-*   **Containerization:** Docker
-*   **Orchestration:** Kubernetes
+**B. Short URL Generator – Enhanced (With Key Improvements)**
 
-**V. Short URL Generation Strategies (Detailed & Robust)**
+*   **Algorithm:** SHA-256 Hashing – Provides a high level of collision resistance.
+*   **Process:**
+    1.  Hash the long URL using SHA-256.
+    2.  Base62 Encode the Hash.
+    3.  **Collision Handling:**
+        *   **Retry with Random Suffix:** If the database check fails (indicating a collision), generate a new hash, Base62 encode, and append a random alphanumeric suffix (4-8 characters).  Limit retry attempts to 3.
+        *   **Fallback:** If all attempts fail after 3 retries, generate a completely unique short URL (e.g., sequential numbering + random characters).
+    4.  Truncate if necessary to meet the 33-character limit.
+*   **Concurrency:**  **Queuing Mechanism (Redis Queue):** Implement a queuing mechanism (using Redis Queue) over a single global lock. This significantly reduces contention and improves concurrency.  The queue will hold short URL generation requests until a slot is available.
 
-*   **Base62 + SHA-256:** Core algorithm.
-*   **Collision Handling:** Sequential counter + retry logic (exponential backoff). UUID backup (for extreme volume).
-*   **Monitoring:** Track collision rates to inform scaling decisions.
+**C. Database (PostgreSQL) – Schema Refinement**
 
-**VI. Database Design (PostgreSQL - Detailed)**
+*   **Table: `short_urls`**
+    *   `id` (BIGINT, PRIMARY KEY, SERIAL) – Unique ID.
+    *   `short_url` (VARCHAR(33), UNIQUE, INDEX) – The generated short URL.
+    *   `long_url` (TEXT, NOT NULL) – The original long URL.
+    *   `created_at` (TIMESTAMP WITH TIME ZONE) – Creation timestamp.
+    *   `clicks` (BIGINT, DEFAULT 0) – Click count.
+    *   `expiration_date` (TIMESTAMP WITH TIME ZONE, NULLABLE) – Optional expiry date for short URL. Handles NULL values.
+    *   `collision_attempts` (SMALLINT, DEFAULT 0) – Tracks the number of collision attempts for a given short URL.  This information can be used for debugging and potential future improvements.
 
-*   **`short_urls` Table:** `id`, `short_url`, `long_url`, `created_at`, `expiration_date` (nullable), `click_count`
-*   **`users` Table:** (if user accounts are implemented) `id`, `username`, `password`, `prefix_count`
-*   **`prefixes` Table:** `id`, `prefix`, `user_id`
+*   **Indexing:** Add indexes to `short_url`, `long_url`, and `created_at` columns in the database.  Consider a composite index on `short_url` and `clicks` for faster analytics queries.
 
-**VII.  Issues & Refinement Questions (Detailed – Based on Input 2)**
+**D. Redirect Service & Caching (Redis)**
 
-*   **Rate Limiting Granularity:**  *Critical Question:* Should rate limiting be per IP address, user account, or a combination? (Significant impact on complexity).  Consider tiered rate limits based on usage.
-*   **Custom URL Prefix Conflicts:** *Requires Policy:* What resolution strategy should be used when collisions occur for custom prefixes? (First-Come-First-Served, Random, Dedicated Namespace?). Implement a system for resolving conflicts.
-*   **URL Expiration:** *Nuanced Approach:* Fixed duration? Click-based? Manual trigger? Removal vs. Flagging?  Consider a tiered expiration system (e.g., short-term for temporary promotions, long-term for permanent links).
-*   **Redirection TTL:** *Performance Optimization:* Dynamic adjustment based on traffic/popularity? (Requires sophisticated monitoring and potentially machine learning).
-*   **Analytics Data:** *Schema Design & Volume:* Specific fields (User
+*   **Redirect Service:** Retrieves short URL from database. Performs HTTP 301 (Permanent Redirect) to the corresponding long URL.
+*   **Caching:** Redis – Caches short URLs and their long URLs based on the short URL key. Cache expiration: 60 seconds.  Implement a Least Recently Used (LRU) eviction policy to optimize cache space.
+
+**E. Rate Limiting Service**
+
+*   **Algorithm:** Token Bucket – Allows a certain number of "tokens" to accumulate

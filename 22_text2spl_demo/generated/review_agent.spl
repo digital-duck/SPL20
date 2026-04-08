@@ -2,105 +2,27 @@ WORKFLOW refine_text
   INPUT @draft TEXT
   OUTPUT @final TEXT
 DO
-  DO
-    GENERATE summarize(@draft) INTO @summary;
-    IF @summary > 0.8 THEN
-      COMMIT @draft;
-      BREAK;
+  @quality := 0.0;
+  @current := @draft;
+  WHILE @quality < 0.8 DO
+    GENERATE rewrite(@current, style='improved') INTO @temp;
+    GENERATE sentiment(@temp) INTO @new_quality;
+    IF @new_quality > @quality THEN
+      @quality := @new_quality;
+      @current := @temp;
     END;
-    GENERATE rewrite(@draft, style='improved') INTO @draft;
-    GENERATE sentiment(@draft) INTO @quality;
-    IF @quality < 0.8 THEN
-      GENERATE classify(@draft) INTO @label;
-      IF @label = 'low_quality' THEN
-        COMMIT @draft;
-        BREAK;
-      END;
-      GENERATE refine(@draft, @summary) INTO @draft;
-    ELSE
-      COMMIT @draft;
-      BREAK;
-    END;
-  EXCEPTION
-    WHEN HallucinationDetected THEN
-      @draft := 'unknown';
-      COMMIT @draft;
-      BREAK;
-    WHEN ModelOverloaded THEN
-      RETRY;
   END;
-END;
+  @final := @current;
+  COMMIT @final;
 
-CREATE FUNCTION summarize(input TEXT)
-RETURNS NUMBER AS $$
-  sum([token] for token in split(input, ' '))
-$$;
-
-CREATE FUNCTION rewrite(input TEXT, style TEXT)
+CREATE FUNCTION rewrite(text TEXT, style TEXT)
 RETURNS TEXT AS $$
-  replace(input, 'bad_word', 'good_word')
-$$;
-
-CREATE FUNCTION sentiment(input TEXT)
-RETURNS NUMBER AS $$
-  (sum([score] for score in [sentiment_score(token) for token in split(input, ' ')])) / count([token] for token in split(input, ' '))
-$$;
-
-CREATE FUNCTION classify(input TEXT)
-RETURNS TEXT AS $$
-  if ([score] > 0.5) then 'high_quality' else 'low_quality'
-$$;
-
-CREATE FUNCTION refine(input TEXT, summary TEXT)
-RETURNS TEXT AS $$
-  replace(input, 'bad_word', 'good_word')
-$$;
-
-CREATE PROCEDURE IF (condition, THEN statement, ELSE statement);
- 
-WORKFLOW refine_text
-  INPUT @draft TEXT
-  OUTPUT @final TEXT
-DO
-  DO
-    GENERATE summarize(@draft) INTO @summary;
-    CREATE PROCEDURE IF (@summary > 0.8, THEN COMMIT @draft; BREAK; ELSE GENERATE rewrite(@draft, style='improved') INTO @draft);
-    GENERATE sentiment(@draft) INTO @quality;
-    CREATE PROCEDURE IF (@quality < 0.8, THEN
-      GENERATE classify(@draft) INTO @label;
-      CREATE PROCEDURE IF (@label = 'low_quality', THEN COMMIT @draft; BREAK; ELSE GENERATE refine(@draft, @summary) INTO @draft);
-    ELSE COMMIT @draft; BREAK);
-  EXCEPTION
-    WHEN HallucinationDetected THEN
-      @draft := 'unknown';
-      COMMIT @draft;
-      BREAK;
-    WHEN ModelOverloaded THEN
-      RETRY;
+  CASE style
+    WHEN 'improved' THEN text || '.'
+    ELSE text
   END;
-END;
-
-CREATE FUNCTION summarize(input TEXT)
-RETURNS NUMBER AS $$
-  sum([token] for token in split(input, ' '))
 $$;
 
-CREATE FUNCTION rewrite(input TEXT, style TEXT)
-RETURNS TEXT AS $$
-  replace(input, 'bad_word', 'good_word')
-$$;
-
-CREATE FUNCTION sentiment(input TEXT)
-RETURNS NUMBER AS $$
-  (sum([score] for score in [sentiment_score(token) for token in split(input, ' ')])) / count([token] for token in split(input, ' '))
-$$;
-
-CREATE FUNCTION classify(input TEXT)
-RETURNS TEXT AS $$
-  if ([score] > 0.5) then 'high_quality' else 'low_quality'
-$$;
-
-CREATE FUNCTION refine(input TEXT, summary TEXT)
-RETURNS TEXT AS $$
-  replace(input, 'bad_word', 'good_word')
-$$;
+CREATE FUNCTION sentiment(text TEXT) RETURNS NUMBER AS $$
+  CAST(SPLIT(text, ' ')[1] AS NUMBER);
+$$

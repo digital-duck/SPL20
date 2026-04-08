@@ -2,9 +2,11 @@
 {
   "risk_level": "low",
   "flags": [
-    "Sanctions",
-    "AML"
+    "Sanctions (Potential for unknowingly facilitating transactions with sanctioned entities if KYC/CDD processes are not robustly applied to lending activities)",
+    "AML (Increased scrutiny of lending activity as part of broader inflation control measures could expose vulnerabilities in AML controls)",
+    "Market Manipulation (While unlikely, a significant shift in lending margins could be investigated for potential manipulation)",
+    "AI Ethics (No immediate ethical concerns related to AI, but the central bank's data analysis informing rate decisions warrants ongoing monitoring for bias)"
   ],
-  "summary": "While the news focuses on monetary policy, a minor risk exists regarding potential inadvertent sanctions exposure due to lending margin stability, and a general AML risk associated with any lending activity."
+  "summary": "The central bank's rate hike presents a low regulatory risk primarily focused on ensuring robust sanctions, AML, and market monitoring procedures are in place."
 }
 ```

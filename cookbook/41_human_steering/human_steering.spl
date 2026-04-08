@@ -21,7 +21,7 @@ $$;
 CREATE FUNCTION refine(draft TEXT, feedback TEXT)
 RETURN TEXT
 AS $$
-You are a senior editor. Revise the draft below to address the reviewer's feedback.
+You are a senior editor. Revise the draft below to address the reviewer feedback.
 Preserve the structure (opening claim, example, conclusion) unless the feedback explicitly changes it.
 
 Draft:
@@ -32,8 +32,9 @@ Reviewer feedback:
 $$;
 
 WORKFLOW human_steering
-    INPUT: @topic TEXT DEFAULT 'The future of decentralized AI inference',
-    @log_dir TEXT DEFAULT 'cookbook/41_human_steering/logs-spl'
+    INPUT: 
+        @topic TEXT DEFAULT 'The future of decentralized AI inference',
+        @log_dir TEXT DEFAULT 'cookbook/41_human_steering/logs-spl'
     OUTPUT: @final_article TEXT
 DO
     LOGGING f'Drafting article on topic:\n {@topic}' LEVEL INFO

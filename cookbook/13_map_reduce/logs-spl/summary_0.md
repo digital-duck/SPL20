@@ -1,1 +1,1 @@
-This document is a test for map-reduce summarization, specifically using the sentence "The quick brown fox jumps over the lazy dog." The output is simply "0".
+This document is a test for map-reduce summarization, specifically using the sentence "The quick brown fox jumps over the lazy dog." The second input, "0," appears to be a placeholder or a result of the summarization process.

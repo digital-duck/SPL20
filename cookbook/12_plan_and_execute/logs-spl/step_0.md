@@ -1,5 +1,3 @@
-This step establishes the core structure for our API, detailing the URLs for accessing todo items and the precise JSON format used to represent each todo. It ensures consistency and facilitates communication between the backend and any frontend applications.
+This step results in a documented API design outlining the core endpoints and corresponding JSON data models for managing todos. It establishes the structure for communication between the frontend and backend.
 
-**Filenames Created:**
-
-*   `api_design.md` (Document outlining the endpoints and data models)
+**Filenames:** `api_design.md`

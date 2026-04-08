@@ -12,7 +12,7 @@ spl run cookbook/01_hello_world/hello.spl
 spl run cookbook/01_hello_world/hello.spl --adapter ollama
 
 # Specific model
-spl run cookbook/01_hello_world/hello.spl --adapter ollama -m gemma3
+spl run cookbook/01_hello_world/hello.spl --adapter ollama -m llama3.2 # gemma3
 
 # Claude Code CLI
 spl run cookbook/01_hello_world/hello.spl --adapter claude_cli

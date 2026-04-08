@@ -5,11 +5,11 @@ Ready-to-run recipes demonstrating SPL 2.0 capabilities. Each recipe is self-con
 ## Prerequisites
 
 ```bash
-conda create -n spl python=3.11
-conda activate spl
+conda create -n spl2 python=3.11
+conda activate spl2
 
 pip install -e ".[dev]"          # install spl
-pip install httpx                # for ollama/openrouter/momagrid adapters
+# pip install httpx                # for ollama/openrouter/momagrid adapters
 
 ollama pull gemma3               # at least one model
 ollama serve                     # start ollama (if not running)

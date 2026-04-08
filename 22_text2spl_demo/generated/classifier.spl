@@ -1,23 +1,11 @@
-WORKFLOW classify_intent
-  INPUT @text TEXT
-  OUTPUT @label TEXT
-  INPUT @models TEXT
-  OUTPUT @selected_model TEXT
-DO
-  GENERATE extract_entities(@text) INTO @entities;
-  GENERATE classify_entities(@entities, @models) INTO @intent;
-  @selected_model := @models[SELECT * FROM entities WHERE label = @intent];
-  COMMIT @selected_model;
-END;
-
-CREATE FUNCTION classify_entities(entities TEXT, models TEXT)
-RETURNS TEXT AS $$
-  SELECT model
-  FROM entities
-  WHERE label IN (SELECT label FROM models)
-$$;
-
-CREATE FUNCTION extract_entities(text TEXT)
-RETURNS TEXT AS $$
-  summarize(text) WITH OUTPUT BUDGET 100 TOKENS;
-$$;
+PROMPT classify_intent
+SELECT @user_input AS input
+GENERATE extract_entities(input) INTO @entities
+GENERATE classify_entities(@entities)
+IF @intent = 'booking' THEN
+  CALL book_handler(@input, @summary)
+ELSE IF @intent = 'payment' THEN
+  CALL payment_handler(@input, @summary)
+ELSE
+  CALL unknown_handler(@input, @summary)
+END

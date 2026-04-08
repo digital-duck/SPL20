@@ -1,5 +1,3 @@
-This step defines the API’s blueprint by specifying the URLs for accessing todo items (e.g., `/todos`) and their corresponding JSON data models, including fields like ID, title, description, and completion status.  It ensures a standardized format for all requests and responses, simplifying integration with client applications.  The primary output is a design document outlining these choices.
+This step defines the blueprint for our API, specifying the URLs (endpoints) and the JSON structure for representing todo items. It ensures a consistent and predictable way for the frontend to interact with the backend data. The primary output is a documented design in `api_design.md`.
 
-**Filenames Created:**
-
-*   `api_design.md`
+**Filenames:** `api_design.md`

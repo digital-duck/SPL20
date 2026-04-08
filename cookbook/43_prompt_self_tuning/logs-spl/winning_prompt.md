@@ -1,1 +1,1 @@
-Summarize this technical document, focusing on the core algorithm and its key steps, explaining the algorithm’s purpose and potential applications in layman’s terms.
+Summarize this technical document, focusing on the core algorithm, its key steps, and its intended purpose, aiming for a summary accessible to someone with a foundational understanding of computer science but not necessarily expertise in quantum physics.

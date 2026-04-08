@@ -9,8 +9,8 @@ General-purpose LLM query — use any Ollama model from the command line with a 
 
 ```bash
 spl run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
-spl run scripts/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
-spl run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="What is 2+2?"
+spl run scripts/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="What is 10!"
+spl run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="What is 10! ?"
 
 export MOMAGRID_HUB_URL=http://192.168.0.235:9000
 spl run scripts/ollama_proxy.spl --adapter momagrid -m gemma3 prompt="What is 10!"
