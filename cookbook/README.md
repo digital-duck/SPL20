@@ -162,6 +162,110 @@ With 20 slots and 10 workers the SILVER node starts filling in much sooner.
 
 Hub: `http://192.168.0.235:9000` (duck machine, PostgreSQL backend)
 
+---
+
+### Hub-to-Hub Peering over the Internet (Pinggy)
+
+By default a Momagrid hub is only reachable inside its LAN.
+[Pinggy](https://pinggy.io) creates a temporary public HTTPS tunnel to a local port — no account required, no binary to install — so two users on different LANs can test hub-to-hub peering without opening firewall ports.
+
+**Scenario:** Bob and Alice each run their own LAN Momagrid hub and want to peer the two grids.
+
+#### Step 1 — Start the local hub
+
+Both Bob and Alice must have their hub running before opening the tunnel:
+
+```bash
+mg hub up
+```
+
+#### Step 2 — Each user opens a Pinggy tunnel
+
+Bob (hub on port 9000):
+```bash
+ssh -p 443 -R0:localhost:9000 a.pinggy.io
+```
+
+Alice (same command):
+```bash
+ssh -p 443 -R0:localhost:9000 a.pinggy.io
+```
+
+Each session prints a public URL in the terminal, e.g.:
+```
+https://qgzqm-99-111-153-200.run.pinggy-free.link
+```
+
+Bob and Alice exchange their URLs (chat, Slack, etc.).
+
+#### Step 3 — Point the SPL client at the Pinggy URL
+
+To submit recipes through the tunnel rather than the LAN IP, set `MOMAGRID_HUB_URL` to your own Pinggy URL:
+
+```bash
+# Bob
+export MOMAGRID_HUB_URL=https://qgzqm-99-111-153-200.run.pinggy-free.link
+
+# Alice
+export MOMAGRID_HUB_URL=https://abcde-11-22-33-44.run.pinggy-free.link
+```
+
+Quick smoke test — does the hub respond over the tunnel?
+
+```bash
+curl $MOMAGRID_HUB_URL/health
+```
+
+#### Step 4 — Register the peer hub
+
+Bob registers Alice's public URL:
+```bash
+mg peer add https://abcde-11-22-33-44.run.pinggy-free.link
+```
+
+Alice registers Bob's:
+```bash
+mg peer add https://qgzqm-99-111-153-200.run.pinggy-free.link
+```
+
+Verify both sides see each other:
+```bash
+mg peer list
+```
+
+Expected output (Bob's side):
+```
+This hub: <bob-hub-id>
+  <alice-hub-id>  https://abcde-11-22-33-44.run.pinggy-free.link  [online]
+```
+
+#### Step 5 — Run a recipe across the peered grids
+
+Bob submits recipes to his hub; the hub forwards overflow to Alice's:
+```bash
+python cookbook/run_all.py --adapter momagrid --ids "01-05" --workers 4
+```
+
+Or target a single recipe:
+```bash
+spl run cookbook/47_arxiv_morning_brief/arxiv_morning_brief.spl \
+    --adapter momagrid \
+    --param urls='["https://arxiv.org/pdf/2501.12948"]'
+```
+
+Alice does the same against her own `MOMAGRID_HUB_URL`.
+
+#### Notes
+
+| Topic | Detail |
+|---|---|
+| Tunnel lifetime | Free Pinggy tunnels stay open as long as the `ssh` session is alive; close the terminal to tear it down |
+| Port | Change `-R0:localhost:9000` if your hub uses a different port |
+| Keepalive | Add `-o "ServerAliveInterval 30"` to prevent idle disconnects |
+| Persistent URL | A paid Pinggy account gives a fixed subdomain — useful if you want a stable peer URL across sessions |
+
+---
+
 ### Browse recipes
 
 ```bash

@@ -1,6 +1,7 @@
 """Shared fixtures for arXiv Morning Brief (SPL 2.0) tests."""
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -33,3 +34,14 @@ def sample_pdf(tmp_path_factory) -> Path:
     with open(pdf_path, "wb") as fh:
         writer.write(fh)
     return pdf_path
+
+
+@pytest.fixture(scope="session")
+def sample_chunks_json() -> str:
+    """Known structured chunk output for use in workflow dry-run mocks."""
+    chunks = [
+        {"title": "ABSTRACT",        "text": "We propose a novel method.",    "page": 1},
+        {"title": "1. INTRODUCTION", "text": "This is the introduction.",      "page": 2},
+        {"title": "2. METHODS",      "text": "We use the following approach.", "page": 3},
+    ]
+    return json.dumps(chunks)
