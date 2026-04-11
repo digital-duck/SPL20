@@ -1543,6 +1543,57 @@ cat ~/.spl/logs/hello-ollama-20260318-143022.log
 grep "ERROR" ~/.spl/logs/*.log
 ```
 
+### Prompt Logging (`--log-prompts`)
+
+The `--log-prompts DIR` flag writes every fully-assembled prompt to a separate Markdown file before the LLM call is made. This is useful when you want to copy a prompt verbatim into a web UI (AI Studio, HuggingFace Chat, ChatGPT, etc.) to compare results against the API, or when you need to audit exactly what was sent to the model.
+
+#### Quick inline check (terminal)
+
+Prompts are emitted at `DEBUG` level, interleaved with other log output:
+
+```bash
+spl run examples/self_refine.spl --verbose \
+    task="What are the benefits of meditation?"
+```
+
+#### One file per GENERATE call
+
+```bash
+spl run examples/self_refine.spl \
+    --log-prompts /tmp/spl-prompts \
+    task="What are the benefits of meditation?"
+```
+
+Files are written to the directory you specify, one per `GENERATE` call, numbered globally across the run:
+
+```
+/tmp/spl-prompts/
+├── draft_001.md        ← initial draft prompt
+├── critique_002.md     ← first critique prompt
+├── refined_003.md      ← first refine prompt
+├── critique_004.md
+└── ...
+```
+
+Each file contains YAML front-matter with the call metadata, then the raw prompt body after a `---` fence — everything below the fence can be pasted directly into any chat UI:
+
+```markdown
+# Prompt: refined [call 003]
+
+- model: `gemma3`
+- max_tokens: 2000
+- temperature: 0.7
+
+---
+
+You are a seasoned writer. Rewrite the draft below incorporating
+the critique provided …
+```
+
+#### Why this is useful for web-UI comparison
+
+API calls and web UIs can return different responses for the same prompt (system prompt injection, safety layers, model version differences). `--log-prompts` gives you the exact bytes sent via the API so you can reproduce the call in a web UI and compare without guessing what the prompt was.
+
 ---
 
 ## 17. Project Structure

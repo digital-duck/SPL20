@@ -242,11 +242,80 @@ class Executor:
         self.max_total_tokens = max_total_tokens
         self.default_max_tokens = default_max_tokens
         self.default_model = default_model
+        # Prompt logging — set prompt_log_dir externally (e.g. via CLI --log-prompts)
+        # to write each assembled prompt to a numbered .md file before LLM dispatch.
+        self.prompt_log_dir: str | None = None
+        self._prompt_counter: int = 0
 
     def register_tool(self, name: str, fn) -> "Executor":
         """Register a Python callable as a CALL-able tool. Returns self for chaining."""
         self.functions.register_tool(name, fn)
         return self
+
+    def _log_prompt(
+        self,
+        fn_name: str,
+        model: str,
+        prompt: str,
+        max_tokens: int | str,
+        temperature: float,
+    ) -> None:
+        """Log the fully-assembled prompt before it is sent to the adapter.
+
+        Two output modes (both can be active simultaneously):
+
+        1. DEBUG log — always emitted; visible with ``--verbose`` / ``-v``.
+           Shows the prompt inline in the terminal so it can be read alongside
+           the model response without leaving the shell.
+
+        2. File dump — active when ``self.prompt_log_dir`` is set (e.g. via the
+           ``--log-prompts DIR`` CLI flag).  Each GENERATE call writes one file:
+
+               <DIR>/<fn_name>_<NNN>.md
+
+           The file is formatted so the prompt body can be copied directly into
+           the Google AI Studio, HuggingFace Chat, or any other playground that
+           accepts raw text — the YAML-ish header section is separated from the
+           prompt body by a ``---`` fence.
+
+        File format example::
+
+            # Prompt: refined [call 002]
+
+            - model: `gemma3`
+            - max_tokens: 2000
+            - temperature: 0.7
+
+            ---
+
+            You are a seasoned writer ...
+        """
+        _RULE = "─" * 60
+        _log.debug(
+            "PROMPT [%s] model=%s max_tokens=%s temp=%.1f\n%s\n%s\n%s",
+            fn_name, model or "default", max_tokens, temperature,
+            _RULE, prompt, _RULE,
+        )
+
+        if not self.prompt_log_dir:
+            return
+
+        from pathlib import Path
+
+        self._prompt_counter += 1
+        log_dir = Path(self.prompt_log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        fname = log_dir / f"{fn_name}_{self._prompt_counter:03d}.md"
+        header = (
+            f"# Prompt: {fn_name} [call {self._prompt_counter:03d}]\n\n"
+            f"- model: `{model or 'default'}`\n"
+            f"- max_tokens: {max_tokens}\n"
+            f"- temperature: {temperature}\n\n"
+            f"---\n\n"
+        )
+        fname.write_text(header + prompt, encoding="utf-8")
+        _log.info("PROMPT LOG → %s", fname)
 
     def _check_budget(self, state: WorkflowState) -> None:
         """Raise BudgetExceeded if this workflow has hit the configured safety caps.
@@ -707,6 +776,8 @@ class Executor:
                 model = state.get_var(model[1:])
 
         _log.info("CTE GENERATE %s (model=%s)", gen.function_name, model or "default")
+        self._log_prompt(gen.function_name, model, prompt_text,
+                         gen.output_budget or 1000, gen.temperature or 0.7)
         self._check_budget(state)
         gen_result = await self.adapter.generate(
             prompt=prompt_text,
@@ -758,6 +829,7 @@ class Executor:
         max_tokens = int(budget) if budget else self.default_max_tokens
 
         gen_function_name = gen.function_name
+        self._log_prompt(gen_function_name, model, prompt, max_tokens, gen.temperature or 0.7)
         self._check_budget(state)
         gen_result = await self.adapter.generate(
             prompt=prompt,
