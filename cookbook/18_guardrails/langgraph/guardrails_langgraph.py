@@ -9,7 +9,7 @@ Usage:
         --user-input "My SSN is 123-45-6789, help me file taxes"
 """
 
-import argparse
+import click
 import json
 import re
 from pathlib import Path
@@ -208,20 +208,18 @@ def build_graph():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Guardrails Pipeline — LangGraph edition")
-    p.add_argument("--user-input", required=True)
-    p.add_argument("--model",      default="gemma3")
-    p.add_argument("--log-dir",    default="cookbook/18_guardrails/langgraph/logs-langgraph")
-    args = p.parse_args()
-
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+@click.command()
+@click.option("--user-input", required=True,    help="User message to process")
+@click.option("--model",      default="gemma3", show_default=True)
+@click.option("--log-dir",    default="cookbook/18_guardrails/langgraph/logs-langgraph", show_default=True)
+def main(user_input: str, model: str, log_dir: str):
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     result = build_graph().invoke({
-        "user_input":    args.user_input,
+        "user_input":    user_input,
         "clean_input":   "",
-        "model":         args.model,
-        "log_dir":       args.log_dir,
+        "model":         model,
+        "log_dir":       log_dir,
         "keyword_class": "",
         "input_class":   "",
         "pii_report":    "",

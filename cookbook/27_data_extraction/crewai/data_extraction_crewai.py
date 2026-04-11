@@ -10,7 +10,7 @@ Usage:
         --text "Please process payment of USD 4,250.00 to Riverside Consulting (ref: PO-8821) by end of March."
 """
 
-import argparse
+import click
 import json
 from pathlib import Path
 
@@ -112,15 +112,14 @@ def run(text: str, format_name: str, model: str, log_dir: str) -> dict:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Data Extraction — CrewAI edition")
-    p.add_argument("--text",   required=True)
-    p.add_argument("--format", default="general", choices=["general", "invoice", "contract"])
-    p.add_argument("--model",  default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/27_data_extraction/crewai/logs-crewai")
-    args = p.parse_args()
-
-    result = run(args.text, args.format, args.model, args.log_dir)
+@click.command()
+@click.option("--text",    required=True, help="Text to extract structured data from")
+@click.option("--format",  default="general", show_default=True,
+              type=click.Choice(["general", "invoice", "contract"]))
+@click.option("--model",   default="gemma3", show_default=True)
+@click.option("--log-dir", default="cookbook/27_data_extraction/crewai/logs-crewai", show_default=True)
+def main(text: str, format: str, model: str, log_dir: str):
+    result = run(text, format, model, log_dir)
     print("\n" + "=" * 60)
     print("EXTRACTED DATA:")
     print(json.dumps(result, indent=2))

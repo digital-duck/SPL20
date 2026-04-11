@@ -10,7 +10,7 @@ Usage:
         --ticket "My account has been charged twice for order #ORD-12345"
 """
 
-import argparse
+import click
 import json
 import re
 from pathlib import Path
@@ -184,16 +184,14 @@ def run(ticket: str, product: str, tone: str, model: str, log_dir: str) -> str:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Support Triage — CrewAI edition")
-    p.add_argument("--ticket",  required=True)
-    p.add_argument("--product", default="CloudDash")
-    p.add_argument("--tone",    default="professional")
-    p.add_argument("--model",   default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/28_support_triage/crewai/logs-crewai")
-    args = p.parse_args()
-
-    result = run(args.ticket, args.product, args.tone, args.model, args.log_dir)
+@click.command()
+@click.option("--ticket",  required=True,       help="Support ticket text")
+@click.option("--product", default="CloudDash", show_default=True)
+@click.option("--tone",    default="professional", show_default=True)
+@click.option("--model",   default="gemma3",    show_default=True)
+@click.option("--log-dir", default="cookbook/28_support_triage/crewai/logs-crewai", show_default=True)
+def main(ticket: str, product: str, tone: str, model: str, log_dir: str):
+    result = run(ticket, product, tone, model, log_dir)
     print("\n" + "=" * 60)
     print(result)
 

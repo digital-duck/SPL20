@@ -9,7 +9,7 @@ Usage:
         --items "Great product! | Terrible experience" --delimiter "|"
 """
 
-import argparse
+import click
 import json
 import math
 import os
@@ -237,25 +237,23 @@ def build_graph():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Sentiment Pipeline — LangGraph edition")
-    p.add_argument("--filename",  default="")
-    p.add_argument("--items",     default="")
-    p.add_argument("--delimiter", default="\\n")
-    p.add_argument("--domain",    default="general")
-    p.add_argument("--model",     default="gemma3")
-    p.add_argument("--log-dir",   default="cookbook/31_sentiment_pipeline/langgraph/logs-langgraph")
-    args = p.parse_args()
-
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+@click.command()
+@click.option("--filename",  default="",        show_default=True, help="File with items (one per line)")
+@click.option("--items",     default="",        show_default=True, help="Inline items (use --delimiter to split)")
+@click.option("--delimiter", default="\\n",     show_default=True)
+@click.option("--domain",    default="general", show_default=True)
+@click.option("--model",     default="gemma3",  show_default=True)
+@click.option("--log-dir",   default="cookbook/31_sentiment_pipeline/langgraph/logs-langgraph", show_default=True)
+def main(filename: str, items: str, delimiter: str, domain: str, model: str, log_dir: str):
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     result = build_graph().invoke({
-        "filename":      args.filename,
-        "items_raw":     args.items,
-        "delimiter":     args.delimiter,
-        "domain":        args.domain,
-        "model":         args.model,
-        "log_dir":       args.log_dir,
+        "filename":      filename,
+        "items_raw":     items,
+        "delimiter":     delimiter,
+        "domain":        domain,
+        "model":         model,
+        "log_dir":       log_dir,
         "item_list":     [],
         "results":       [],
         "stats":         {},

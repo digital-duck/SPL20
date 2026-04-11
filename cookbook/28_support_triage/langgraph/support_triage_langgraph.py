@@ -9,7 +9,7 @@ Usage:
         --ticket "My account has been charged twice for order #ORD-12345"
 """
 
-import argparse
+import click
 import json
 import re
 from pathlib import Path
@@ -311,23 +311,21 @@ def build_graph():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Support Triage — LangGraph edition")
-    p.add_argument("--ticket",  required=True)
-    p.add_argument("--product", default="CloudDash")
-    p.add_argument("--tone",    default="professional")
-    p.add_argument("--model",   default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/28_support_triage/langgraph/logs-langgraph")
-    args = p.parse_args()
-
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+@click.command()
+@click.option("--ticket",  required=True,       help="Support ticket text")
+@click.option("--product", default="CloudDash", show_default=True)
+@click.option("--tone",    default="professional", show_default=True)
+@click.option("--model",   default="gemma3",    show_default=True)
+@click.option("--log-dir", default="cookbook/28_support_triage/langgraph/logs-langgraph", show_default=True)
+def main(ticket: str, product: str, tone: str, model: str, log_dir: str):
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     result = build_graph().invoke({
-        "ticket":         args.ticket,
-        "product":        args.product,
-        "tone":           args.tone,
-        "model":          args.model,
-        "log_dir":        args.log_dir,
+        "ticket":         ticket,
+        "product":        product,
+        "tone":           tone,
+        "model":          model,
+        "log_dir":        log_dir,
         "order_numbers":  "",
         "order_context":  "",
         "classification": {},

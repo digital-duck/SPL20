@@ -9,7 +9,7 @@ Usage:
         --problem "Design a sustainable urban transport system."
 """
 
-import argparse
+import click
 import re
 from pathlib import Path
 from typing import TypedDict, List, Dict
@@ -208,20 +208,18 @@ def build_graph():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Tree of Thought — LangGraph edition")
-    p.add_argument("--problem",   default="Design a sustainable urban transport system.")
-    p.add_argument("--models",    nargs="+", default=["gemma3", "phi4", "qwen2.5"])
-    p.add_argument("--log-dir",   default="cookbook/17_tree_of_thought/langgraph/logs-langgraph")
-    args = p.parse_args()
-
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+@click.command()
+@click.option("--problem", default="Design a sustainable urban transport system.", show_default=True)
+@click.option("--models",  multiple=True, default=["gemma3", "phi4", "qwen2.5"], show_default=True)
+@click.option("--log-dir", default="cookbook/17_tree_of_thought/langgraph/logs-langgraph", show_default=True)
+def main(problem: str, models: tuple, log_dir: str):
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     result = build_graph().invoke({
-        "problem":           args.problem,
-        "models":            args.models,
+        "problem":           problem,
+        "models":            list(models),
         "current_model_idx": 0,
-        "log_dir":           args.log_dir,
+        "log_dir":           log_dir,
         "results":           {},
         "best_path":         "",
         "solution":          "",

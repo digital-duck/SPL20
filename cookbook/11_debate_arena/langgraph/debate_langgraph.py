@@ -8,7 +8,7 @@ Usage:
     python cookbook/11_debate_arena/langgraph/debate_langgraph.py --topic "AI should be open-sourced"
 """
 
-import argparse
+import click
 from pathlib import Path
 from typing import TypedDict, Annotated
 import operator
@@ -169,22 +169,19 @@ def build_graph():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Debate Arena — LangGraph edition")
-    p.add_argument("--topic",      required=True)
-    p.add_argument("--max-rounds", type=int, default=3)
-    p.add_argument("--model",      default="gemma3")
-    p.add_argument("--log-dir",    default="cookbook/11_debate_arena/langgraph/logs-langgraph")
-    args = p.parse_args()
-
-    # Create log dir if it doesn't exist
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+@click.command()
+@click.option("--topic",      required=True,    help="Debate topic")
+@click.option("--max-rounds", default=3,        show_default=True, type=int)
+@click.option("--model",      default="gemma3", show_default=True)
+@click.option("--log-dir",    default="cookbook/11_debate_arena/langgraph/logs-langgraph", show_default=True)
+def main(topic: str, max_rounds: int, model: str, log_dir: str):
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     result = build_graph().invoke({
-        "topic":       args.topic,
-        "max_rounds":  args.max_rounds,
-        "model":       args.model,
-        "log_dir":     args.log_dir,
+        "topic":       topic,
+        "max_rounds":  max_rounds,
+        "model":       model,
+        "log_dir":     log_dir,
         "pro_history": "",
         "con_history": "",
         "last_arg":    "",

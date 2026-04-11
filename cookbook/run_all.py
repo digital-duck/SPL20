@@ -44,7 +44,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
-import argparse
+import click
 
 COOKBOOK_DIR = Path(__file__).resolve().parent
 
@@ -277,38 +277,40 @@ def print_summary(results: list[dict], start_all: datetime) -> None:
     print()
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="SPL 2.0 Cookbook batch runner")
-    parser.add_argument("--adapter", "-a", default="ollama", help="Override LLM adapter for all recipes (e.g. ollama, momagrid)")
-    parser.add_argument("--model", "-m", default="gemma3", help="Override model for all recipes")
-    parser.add_argument("--ids", default="", help="Comma-separated recipe IDs or ranges to run (e.g. '04,08,10-13')")
-    parser.add_argument("--workers", "-w", default=0, type=int, help="Max parallel workers for momagrid (default: 5)")
-    parser.add_argument("--category", default="", help="Only run recipes in this category")
-    parser.add_argument("--status", default="", help="Only run recipes with this approval status")
-    parser.add_argument("--list", action="store_true", dest="list_recipes", help="Print brief recipe list and exit")
-    parser.add_argument("--catalog", action="store_true", help="Print full catalog table and exit")
-    args = parser.parse_args()
-
+@click.command()
+@click.option("--adapter",  "-a", default="ollama", show_default=True,
+              help="Override LLM adapter for all recipes (e.g. ollama, momagrid)")
+@click.option("--model",    "-m", default="gemma3", show_default=True,
+              help="Override model for all recipes")
+@click.option("--ids",      default="", help="Comma-separated recipe IDs or ranges (e.g. '04,08,10-13')")
+@click.option("--workers",  "-w", default=0, show_default=True, type=int,
+              help="Max parallel workers for momagrid")
+@click.option("--category", default="", help="Only run recipes in this category")
+@click.option("--status",   default="", help="Only run recipes with this approval status")
+@click.option("--list",     "list_recipes", is_flag=True, help="Print brief recipe list and exit")
+@click.option("--catalog",  is_flag=True, help="Print full catalog table and exit")
+def main(adapter, model, ids, workers, category, status, list_recipes, catalog) -> None:
+    """SPL 2.0 Cookbook batch runner."""
     recipes = load_catalog()
 
-    if args.catalog:
-        print_catalog(recipes, args.category, args.status)
+    if catalog:
+        print_catalog(recipes, category, status)
         return
 
-    if args.list_recipes:
-        print_list(recipes, args.category, args.status)
+    if list_recipes:
+        print_list(recipes, category, status)
         return
 
-    use_parallel = args.adapter == "momagrid"
-    id_filter = parse_id_filter(args.ids) if args.ids else set()
+    use_parallel = adapter == "momagrid"
+    id_filter = parse_id_filter(ids) if ids else set()
 
     start_all = datetime.now()
     print(f"=== SPL 2.0 Cookbook Batch Run — {start_all.strftime('%Y-%m-%d %H:%M:%S')} ===")
     overrides = []
-    if args.adapter:
-        overrides.append(f"adapter={args.adapter}")
-    if args.model:
-        overrides.append(f"model={args.model}")
+    if adapter:
+        overrides.append(f"adapter={adapter}")
+    if model:
+        overrides.append(f"model={model}")
     if overrides:
         print(f"    Overrides : {', '.join(overrides)}")
     if use_parallel:
@@ -325,14 +327,14 @@ def main() -> None:
             if rid not in id_filter:
                 continue
         else:
-            if args.category and r.get("category") != args.category:
+            if category and r.get("category") != category:
                 continue
-            if args.status and r.get("approval_status") != args.status:
+            if status and r.get("approval_status") != status:
                 continue
             if not r.get("is_active"):
                 print(f"[{rid}] {r['name']}  (skipping — {r.get('approval_status','').upper()})")
                 continue
-        cmd_args = apply_overrides(r["args"], args.adapter, args.model)
+        cmd_args = apply_overrides(r["args"], adapter, model)
         log_path = COOKBOOK_DIR / r["dir"] / "logs" / f"{r['log']}_{ts}.md"
         active.append((r, cmd_args, log_path))
 
@@ -345,7 +347,7 @@ def main() -> None:
     PROJECT_ROOT = COOKBOOK_DIR.parent
 
     if use_parallel:
-        n_workers = args.workers or len(active)
+        n_workers = workers or len(active)
         print(f"Submitting {len(active)} recipe(s) with {n_workers} parallel worker(s)...\n")
         futures: dict = {}
         with ThreadPoolExecutor(max_workers=n_workers) as pool:

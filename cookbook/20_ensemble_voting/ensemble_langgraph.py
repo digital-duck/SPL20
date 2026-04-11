@@ -24,7 +24,7 @@ Usage:
         --random-selection false
 """
 
-import argparse
+import click
 import random
 import re
 from pathlib import Path
@@ -267,36 +267,30 @@ def build_graph():
 
 # ─── Entry point  (SPL: built into the CLI — `spl run ...`) ───────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Ensemble voting — LangGraph edition")
-    p.add_argument("--question",         required=True)
-    p.add_argument("--models",           nargs="+",
-                   default=["llama3.2", "qwen2.5", "gemma3", "mistral", "deepseek-r1"])
-    p.add_argument("--n-candidates",     type=int, default=5)
-    p.add_argument("--random-selection",
-                   type=lambda x: x.lower() not in ("false", "0", "no"), default=True)
-    p.add_argument("--consensus-model",  default="qwen2.5")
-    p.add_argument("--polish-model",     default="deepseek-r1")
-    p.add_argument("--log-dir",          default="cookbook/20_ensemble_voting/logs")
-    args = p.parse_args()
-
-    graph = build_graph()
-
-    result = graph.invoke({
-        "question":         args.question,
-        "models":           args.models,
-        "n_candidates":     args.n_candidates,
-        "random_selection": args.random_selection,
-        "consensus_model":  args.consensus_model,
-        "polish_model":     args.polish_model,
-        "log_dir":          args.log_dir,
-        # ── accumulators must be initialised explicitly in LangGraph ──────────
+@click.command()
+@click.option("--question",         required=True, help="Question to answer by ensemble vote")
+@click.option("--models",           multiple=True,
+              default=["llama3.2", "qwen2.5", "gemma3", "mistral", "deepseek-r1"], show_default=True)
+@click.option("--n-candidates",     default=5, show_default=True, type=int)
+@click.option("--random-selection/--no-random-selection", default=True, show_default=True)
+@click.option("--consensus-model",  default="qwen2.5",    show_default=True)
+@click.option("--polish-model",     default="deepseek-r1",show_default=True)
+@click.option("--log-dir",          default="cookbook/20_ensemble_voting/logs", show_default=True)
+def main(question: str, models: tuple, n_candidates: int, random_selection: bool,
+         consensus_model: str, polish_model: str, log_dir: str):
+    result = build_graph().invoke({
+        "question":         question,
+        "models":           list(models),
+        "n_candidates":     n_candidates,
+        "random_selection": random_selection,
+        "consensus_model":  consensus_model,
+        "polish_model":     polish_model,
+        "log_dir":          log_dir,
         "candidates":       [],
         "scores":           [],
         "gen_models":       [],
         "score_models":     [],
         "current_index":    0,
-        # ── outputs ───────────────────────────────────────────────────────────
         "consensus":        "",
         "best_candidate":   "",
         "final_answer":     "",

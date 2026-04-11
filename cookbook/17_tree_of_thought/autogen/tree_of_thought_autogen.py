@@ -10,7 +10,7 @@ Usage:
         --problem "Design a sustainable urban transport system."
 """
 
-import argparse
+import click
 from pathlib import Path
 
 from autogen import ConversableAgent
@@ -126,14 +126,12 @@ def run(problem: str, models: list, log_dir: str) -> str:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Tree of Thought — AutoGen edition")
-    p.add_argument("--problem",   default="Design a sustainable urban transport system.")
-    p.add_argument("--models",    nargs="+", default=["gemma3", "phi4", "qwen2.5"])
-    p.add_argument("--log-dir",   default="cookbook/17_tree_of_thought/autogen/logs-autogen")
-    args = p.parse_args()
-
-    result = run(args.problem, args.models, args.log_dir)
+@click.command()
+@click.option("--problem", default="Design a sustainable urban transport system.", show_default=True)
+@click.option("--models",  multiple=True, default=["gemma3", "phi4", "qwen2.5"], show_default=True)
+@click.option("--log-dir", default="cookbook/17_tree_of_thought/autogen/logs-autogen", show_default=True)
+def main(problem: str, models: tuple, log_dir: str):
+    result = run(problem, list(models), log_dir)
     print("\n" + "=" * 60)
     print("FINAL SOLUTION:")
     print(result)

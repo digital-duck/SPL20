@@ -10,7 +10,7 @@ Usage:
         --task "Build a REST API for a todo app"
 """
 
-import argparse
+import click
 import os
 import re
 from pathlib import Path
@@ -186,17 +186,15 @@ def run(task: str, max_steps: int, max_replans: int, model: str, output_dir: str
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Plan and Execute — AutoGen edition")
-    p.add_argument("--task",         default="Build a REST API for a todo app")
-    p.add_argument("--max-steps",    type=int, default=5)
-    p.add_argument("--max-replans",  type=int, default=3)
-    p.add_argument("--model",        default="gemma3")
-    p.add_argument("--output-dir",   default="cookbook/12_plan_and_execute/autogen/output")
-    p.add_argument("--log-dir",      default="cookbook/12_plan_and_execute/autogen/logs-autogen")
-    args = p.parse_args()
-
-    result = run(args.task, args.max_steps, args.max_replans, args.model, args.output_dir, args.log_dir)
+@click.command()
+@click.option("--task",        default="Build a REST API for a todo app", show_default=True)
+@click.option("--max-steps",   default=5, show_default=True, type=int)
+@click.option("--max-replans", default=3, show_default=True, type=int)
+@click.option("--model",       default="gemma3", show_default=True)
+@click.option("--output-dir",  default="cookbook/12_plan_and_execute/autogen/output", show_default=True)
+@click.option("--log-dir",     default="cookbook/12_plan_and_execute/autogen/logs-autogen", show_default=True)
+def main(task: str, max_steps: int, max_replans: int, model: str, output_dir: str, log_dir: str):
+    result = run(task, max_steps, max_replans, model, output_dir, log_dir)
     print("\n" + "=" * 60)
     print("FINAL REPORT:")
     print(result)

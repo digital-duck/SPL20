@@ -12,8 +12,9 @@ Usage:
 import re
 import json
 import datetime
-import argparse
 from pathlib import Path
+
+import click
 
 COOKBOOK_DIR = Path(__file__).resolve().parent
 
@@ -297,12 +298,10 @@ def print_paper_summary(rows: list):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Analyze SPL 2.0 cookbook logs")
-    parser.add_argument("--summary", action="store_true", help="Print paper table to stdout")
-    parser.add_argument("--all",     action="store_true", help="HTML report + paper table")
-    args = parser.parse_args()
-
+@click.command()
+@click.option("--summary",     is_flag=True, help="Print paper table to stdout")
+@click.option("--all",         "include_all", is_flag=True, help="HTML report + paper table")
+def main(summary: bool, include_all: bool):
     catalog = load_catalog()
     rows    = get_latest_logs(catalog)
 
@@ -310,12 +309,15 @@ if __name__ == "__main__":
         print("No log files found. Run: python cookbook/run_all.py --adapter ollama")
         raise SystemExit(1)
 
-    if args.summary:
+    if summary:
         print_paper_summary(rows)
-    elif args.all:
+    elif include_all:
         path = generate_html(rows)
         print(f"HTML report: {path}")
         print_paper_summary(rows)
     else:
         path = generate_html(rows)
         print(f"HTML report: {path}")
+
+if __name__ == "__main__":
+    main()

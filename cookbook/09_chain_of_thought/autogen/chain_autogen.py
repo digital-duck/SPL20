@@ -13,7 +13,7 @@ Usage:
         --topic "quantum computing" --model llama3.2
 """
 
-import argparse
+import click
 from pathlib import Path
 
 from autogen import ConversableAgent
@@ -108,14 +108,12 @@ def run(topic: str, model: str, log_dir: str) -> str:
 
 # ── Entry point  (SPL: built into CLI — `spl run ...`) ────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Chain of Thought — AutoGen edition")
-    p.add_argument("--topic",   required=True)
-    p.add_argument("--model",   default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/09_chain_of_thought/autogen/logs")
-    args = p.parse_args()
-
-    result = run(args.topic, args.model, args.log_dir)
+@click.command()
+@click.option("--topic",   required=True,    help="Topic to analyze")
+@click.option("--model",   default="gemma3", show_default=True)
+@click.option("--log-dir", default="cookbook/09_chain_of_thought/autogen/logs", show_default=True)
+def main(topic: str, model: str, log_dir: str):
+    result = run(topic, model, log_dir)
     print("\n" + "=" * 60)
     print(result)
 

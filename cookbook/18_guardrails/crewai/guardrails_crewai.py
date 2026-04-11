@@ -10,7 +10,7 @@ Usage:
         --user-input "My SSN is 123-45-6789, help me file taxes"
 """
 
-import argparse
+import click
 import re
 from pathlib import Path
 
@@ -126,14 +126,12 @@ def run(user_input: str, model: str, log_dir: str) -> str:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Guardrails Pipeline — CrewAI edition")
-    p.add_argument("--user-input", required=True)
-    p.add_argument("--model",      default="gemma3")
-    p.add_argument("--log-dir",    default="cookbook/18_guardrails/crewai/logs-crewai")
-    args = p.parse_args()
-
-    result = run(args.user_input, args.model, args.log_dir)
+@click.command()
+@click.option("--user-input", required=True,    help="User message to process")
+@click.option("--model",      default="gemma3", show_default=True)
+@click.option("--log-dir",    default="cookbook/18_guardrails/crewai/logs-crewai", show_default=True)
+def main(user_input: str, model: str, log_dir: str):
+    result = run(user_input, model, log_dir)
     print("\n" + "=" * 60)
     print(f"RESPONSE:\n{result}")
 

@@ -10,7 +10,7 @@ Usage:
         --items "Great product! | Terrible experience" --delimiter "|"
 """
 
-import argparse
+import click
 import json
 import math
 from pathlib import Path
@@ -143,17 +143,15 @@ def run(filename: str, items_raw: str, delimiter: str, domain: str, model: str, 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Sentiment Pipeline — CrewAI edition")
-    p.add_argument("--filename",  default="")
-    p.add_argument("--items",     default="")
-    p.add_argument("--delimiter", default="\\n")
-    p.add_argument("--domain",    default="general")
-    p.add_argument("--model",     default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/31_sentiment_pipeline/crewai/logs-crewai")
-    args = p.parse_args()
-
-    result = run(args.filename, args.items, args.delimiter, args.domain, args.model, args.log_dir)
+@click.command()
+@click.option("--filename",  default="",        show_default=True, help="File with items (one per line)")
+@click.option("--items",     default="",        show_default=True, help="Inline items (use --delimiter to split)")
+@click.option("--delimiter", default="\\n",     show_default=True)
+@click.option("--domain",    default="general", show_default=True)
+@click.option("--model",     default="gemma3",  show_default=True)
+@click.option("--log-dir",   default="cookbook/31_sentiment_pipeline/crewai/logs-crewai", show_default=True)
+def main(filename: str, items: str, delimiter: str, domain: str, model: str, log_dir: str):
+    result = run(filename, items, delimiter, domain, model, log_dir)
     print("\n" + "=" * 60)
     print(result)
 

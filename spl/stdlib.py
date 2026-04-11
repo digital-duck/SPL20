@@ -21,6 +21,7 @@ Categories
   Date / time       : now_iso, date_format_val, date_diff_days
   Hashing           : md5_hash, sha256_hash
   List / split      : list_get, list_length, list_join, list_contains, trim_turns
+  File I/O          : write_file, read_file, file_exists, make_dir, path_join
 
 All tools accept and return strings (SPL's universal scalar type).
 Numeric tools accept numeric strings and return numeric strings so they
@@ -32,6 +33,8 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
+import pathlib
 import re
 import datetime
 from typing import Any
@@ -503,3 +506,59 @@ def trim_turns(history: str, max_turns: str) -> str:
     if not last_n:
         return ""
     return "\nUser: " + "\nUser: ".join(last_n)
+
+
+# ── File I/O ──────────────────────────────────────────────────────────────────
+
+@spl_tool
+def write_file(file_path: str, content: str, mode: str = "w") -> str:
+    """WRITE_FILE(file_path, content [, mode]) — write text to a file.
+
+    mode: 'w' (overwrite, default) or 'a' (append).
+    Creates parent directories automatically.
+    Returns the absolute path written.
+    """
+    p = pathlib.Path(str(file_path).strip())
+    p.parent.mkdir(parents=True, exist_ok=True)
+    m = str(mode).strip().lower()
+    if m not in ("w", "a"):
+        m = "w"
+    with p.open(m, encoding="utf-8") as fh:
+        fh.write(str(content))
+    return str(p.resolve())
+
+
+@spl_tool
+def read_file(file_path: str) -> str:
+    """READ_FILE(file_path) — read entire text file and return its content.
+
+    Raises FileNotFoundError (propagated as SPL FileNotFound) if path missing.
+    """
+    p = pathlib.Path(str(file_path).strip())
+    return p.read_text(encoding="utf-8")
+
+
+@spl_tool
+def file_exists(file_path: str) -> str:
+    """FILE_EXISTS(file_path) — return 'true' if path exists, else 'false'."""
+    return "true" if pathlib.Path(str(file_path).strip()).exists() else "false"
+
+
+@spl_tool
+def make_dir(dir_path: str) -> str:
+    """MAKE_DIR(dir_path) — create directory (and parents) if not present.
+
+    Returns the absolute path of the directory.
+    """
+    p = pathlib.Path(str(dir_path).strip())
+    p.mkdir(parents=True, exist_ok=True)
+    return str(p.resolve())
+
+
+@spl_tool
+def path_join(*parts: str) -> str:
+    """PATH_JOIN(part1, part2, ...) — join path segments with OS separator.
+
+    Returns the joined path as a string.
+    """
+    return str(pathlib.Path(*[str(p).strip() for p in parts]))

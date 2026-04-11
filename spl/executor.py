@@ -106,17 +106,55 @@ class BudgetExceeded(SPLWorkflowError):
 class NodeUnavailable(SPLWorkflowError):
     pass
 
+# ── SPL 3.0 exceptions — model availability and media codec errors ──────────
+
+class ModelUnavailable(SPLWorkflowError):
+    """Raised when the requested LLM or multimodal model cannot be reached.
+    Covers: Ollama not running, model not pulled, API key missing or quota exceeded.
+    """
+    pass
+
+class FileNotFound(SPLWorkflowError):
+    """Raised when a required input file (image, audio, video) does not exist."""
+    pass
+
+class UnsupportedFormat(SPLWorkflowError):
+    """Raised when a target media format is not supported by the codec layer."""
+    pass
+
+class CodecError(SPLWorkflowError):
+    """Raised when a media codec operation fails (e.g. ffmpeg not installed,
+    corrupt file, unsupported bitrate/sample-rate combination).
+    """
+    pass
+
+class NoAudioTrack(SPLWorkflowError):
+    """Raised when attempting to extract audio from a video that has no audio stream."""
+    pass
+
+class InvalidTimestamp(SPLWorkflowError):
+    """Raised when a requested video timestamp exceeds the video duration."""
+    pass
+
 
 # Map exception type names to classes
 EXCEPTION_CLASSES: dict[str, type[SPLWorkflowError]] = {
+    # SPL 2.0
     'HallucinationDetected': HallucinationDetected,
-    'RefusalToAnswer': RefusalToAnswer,
+    'RefusalToAnswer':       RefusalToAnswer,
     'ContextLengthExceeded': ContextLengthExceeded,
-    'ModelOverloaded': ModelOverloaded,
+    'ModelOverloaded':       ModelOverloaded,
     'QualityBelowThreshold': QualityBelowThreshold,
-    'MaxIterationsReached': MaxIterationsReached,
-    'BudgetExceeded': BudgetExceeded,
-    'NodeUnavailable': NodeUnavailable,
+    'MaxIterationsReached':  MaxIterationsReached,
+    'BudgetExceeded':        BudgetExceeded,
+    'NodeUnavailable':       NodeUnavailable,
+    # SPL 3.0 — model and media
+    'ModelUnavailable':      ModelUnavailable,
+    'FileNotFound':          FileNotFound,
+    'UnsupportedFormat':     UnsupportedFormat,
+    'CodecError':            CodecError,
+    'NoAudioTrack':          NoAudioTrack,
+    'InvalidTimestamp':      InvalidTimestamp,
 }
 
 
@@ -1034,6 +1072,12 @@ class Executor:
                 await self._execute_body(handler.statements, state)
                 return True
 
+        _log.error(
+            "Unhandled SPL exception [%s]: %s — no EXCEPTION WHEN handler matched; "
+            "propagating to caller. Add 'WHEN OTHERS THEN' to catch all exceptions.",
+            error_type,
+            str(error),
+        )
         return False
 
     # ================================================================

@@ -10,7 +10,7 @@ Usage:
         --output-dir "cookbook/12_plan_and_execute/langgraph/output"
 """
 
-import argparse
+import click
 import os
 import re
 from pathlib import Path
@@ -352,25 +352,23 @@ def build_graph():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Plan and Execute — LangGraph edition")
-    p.add_argument("--task",         default="Build a REST API for a todo app")
-    p.add_argument("--max-steps",    type=int, default=5)
-    p.add_argument("--max-replans",  type=int, default=3)
-    p.add_argument("--model",        default="gemma3")
-    p.add_argument("--output-dir",   default="cookbook/12_plan_and_execute/langgraph/output")
-    p.add_argument("--log-dir",      default="cookbook/12_plan_and_execute/langgraph/logs-langgraph")
-    args = p.parse_args()
-
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+@click.command()
+@click.option("--task",        default="Build a REST API for a todo app", show_default=True)
+@click.option("--max-steps",   default=5, show_default=True, type=int)
+@click.option("--max-replans", default=3, show_default=True, type=int)
+@click.option("--model",       default="gemma3", show_default=True)
+@click.option("--output-dir",  default="cookbook/12_plan_and_execute/langgraph/output", show_default=True)
+@click.option("--log-dir",     default="cookbook/12_plan_and_execute/langgraph/logs-langgraph", show_default=True)
+def main(task: str, max_steps: int, max_replans: int, model: str, output_dir: str, log_dir: str):
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     result = build_graph().invoke({
-        "task":           args.task,
-        "max_steps":      args.max_steps,
-        "max_replans":    args.max_replans,
-        "model":          args.model,
-        "output_dir":     args.output_dir,
-        "log_dir":        args.log_dir,
+        "task":           task,
+        "max_steps":      max_steps,
+        "max_replans":    max_replans,
+        "model":          model,
+        "output_dir":     output_dir,
+        "log_dir":        log_dir,
         "plan":           "",
         "step_count":     0,
         "step_index":     0,

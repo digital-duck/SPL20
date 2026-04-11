@@ -11,7 +11,7 @@ Usage:
         --topic "quantum computing" --model llama3.2
 """
 
-import argparse
+import click
 from pathlib import Path
 from typing import TypedDict
 
@@ -116,17 +116,15 @@ def build_graph():
 
 # ── Entry point  (SPL: built into CLI — `spl run ...`) ────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Chain of Thought — LangGraph edition")
-    p.add_argument("--topic",   required=True)
-    p.add_argument("--model",   default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/09_chain_of_thought/langgraph/logs")
-    args = p.parse_args()
-
+@click.command()
+@click.option("--topic",   required=True,    help="Topic to analyze")
+@click.option("--model",   default="gemma3", show_default=True)
+@click.option("--log-dir", default="cookbook/09_chain_of_thought/langgraph/logs", show_default=True)
+def main(topic: str, model: str, log_dir: str):
     result = build_graph().invoke({
-        "topic":    args.topic,
-        "model":    args.model,
-        "log_dir":  args.log_dir,
+        "topic":    topic,
+        "model":    model,
+        "log_dir":  log_dir,
         "research": "",
         "analysis": "",
         "summary":  "",

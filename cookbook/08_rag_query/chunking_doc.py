@@ -10,10 +10,11 @@ Or via the improved CLI (does the same thing in one command):
     spl doc-rag add /path/to/document.md
 """
 
-import argparse
 import re
 import sys
 import time
+
+import click
 
 
 # ── Step 1: Load the document ─────────────────────────────────────────────────
@@ -90,36 +91,33 @@ def demo_query(store, query: str, top_k: int = 3) -> None:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("document", help="Path to the markdown/text file to index")
-    parser.add_argument("--query", default="Who is Wen?",
-                        help="Demo query to run after indexing (default: 'Who is Wen?')")
-    parser.add_argument("--storage-dir", default=".spl",
-                        help="Vector store directory (default: .spl)")
-    parser.add_argument("--top-k", type=int, default=3,
-                        help="Number of results to retrieve (default: 3)")
-    parser.add_argument("--reset", action="store_true",
-                        help="Delete existing index before indexing")
-    args = parser.parse_args()
-
-    if args.reset:
-        import os
+@click.command()
+@click.argument("document", type=click.Path(exists=True))
+@click.option("--query",       default="Who is Wen?", show_default=True,
+              help="Demo query to run after indexing")
+@click.option("--storage-dir", default=".spl", show_default=True,
+              help="Vector store directory")
+@click.option("--top-k",       default=3, show_default=True, type=int,
+              help="Number of results to retrieve")
+@click.option("--reset",       is_flag=True, help="Delete existing index before indexing")
+def main(document, query, storage_dir, top_k, reset):
+    """Educational chunking demo: index a document and run a semantic query."""
+    import os
+    if reset:
         for f in ["vectors.faiss", "vectors_meta.db"]:
-            path = os.path.join(args.storage_dir, f)
+            path = os.path.join(storage_dir, f)
             if os.path.exists(path):
                 os.remove(path)
-                print(f"Removed: {path}")
+                click.echo(f"Removed: {path}")
 
-    text = load_document(args.document)
+    text = load_document(document)
     chunks = chunk_by_paragraph(text)
-    store = index_chunks(chunks, storage_dir=args.storage_dir)
-    demo_query(store, args.query, top_k=args.top_k)
+    store = index_chunks(chunks, storage_dir=storage_dir)
+    demo_query(store, query, top_k=top_k)
     store.close()
 
-    print(f"\nDone. Run the recipe:")
-    print(f'  spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="{args.query}"')
+    click.echo(f"\nDone. Run the recipe:")
+    click.echo(f'  spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="{query}"')
 
 
 if __name__ == "__main__":

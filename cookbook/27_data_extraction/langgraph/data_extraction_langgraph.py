@@ -9,7 +9,7 @@ Usage:
         --text "Please process payment of USD 4,250.00 to Riverside Consulting (ref: PO-8821) by end of March."
 """
 
-import argparse
+import click
 import json
 from pathlib import Path
 from typing import TypedDict
@@ -131,21 +131,20 @@ def build_graph():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Data Extraction — LangGraph edition")
-    p.add_argument("--text",   required=True)
-    p.add_argument("--format", default="general", choices=["general", "invoice", "contract"])
-    p.add_argument("--model",  default="gemma3")
-    p.add_argument("--log-dir", default="cookbook/27_data_extraction/langgraph/logs-langgraph")
-    args = p.parse_args()
-
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+@click.command()
+@click.option("--text",    required=True, help="Text to extract structured data from")
+@click.option("--format",  default="general", show_default=True,
+              type=click.Choice(["general", "invoice", "contract"]))
+@click.option("--model",   default="gemma3", show_default=True)
+@click.option("--log-dir", default="cookbook/27_data_extraction/langgraph/logs-langgraph", show_default=True)
+def main(text: str, format: str, model: str, log_dir: str):
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     result = build_graph().invoke({
-        "text":           args.text,
-        "format":         args.format,
-        "model":          args.model,
-        "log_dir":        args.log_dir,
+        "text":           text,
+        "format":         format,
+        "model":          model,
+        "log_dir":        log_dir,
         "extracted_data": {},
     })
 

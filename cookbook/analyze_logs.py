@@ -14,8 +14,9 @@ Usage:
 import re
 import json
 import datetime
-import argparse
 from pathlib import Path
+
+import click
 
 COOKBOOK_DIR = Path(__file__).resolve().parent
 OUT_DIR      = COOKBOOK_DIR / "out"
@@ -494,48 +495,44 @@ def generate_html(rows: list) -> Path:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Analyze SPL 2.0 cookbook logs")
-    parser.add_argument("--summary",     action="store_true",
-                        help="Print per-recipe paper table (markdown)")
-    parser.add_argument("--paper-stats", action="store_true",
-                        help="Print Table 7 aggregate metrics from batch run file")
-    parser.add_argument("--all",         action="store_true",
-                        help="HTML report + per-recipe table + aggregate stats")
-    parser.add_argument("--run",         type=Path, default=None,
-                        help="Path to run_all_*.md batch file (default: latest in out/)")
-    args = parser.parse_args()
-
+@click.command()
+@click.option("--summary",     is_flag=True, help="Print per-recipe paper table (markdown)")
+@click.option("--paper-stats", is_flag=True, help="Print Table 7 aggregate metrics from batch run file")
+@click.option("--all",         "include_all", is_flag=True, help="HTML report + per-recipe table + aggregate stats")
+@click.option("--run",         type=click.Path(), default=None,
+              help="Path to run_all_*.md batch file (default: latest in out/)")
+def main(summary: bool, paper_stats: bool, include_all: bool, run: str | None):
     catalog = load_catalog()
 
-    # Resolve batch run file
-    run_path = args.run or latest_run_file()
-    run: dict | None = None
+    run_path = Path(run) if run else latest_run_file()
+    run_data: dict | None = None
 
-    if args.paper_stats or args.all:
+    if paper_stats or include_all:
         if run_path is None or not run_path.exists():
             print("No run_all_*.md file found. Run: python cookbook/run_all.py --adapter ollama")
             raise SystemExit(1)
-        run = parse_run_file(run_path)
-        print(f"Parsed: {run_path.name}  ({run['timestamp']})")
+        run_data = parse_run_file(run_path)
+        print(f"Parsed: {run_path.name}  ({run_data['timestamp']})")
 
-    # HTML + per-recipe summary use individual log files
     rows = get_latest_logs(catalog)
-    if not rows and (args.summary or args.all or not args.paper_stats):
+    if not rows and (summary or include_all or not paper_stats):
         print("No log files found. Run: python cookbook/run_all.py --adapter ollama")
         raise SystemExit(1)
 
-    if args.paper_stats:
-        assert run is not None
-        print_paper_stats(run, catalog)
-    elif args.summary:
+    if paper_stats:
+        assert run_data is not None
+        print_paper_stats(run_data, catalog)
+    elif summary:
         print_paper_summary(rows)
-    elif args.all:
-        assert run is not None
+    elif include_all:
+        assert run_data is not None
         path = generate_html(rows)
         print(f"HTML report: {path}")
         print_paper_summary(rows)
-        print_paper_stats(run, catalog)
+        print_paper_stats(run_data, catalog)
     else:
         path = generate_html(rows)
         print(f"HTML report: {path}")
+
+if __name__ == "__main__":
+    main()

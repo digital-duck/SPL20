@@ -9,7 +9,7 @@ Usage:
     python cookbook/11_debate_arena/crewai/debate_crewai.py --topic "AI should be open-sourced"
 """
 
-import argparse
+import click
 from pathlib import Path
 
 from crewai import Agent, Crew, Process, Task
@@ -118,15 +118,13 @@ def run(topic: str, max_rounds: int, model: str, log_dir: str) -> str:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    p = argparse.ArgumentParser(description="Debate Arena — CrewAI edition")
-    p.add_argument("--topic",      required=True)
-    p.add_argument("--max-rounds", type=int, default=3)
-    p.add_argument("--model",      default="gemma3")
-    p.add_argument("--log-dir",    default="cookbook/11_debate_arena/crewai/logs-crewai")
-    args = p.parse_args()
-
-    result = run(args.topic, args.max_rounds, args.model, args.log_dir)
+@click.command()
+@click.option("--topic",      required=True,    help="Debate topic")
+@click.option("--max-rounds", default=3,        show_default=True, type=int)
+@click.option("--model",      default="gemma3", show_default=True)
+@click.option("--log-dir",    default="cookbook/11_debate_arena/crewai/logs-crewai", show_default=True)
+def main(topic: str, max_rounds: int, model: str, log_dir: str):
+    result = run(topic, max_rounds, model, log_dir)
     print("\n" + "=" * 60)
     print("VERDICT:")
     print(result)
