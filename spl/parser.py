@@ -599,7 +599,7 @@ class Parser:
             else:
                 model = self._expect(TokenType.IDENTIFIER).value
 
-        return GenerateClause(
+        clause = GenerateClause(
             function_name=func_name,
             arguments=arguments,
             output_budget=output_budget,
@@ -608,6 +608,93 @@ class Parser:
             schema=schema,
             model=model,
         )
+
+        # SPL 2.0: Piped GENERATE calls: GENERATE a() | b() | c()
+        if self._check(TokenType.PIPE):
+            self._advance()  # consume |
+            # Expect next segment: func(args) ...
+            clause.next_segment = self._parse_piped_generate_segment()
+
+        return clause
+
+    def _parse_piped_generate_segment(self) -> GenerateClause:
+        """Parse a segment of a piped GENERATE chain (after the |)."""
+        func_name = self._expect_identifier_or_keyword().value
+
+        self._expect(TokenType.LPAREN)
+        arguments: list[Expression] = []
+        if not self._check(TokenType.RPAREN):
+            arguments.append(self._parse_expression())
+            while self._check(TokenType.COMMA):
+                self._advance()
+                arguments.append(self._parse_expression())
+        self._expect(TokenType.RPAREN)
+
+        # Piped segments can also have WITH options and USING MODEL
+        output_budget = None
+        temperature = None
+        output_format = None
+        schema = None
+
+        generate_with_tokens = {TokenType.OUTPUT, TokenType.TEMPERATURE, TokenType.FORMAT, TokenType.SCHEMA}
+        if self._check(TokenType.WITH) and self.pos + 1 < len(self.tokens) and self.tokens[self.pos + 1].type in generate_with_tokens:
+            self._advance()
+            while True:
+                if self._check(TokenType.OUTPUT):
+                    self._advance()
+                    self._expect(TokenType.BUDGET)
+                    if self._check(TokenType.AT):
+                        self._advance()
+                        output_budget = '@' + self._expect_identifier_or_keyword().value
+                    else:
+                        output_budget = int(self._expect(TokenType.INTEGER).value)
+                    self._expect(TokenType.TOKENS)
+                elif self._check(TokenType.TEMPERATURE):
+                    self._advance()
+                    if self._check(TokenType.FLOAT):
+                        temperature = float(self._advance().value)
+                    else:
+                        temperature = float(self._expect(TokenType.INTEGER).value)
+                elif self._check(TokenType.FORMAT):
+                    self._advance()
+                    output_format = self._expect(TokenType.IDENTIFIER).value
+                elif self._check(TokenType.SCHEMA):
+                    self._advance()
+                    schema = self._expect(TokenType.IDENTIFIER).value
+                else:
+                    break
+                if self._check(TokenType.COMMA):
+                    self._advance()
+                else:
+                    break
+
+        model = None
+        if self._check(TokenType.USING):
+            self._advance()
+            self._expect(TokenType.MODEL)
+            if self._check(TokenType.STRING):
+                model = self._advance().value
+            elif self._check(TokenType.AT):
+                self._advance()
+                model = '@' + self._expect_identifier_or_keyword().value
+            else:
+                model = self._expect(TokenType.IDENTIFIER).value
+
+        segment = GenerateClause(
+            function_name=func_name,
+            arguments=arguments,
+            output_budget=output_budget,
+            temperature=temperature,
+            output_format=output_format,
+            schema=schema,
+            model=model,
+        )
+
+        if self._check(TokenType.PIPE):
+            self._advance()
+            segment.next_segment = self._parse_piped_generate_segment()
+
+        return segment
 
     def _parse_store_clause(self) -> StoreClause:
         self._expect(TokenType.STORE)
@@ -943,10 +1030,16 @@ class Parser:
         """Parse a condition in EVALUATE context.
 
         Can be:
-        - Semantic: 'coherent', 'complete' (string literal)
+        - Semantic: 'coherent', 'complete' (string literal) or ~ 'semantic' (TILDE)
         - Comparison: > 0.8, <= 0.5, = 'value'
         """
-        # Semantic condition: string literal
+        # Semantic condition: ~ 'is angry'
+        if self._check(TokenType.TILDE):
+            self._advance()
+            value = self._expect(TokenType.STRING).value
+            return SemanticCondition(semantic_value=value)
+
+        # Semantic condition (legacy/shortcut): string literal
         if self._check(TokenType.STRING):
             value = self._advance().value
             return SemanticCondition(semantic_value=value)
@@ -966,6 +1059,12 @@ class Parser:
             self._advance()
             right = self._parse_expression()
             return ComparisonCondition(operator=op, right=right)
+
+        # Boolean literal condition: WHEN TRUE / WHEN FALSE
+        if tok.type in (TokenType.TRUE, TokenType.FALSE):
+            val = (tok.type == TokenType.TRUE)
+            self._advance()
+            return ComparisonCondition(operator="=", right=Literal(value=val, literal_type="bool"))
 
         # contains('value') [OR contains('value')]* — semantic substring condition
         if tok.type == TokenType.IDENTIFIER and tok.value.lower() == 'contains':
@@ -1030,6 +1129,13 @@ class Parser:
         }
 
         tok = self._current()
+
+        # Collection-based iteration: WHILE @item IN @collection
+        if tok.type == TokenType.IN:
+            self._advance()
+            right = self._parse_expression()
+            return Condition(left=left, operator="IN", right=right)
+
         if tok.type in op_map:
             op = op_map[tok.type]
             self._advance()

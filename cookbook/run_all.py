@@ -5,15 +5,16 @@ Recipes are defined in cookbook/cookbook_catalog.json — edit that file to
 add, remove, or update recipes without touching Python code.
 
 Usage:
-    python cookbook/run_all.py                                   # run all active recipes
-    python cookbook/run_all.py --adapter ollama                  # override adapter
-    python cookbook/run_all.py --adapter momagrid                # parallel submit to momagrid hub
+    python cookbook/run_all.py                                                        # run all active recipes (spl)
+    python cookbook/run_all.py --catalog-file cookbook/cookbook_catalog_go.json       # run all active recipes (spl-go)
+    python cookbook/run_all.py --adapter ollama                                       # override adapter
+    python cookbook/run_all.py --adapter momagrid                                     # parallel submit to momagrid hub
     python cookbook/run_all.py --adapter momagrid --workers 5
-    python cookbook/run_all.py --model gemma3                    # override model
-    python cookbook/run_all.py --ids 04,08,13                    # run specific recipes by ID
-    python cookbook/run_all.py --list                            # brief recipe list
+    python cookbook/run_all.py --model gemma3                                         # override model
+    python cookbook/run_all.py --ids 04,08,13                                         # run specific recipes by ID
+    python cookbook/run_all.py --list                                                 # brief recipe list
     python cookbook/run_all.py --list --category agentic
-    python cookbook/run_all.py --catalog                         # full catalog table
+    python cookbook/run_all.py --catalog                                              # full catalog table
     python cookbook/run_all.py --catalog --status new
 
 conda activate spl
@@ -67,8 +68,10 @@ MARKERS = {
 
 # ── Catalog helpers ───────────────────────────────────────────────────────────
 
-def load_catalog() -> list[dict]:
-    path = COOKBOOK_DIR / "cookbook_catalog.json"
+def load_catalog(catalog_file: str = "") -> list[dict]:
+    path = Path(catalog_file) if catalog_file else COOKBOOK_DIR / "cookbook_catalog.json"
+    if not path.is_absolute():
+        path = Path.cwd() / path
     with open(path) as f:
         data = json.load(f)
     return data["recipes"]
@@ -111,7 +114,7 @@ def parse_id_filter(ids: str) -> set[str]:
 
 def apply_overrides(cmd_args: list[str], adapter: str, model: str) -> list[str]:
     """Apply --adapter and --model overrides to spl run commands."""
-    if not cmd_args or cmd_args[0] != "spl":
+    if not cmd_args or cmd_args[0] not in ("spl", "spl-go"):
         return cmd_args
 
     result = list(cmd_args)
@@ -278,20 +281,23 @@ def print_summary(results: list[dict], start_all: datetime) -> None:
 
 
 @click.command()
-@click.option("--adapter",  "-a", default="ollama", show_default=True,
+@click.option("--adapter",      "-a", default="ollama", show_default=True,
               help="Override LLM adapter for all recipes (e.g. ollama, momagrid)")
-@click.option("--model",    "-m", default="gemma3", show_default=True,
+@click.option("--model",        "-m", default="gemma3", show_default=True,
               help="Override model for all recipes")
-@click.option("--ids",      default="", help="Comma-separated recipe IDs or ranges (e.g. '04,08,10-13')")
-@click.option("--workers",  "-w", default=0, show_default=True, type=int,
+@click.option("--ids",          default="", help="Comma-separated recipe IDs or ranges (e.g. '04,08,10-13')")
+@click.option("--workers",      "-w", default=0, show_default=True, type=int,
               help="Max parallel workers for momagrid")
-@click.option("--category", default="", help="Only run recipes in this category")
-@click.option("--status",   default="", help="Only run recipes with this approval status")
-@click.option("--list",     "list_recipes", is_flag=True, help="Print brief recipe list and exit")
-@click.option("--catalog",  is_flag=True, help="Print full catalog table and exit")
-def main(adapter, model, ids, workers, category, status, list_recipes, catalog) -> None:
+@click.option("--category",     default="", help="Only run recipes in this category")
+@click.option("--status",       default="", help="Only run recipes with this approval status")
+@click.option("--list",         "list_recipes", is_flag=True, help="Print brief recipe list and exit")
+@click.option("--catalog",      is_flag=True, help="Print full catalog table and exit")
+@click.option("--catalog-file", "catalog_file", default="",
+              help="Path to catalog JSON (default: cookbook/cookbook_catalog.json). "
+                   "Use cookbook/cookbook_catalog_go.json to test against the spl-go binary.")
+def main(adapter, model, ids, workers, category, status, list_recipes, catalog, catalog_file) -> None:
     """SPL 2.0 Cookbook batch runner."""
-    recipes = load_catalog()
+    recipes = load_catalog(catalog_file)
 
     if catalog:
         print_catalog(recipes, category, status)

@@ -1,0 +1,35 @@
+WORKFLOW test_phase2
+  INPUT: @topic TEXT DEFAULT 'AI'
+  OUTPUT: @result TEXT
+DO
+  -- 1. Test semantic EVALUATE with ~ operator
+  @input := 'I am very happy with this progress!'
+  
+  EVALUATE @input
+    WHEN ~ 'sentiment is positive' THEN
+      LOGGING 'Sentiment judged POSITIVE'
+    ELSE
+      LOGGING 'Sentiment judged NEGATIVE'
+  END
+
+  -- 2. Test RETRY with parameters and limit
+  @retry_done := FALSE
+
+  DO
+    EVALUATE @retry_done
+      WHEN FALSE THEN
+        LOGGING 'Attempting a step that might fail...'
+        @retry_done := TRUE
+        RAISE HallucinationDetected 'Simulated hallucination'
+      ELSE
+        LOGGING 'Step succeeded after RETRY!'
+    END
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      LOGGING 'Hallucination detected! Retrying with lower temperature...'
+      RETRY WITH temperature = 0.1 LIMIT 2
+  END
+
+  LOGGING 'Workflow finished successfully after retry logic'
+  RETURN 'Success'
+END

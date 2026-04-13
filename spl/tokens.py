@@ -128,6 +128,7 @@ class TokenType(Enum):
     ASSIGN = auto()     # :=
     COLON = auto()      # :
     PERCENT = auto()    # %
+    TILDE = auto()      # ~ semantic operator
 
     # === Delimiters ===
     SEMICOLON = auto()

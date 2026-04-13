@@ -61,7 +61,8 @@ class TestExceptions:
     def test_exception_classes_registry(self):
         assert "HallucinationDetected" in EXCEPTION_CLASSES
         assert "RefusalToAnswer" in EXCEPTION_CLASSES
-        assert len(EXCEPTION_CLASSES) == 8
+        assert "ToolFailed" in EXCEPTION_CLASSES  # added v1.2
+        assert len(EXCEPTION_CLASSES) >= 9
 
 
 # ================================================================

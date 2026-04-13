@@ -1,4 +1,4 @@
-# SPL 2.0 Language Design
+# SPL 2.0 Language Design — v1.2
 
 > *"One beautiful language for Generative AI application development."*
 > — Wen, 2026
@@ -236,13 +236,25 @@ WORKFLOW name
     OUTPUT: @result TYPE
 DO
     -- body statements
+RETURN @result
 EXCEPTION
     WHEN ExceptionType THEN
         -- handler
+    WHEN OTHERS THEN
+        -- catch-all for any unmatched exception
 END
 ```
 
 Single-parameter workflows may keep INPUT on one line. For two or more parameters, put each on its own line.
+
+**`RETURN` vs `COMMIT`:** `RETURN` is the canonical finalisation keyword. `COMMIT` is a deprecated alias accepted for backwards compatibility — prefer `RETURN` in all new workflows. Both accept `WITH status = '...'` metadata options:
+
+```spl
+RETURN @result WITH status = 'complete'
+RETURN 'fallback' WITH status = 'degraded'
+```
+
+**`WHEN OTHERS THEN`** is a catch-all handler that matches any exception type not matched by an earlier `WHEN` clause. Use as the last handler in a production workflow.
 
 ### 5.2 LLM Invocation — GENERATE
 
@@ -302,12 +314,16 @@ WHILE @i < @count DO
 END
 
 -- Collection-based iteration (LIST-aware)
+-- @item is bound to each element in turn; @items must be a JSON array or comma-separated string
 WHILE @item IN @items DO
-    ...
+    GENERATE process(@item) INTO @result
+    @summaries := list_append(@summaries, @result)
 END
 ```
 
 One keyword, two iteration modes. No `FOR` needed — see Principle 1.
+
+In the collection form, `@item` is automatically bound to each element of `@items` before the body executes. The collection is resolved at the start of the loop; modifications to `@items` inside the body do not affect the current iteration.
 
 ### 5.6 Exception Handling
 
@@ -332,19 +348,35 @@ END
 
 | Exception | Source | Meaning |
 |-----------|--------|---------|
-| `HallucinationDetected` | GENERATE + runtime validation | Post-generation confidence check failed. The runtime can be configured with a confidence threshold; falling below it raises this exception. Can also be raised explicitly by a CALL-based validator. |
+| `HallucinationDetected` | `RAISE` in workflow body | Raised explicitly by a validator tool or workflow logic when the generated output is deemed unreliable. There is no automatic confidence threshold — the workflow author decides when to raise it. |
 | `ContextLengthExceeded` | GENERATE | Input exceeds the model's context window |
-| `BudgetExceeded` | Runtime | Token budget limit reached |
+| `BudgetExceeded` | Runtime | LLM call count or token budget cap reached |
 | `RefusalToAnswer` | GENERATE | LLM declined to respond |
 | `ModelOverloaded` | GENERATE | Model endpoint unavailable or rate-limited |
-| `ToolFailed` | CALL | Deterministic tool raised an error |
+| `ToolFailed` | CALL | Deterministic tool or built-in raised an exception — wraps the underlying Python error and makes it catchable in SPL |
+| `MaxIterationsReached` | WHILE | Loop hit the iteration safety cap (default: 100) |
+| `QualityBelowThreshold` | `RAISE` in workflow body | Raised explicitly when output quality does not meet a workflow-defined threshold |
+| `OTHERS` | Any | Catch-all handler: matches any exception type not matched by an earlier `WHEN` clause |
 
 **RETRY** accepts `LIMIT n` to prevent infinite loops. All production workflows should specify a limit:
 ```spl
 RETRY WITH temperature = 0.1 LIMIT 3
 ```
 
-Both `CALL` and `GENERATE` failures are caught by the same `EXCEPTION` block. Exception types distinguish the source when handling needs to differ.
+Both `CALL` and `GENERATE` failures are caught by the same `EXCEPTION` block. `ToolFailed` distinguishes a CALL-side failure from a GENERATE-side failure.
+
+**Pattern: explicit hallucination detection**
+
+`HallucinationDetected` is raised by the workflow, not by the runtime automatically. The standard pattern is a CALL-based validator followed by a conditional raise:
+
+```spl
+GENERATE analyze(@doc) INTO @result
+CALL validate_output(@result) INTO @is_valid
+EVALUATE @is_valid
+    WHEN = 'false' THEN
+        RAISE HallucinationDetected 'validator rejected output'
+END
+```
 
 ### 5.7 LOGGING
 
@@ -363,7 +395,7 @@ Log levels: `DEBUG < INFO < WARN < ERROR`. Default minimum: `INFO`.
 ```spl
 @msg := f'Processing {@chunk_count} chunks with style={@style}'
 LOGGING f'[Chunk {@chunk_index}/{@chunk_count}] score={@score}' LEVEL DEBUG
-COMMIT f'Done: {@chunk_count} chunks processed'
+RETURN f'Done: {@chunk_count} chunks processed'
 ```
 
 Use `{@varname}` inside `f'...'`. The `@` sigil is retained inside f-strings deliberately: it makes variable references unambiguous in templates that mix variable tokens with literal text, and it is consistent with the `@var` sigil used throughout SPL. Evaluated at runtime by substituting variable values.
@@ -482,7 +514,7 @@ WORKFLOW analyze_product_photo
 DO
     GENERATE describe_image(@photo) INTO @description
     GENERATE answer(@question, @description) INTO @answer
-    COMMIT @answer
+    RETURN @answer
 END
 
 -- v3.0: audio transcription pipeline
@@ -533,3 +565,10 @@ In each version, the *language* stays structured and simple. The *world it can d
 | 2026-03-25 | **v1.1** | Clarified `STREAM` type (v4.0): data stream inputs (sensor/IoT/event queues), not LLM output streaming — batch/async model holds throughout |
 | 2026-03-25 | **v1.1** | PL/SQL analogy: scoped to single historical reference, not recurring theme |
 | 2026-03-25 | **v1.1** | `write_file`, `read_file` added to built-in functions list (already in use, now documented) |
+| 2026-04-12 | **v1.2** | **NDD closure audit** — four gaps between spec and codebase identified and resolved |
+| 2026-04-12 | **v1.2** | `RETURN` established as primary finalisation keyword; `COMMIT` documented as deprecated alias |
+| 2026-04-12 | **v1.2** | `WHEN OTHERS THEN` catch-all documented in workflow structure and exception tables |
+| 2026-04-12 | **v1.2** | `WHILE @item IN @items` — collection iteration variable binding documented; implementation fixed in executor |
+| 2026-04-12 | **v1.2** | `ToolFailed` — exception registered in runtime; CALL tool errors now catchable via `WHEN ToolFailed THEN` |
+| 2026-04-12 | **v1.2** | `HallucinationDetected` — corrected source: raised explicitly via `RAISE`, not by automatic confidence threshold; standard detection pattern documented |
+| 2026-04-12 | **v1.2** | Exception table expanded: `MaxIterationsReached`, `QualityBelowThreshold`, `OTHERS` added |

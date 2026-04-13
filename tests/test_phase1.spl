@@ -1,0 +1,18 @@
+WORKFLOW test_phase1
+  INPUT: @name TEXT DEFAULT 'Wen', @topic TEXT DEFAULT 'AI'
+  OUTPUT: @result TEXT
+DO
+  -- 1. Test || concatenation
+  @greeting := 'Hello ' || @name || '!'
+  LOGGING @greeting
+
+  -- 2. Test piped GENERATE
+  -- Each segment's output becomes the input to the next if no args are provided.
+  GENERATE brainstorm(@topic) 
+    | summarize() 
+    | translate('French')
+    INTO @result
+
+  LOGGING f'Final result: {@result}'
+  RETURN @result
+END

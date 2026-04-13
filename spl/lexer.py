@@ -90,6 +90,9 @@ class Lexer:
             elif ch == '%':
                 self._emit(TokenType.PERCENT, '%')
                 self._advance()
+            elif ch == '~':
+                self._emit(TokenType.TILDE, '~')
+                self._advance()
             elif ch == ':':
                 # SPL 2.0: := assignment operator or : colon
                 if self._peek(1) == '=':

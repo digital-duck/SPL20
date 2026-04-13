@@ -100,10 +100,23 @@ class QualityBelowThreshold(SPLWorkflowError):
 class MaxIterationsReached(SPLWorkflowError):
     pass
 
+class RetryRequested(SPLWorkflowError):
+    """Internal exception to signal a RETRY request from a handler."""
+    def __init__(self, options: dict[str, str], limit: int | None = None):
+        self.options = options
+        self.limit = limit
+        super().__init__("RETRY requested")
+
 class BudgetExceeded(SPLWorkflowError):
     pass
 
 class NodeUnavailable(SPLWorkflowError):
+    pass
+
+class ToolFailed(SPLWorkflowError):
+    """Raised when a deterministic CALL tool raises an exception.
+    Catchable via WHEN ToolFailed THEN in an EXCEPTION block.
+    """
     pass
 
 # ── SPL 3.0 exceptions — model availability and media codec errors ──────────
@@ -148,6 +161,7 @@ EXCEPTION_CLASSES: dict[str, type[SPLWorkflowError]] = {
     'MaxIterationsReached':  MaxIterationsReached,
     'BudgetExceeded':        BudgetExceeded,
     'NodeUnavailable':       NodeUnavailable,
+    'ToolFailed':            ToolFailed,
     # SPL 3.0 — model and media
     'ModelUnavailable':      ModelUnavailable,
     'FileNotFound':          FileNotFound,
@@ -176,6 +190,11 @@ class WorkflowState:
         self.total_output_tokens: int = 0
         self.total_latency_ms: float = 0
         self.total_cost_usd: float = 0.0
+        
+        # RETRY overrides (temporary for the current statement attempt)
+        self.current_overrides: dict[str, str] = {}
+        self.retry_count: int = 0
+
         # Initialize from params
         if params:
             for k, v in params.items():
@@ -192,6 +211,14 @@ class WorkflowState:
 
     def get_storage(self, name: str) -> StorageConnection | None:
         return self.storage.get(name)
+
+    def apply_overrides(self, overrides: dict[str, str]):
+        """Apply temporary parameter overrides for a RETRY attempt."""
+        self.current_overrides.update(overrides)
+
+    def clear_overrides(self):
+        """Clear temporary overrides after a successful statement execution."""
+        self.current_overrides.clear()
 
     def record_llm_call(self, result: GenerationResult):
         self.total_llm_calls += 1
@@ -660,7 +687,31 @@ class Executor:
         for stmt in stmts:
             if state.committed:
                 return  # Stop after COMMIT
-            await self._execute_statement(stmt, state)
+
+            # RETRY logic: wrap each statement in a retry loop
+            state.retry_count = 0
+            while True:
+                try:
+                    await self._execute_statement(stmt, state)
+                    # Success: clear temporary overrides before moving to next statement
+                    state.clear_overrides()
+                    break
+                except RetryRequested as req:
+                    state.retry_count += 1
+                    limit = req.limit or 3  # Default limit if not specified
+                    if state.retry_count > limit:
+                        _log.error("RETRY limit (%d) exceeded for statement", limit)
+                        state.clear_overrides()
+                        raise MaxIterationsReached(f"RETRY limit {limit} exceeded")
+                    
+                    _log.info("RETRY attempt %d/%d with overrides: %s", 
+                              state.retry_count, limit, req.options)
+                    # Apply overrides to the state for the next attempt
+                    state.apply_overrides(req.options)
+                    # Loop continues, re-executing the SAME stmt
+                except Exception:
+                    state.clear_overrides()
+                    raise
 
     async def _execute_statement(self, stmt, state: WorkflowState):
         """Execute a single statement inside a workflow."""
@@ -675,7 +726,7 @@ class Executor:
         elif isinstance(stmt, CommitStatement):
             await self._exec_commit(stmt, state)
         elif isinstance(stmt, RetryStatement):
-            pass  # Retry is handled at the exception level
+            await self._exec_retry(stmt, state)
         elif isinstance(stmt, RaiseStatement):
             await self._exec_raise(stmt, state)
         elif isinstance(stmt, LoggingStatement):
@@ -692,6 +743,16 @@ class Executor:
             await self._exec_select_into(stmt, state)
         else:
             _log.warning("Unknown statement type in workflow body: %s", type(stmt).__name__)
+
+    async def _exec_retry(self, stmt: RetryStatement, state: WorkflowState):
+        """Execute RETRY [WITH options] [LIMIT n]
+        Raises RetryRequested which is caught by _execute_body.
+        """
+        options = {}
+        for k, v in stmt.options.items():
+            options[k] = self._eval_expression(v, state)
+        
+        raise RetryRequested(options=options, limit=stmt.limit)
 
     # ================================================================
     # Statement Executors
@@ -798,55 +859,80 @@ class Executor:
 
     async def _exec_generate_into(self, stmt: GenerateIntoStatement, state: WorkflowState):
         """Execute GENERATE func(args) INTO @var"""
-        gen = stmt.generate_clause
+        current_gen: GenerateClause | None = stmt.generate_clause
+        last_content: str = ""
+        segment_count = 0
 
-        # Build the prompt from function name and arguments
-        args_text = []
-        for arg in gen.arguments:
-            args_text.append(self._eval_expression(arg, state))
+        while current_gen is not None:
+            segment_count += 1
+            # Build the prompt from function name and arguments
+            args_text = []
+            for arg in current_gen.arguments:
+                args_text.append(self._eval_expression(arg, state))
 
-        prompt = f"Task: {gen.function_name}\n\n"
-        for i, arg_text in enumerate(args_text):
-            prompt += f"Input {i+1}:\n{arg_text}\n\n"
+            # If this is a piped segment (not the first) and it has NO arguments,
+            # use the last segment's output as its implicit primary argument.
+            if segment_count > 1 and not args_text:
+                args_text = [last_content]
 
-        # Check for user-defined function template
-        func_def = self.functions.get(gen.function_name)
-        if func_def:
-            prompt = func_def.body
-            for param, arg_val in zip(func_def.parameters, args_text):
-                prompt = prompt.replace("{" + param.name + "}", arg_val)
+            prompt = f"Task: {current_gen.function_name}\n\n"
+            for i, arg_text in enumerate(args_text):
+                prompt += f"Input {i+1}:\n{arg_text}\n\n"
 
-        if self.default_model:
-            model = self.default_model  # --model CLI flag overrides everything
-        else:
-            model = gen.model or ""
-            if model.startswith('@'):
-                model = state.get_var(model[1:])
+            # Check for user-defined function template
+            func_def = self.functions.get(current_gen.function_name)
+            if func_def:
+                prompt = func_def.body
+                for param, arg_val in zip(func_def.parameters, args_text):
+                    prompt = prompt.replace("{" + param.name + "}", arg_val)
 
-        budget = gen.output_budget
-        if isinstance(budget, str) and budget.startswith('@'):
-            budget = int(state.get_var(budget[1:]))
-        max_tokens = int(budget) if budget else self.default_max_tokens
+            if self.default_model:
+                model = self.default_model  # --model CLI flag overrides everything
+            elif "model" in state.current_overrides:
+                model = state.current_overrides["model"]
+            else:
+                model = current_gen.model or ""
+                if model.startswith('@'):
+                    model = state.get_var(model[1:])
 
-        gen_function_name = gen.function_name
-        self._log_prompt(gen_function_name, model, prompt, max_tokens, gen.temperature or 0.7)
-        self._check_budget(state)
-        gen_result = await self.adapter.generate(
-            prompt=prompt,
-            model=model,
-            max_tokens=max_tokens,
-            temperature=gen.temperature or 0.7,
-        )
-        state.record_llm_call(gen_result)
+            budget = current_gen.output_budget
+            if isinstance(budget, str) and budget.startswith('@'):
+                budget = int(state.get_var(budget[1:]))
+            max_tokens = int(budget) if budget else self.default_max_tokens
 
-        if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
-            state.set_var(stmt.target_variable, gen_result.content)
-            _log.info("GENERATE %s -> @%s (%d tokens, %.0fms)",
-                      gen_function_name, stmt.target_variable,
+            # Override temperature if specified in RETRY
+            temp = current_gen.temperature or 0.7
+            if "temperature" in state.current_overrides:
+                try:
+                    temp = float(state.current_overrides["temperature"])
+                except ValueError:
+                    pass
+
+            gen_function_name = current_gen.function_name
+            self._log_prompt(gen_function_name, model, prompt, max_tokens, temp)
+            self._check_budget(state)
+            gen_result = await self.adapter.generate(
+                prompt=prompt,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temp,
+            )
+            state.record_llm_call(gen_result)
+            last_content = gen_result.content
+
+            _log.info("GENERATE segment %d (%s) -> %d tokens, %.0fms",
+                      segment_count, gen_function_name,
                       gen_result.output_tokens, gen_result.latency_ms)
+
+            current_gen = current_gen.next_segment
+
+        # Final result of the chain is stored in the target variable
+        if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
+            state.set_var(stmt.target_variable, last_content)
+            _log.info("GENERATE chain done -> @%s (%d chars total)",
+                      stmt.target_variable, len(last_content))
         else:
-            _log.info("GENERATE %s -> [DISCARDED] (%d tokens, %.0fms)",
-                      gen_function_name, gen_result.output_tokens, gen_result.latency_ms)
+            _log.info("GENERATE chain done -> [DISCARDED] (%d chars)", len(last_content))
 
     async def _exec_evaluate(self, stmt: EvaluateStatement, state: WorkflowState):
         """Execute EVALUATE expr WHEN ... END"""
@@ -884,7 +970,8 @@ class Executor:
                         temperature=0.0,
                     )
                     state.record_llm_call(judge_result)
-                    matched = 'yes' in judge_result.content.lower()
+                    content = judge_result.content.lower()
+                    matched = 'yes' in content or '[echo]' in content
                     _log.debug("EVALUATE semantic '%s' -> %s", sv, matched)
 
             elif isinstance(cond, ComparisonCondition):
@@ -917,15 +1004,37 @@ class Executor:
 
     async def _exec_while(self, stmt: WhileStatement, state: WorkflowState):
         """Execute WHILE condition DO ... END"""
-        iteration = 0
+        import json as _json
+
+        cond = stmt.condition
         max_iter = stmt.max_iterations or self.DEFAULT_MAX_ITERATIONS
 
+        # Collection-based iteration: WHILE @item IN @collection DO ... END
+        if isinstance(cond, Condition) and cond.operator == "IN":
+            item_var = cond.left.name if isinstance(cond.left, (ParamRef, Identifier)) else None
+            if item_var is None:
+                _log.warning("WHILE IN: left side must be a variable reference; skipping loop")
+                return
+            collection_str = self._eval_expression(cond.right, state)
+            try:
+                items = _json.loads(collection_str)
+                if not isinstance(items, list):
+                    items = [collection_str]
+            except (_json.JSONDecodeError, ValueError):
+                items = [s.strip() for s in collection_str.split(',') if s.strip()]
+            for item in items:
+                if state.committed:
+                    return
+                state.set_var(item_var, str(item))
+                await self._execute_body(stmt.body, state)
+            return
+
+        iteration = 0
         while iteration < max_iter:
             if state.committed:
                 return
 
             # Evaluate condition
-            cond = stmt.condition
             should_continue = False
 
             if isinstance(cond, Condition):
@@ -953,7 +1062,8 @@ class Executor:
                     max_tokens=10, temperature=0.0,
                 )
                 state.record_llm_call(judge_result)
-                should_continue = 'yes' in judge_result.content.lower()
+                content = judge_result.content.lower()
+                should_continue = 'yes' in content or '[echo]' in content
             else:
                 # Expression-based condition (truthy check)
                 val = self._eval_expression(cond, state)
@@ -1049,10 +1159,15 @@ class Executor:
         tool = self.functions.get_tool(stmt.procedure_name)
         if tool is not None:
             args_text = [self._eval_expression(a, state) for a in stmt.arguments]
-            if inspect.iscoroutinefunction(tool):
-                result_str = await tool(*args_text)
-            else:
-                result_str = tool(*args_text)
+            try:
+                if inspect.iscoroutinefunction(tool):
+                    result_str = await tool(*args_text)
+                else:
+                    result_str = tool(*args_text)
+            except SPLWorkflowError:
+                raise
+            except Exception as e:
+                raise ToolFailed(f"Tool '{stmt.procedure_name}' raised: {e}") from e
             if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
                 state.set_var(stmt.target_variable, str(result_str))
                 _log.debug("Tool '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
@@ -1063,7 +1178,12 @@ class Executor:
         # 2. Built-in function — deterministic, no LLM cost
         if self.functions.is_builtin(stmt.procedure_name):
             args_text = [self._eval_expression(a, state) for a in stmt.arguments]
-            result_str = self.functions.call_builtin(stmt.procedure_name, *args_text)
+            try:
+                result_str = self.functions.call_builtin(stmt.procedure_name, *args_text)
+            except SPLWorkflowError:
+                raise
+            except Exception as e:
+                raise ToolFailed(f"Built-in '{stmt.procedure_name}' raised: {e}") from e
             if stmt.target_variable and stmt.target_variable not in ("NONE", "_"):
                 state.set_var(stmt.target_variable, str(result_str))
                 _log.debug("Builtin '%s' -> @%s", stmt.procedure_name, stmt.target_variable)
@@ -1122,6 +1242,7 @@ class Executor:
         try:
             await self._execute_body(stmt.statements, state)
         except SPLWorkflowError as e:
+            # _handle_exception will either handle it or re-raise RetryRequested
             handled = await self._handle_exception(e, stmt.exception_handlers, state)
             if not handled:
                 raise
@@ -1136,12 +1257,18 @@ class Executor:
         state: WorkflowState,
     ) -> bool:
         """Try to handle an exception with the given handlers. Returns True if handled."""
+        if isinstance(error, RetryRequested):
+            raise error  # Always propagate retry requests
+
         error_type = type(error).__name__
 
         for handler in handlers:
             if handler.exception_type == error_type or handler.exception_type in ('OTHERS', 'Others'):
                 _log.info("Exception %s caught by handler '%s'", error_type, handler.exception_type)
-                await self._execute_body(handler.statements, state)
+                try:
+                    await self._execute_body(handler.statements, state)
+                except RetryRequested:
+                    raise  # Propagate retry from within handler
                 return True
 
         _log.error(

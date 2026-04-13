@@ -70,9 +70,9 @@ class FunctionCall(Expression):
 
 @dataclass
 class BinaryOp(Expression):
-    """Binary operation (e.g., 'a + b')."""
+    """Binary operation (e.g., 'a + b', 'a || b')."""
     left: Expression
-    op: str  # "+", "-"
+    op: str  # "+", "-", "||"
     right: Expression
 
 
@@ -163,7 +163,7 @@ class OrderByItem:
 
 @dataclass
 class GenerateClause:
-    """GENERATE function(args) WITH options."""
+    """GENERATE function(args) WITH options [| next_clause]."""
     function_name: str
     arguments: list[Expression] = field(default_factory=list)
     output_budget: int | str | None = None  # int literal or '@varname'
@@ -171,6 +171,7 @@ class GenerateClause:
     output_format: str | None = None
     schema: str | None = None
     model: str | None = None
+    next_segment: GenerateClause | None = None
 
 
 @dataclass
