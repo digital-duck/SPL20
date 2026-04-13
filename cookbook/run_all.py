@@ -7,6 +7,7 @@ add, remove, or update recipes without touching Python code.
 Usage:
     python cookbook/run_all.py                                                        # run all active recipes (spl)
     python cookbook/run_all.py --catalog-file cookbook/cookbook_catalog_go.json       # run all active recipes (spl-go)
+    python cookbook/run_all.py --catalog-file cookbook/cookbook_catalog_ts.json       # run all active recipes (spl-ts)
     python cookbook/run_all.py --adapter ollama                                       # override adapter
     python cookbook/run_all.py --adapter momagrid                                     # parallel submit to momagrid hub
     python cookbook/run_all.py --adapter momagrid --workers 5
@@ -114,7 +115,7 @@ def parse_id_filter(ids: str) -> set[str]:
 
 def apply_overrides(cmd_args: list[str], adapter: str, model: str) -> list[str]:
     """Apply --adapter and --model overrides to spl run commands."""
-    if not cmd_args or cmd_args[0] not in ("spl", "spl-go"):
+    if not cmd_args or cmd_args[0] not in ("spl", "spl-go", "spl-ts"):
         return cmd_args
 
     result = list(cmd_args)
