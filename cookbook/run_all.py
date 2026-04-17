@@ -114,28 +114,57 @@ def parse_id_filter(ids: str) -> set[str]:
 # ── Recipe execution ──────────────────────────────────────────────────────────
 
 def apply_overrides(cmd_args: list[str], adapter: str, model: str) -> list[str]:
-    """Apply --adapter and --model overrides to spl run commands."""
-    if not cmd_args or cmd_args[0] not in ("spl", "spl-go", "spl-ts"):
+    """Apply --adapter and --model overrides to spl execute commands."""
+    if not cmd_args:
         return cmd_args
 
-    result = list(cmd_args)
+    # Check if we should use local spl.cli
+    if cmd_args[0] == "spl":
+        result = ["python3", "-m", "spl.cli"]
+        # Skip the original 'spl'
+        for arg in cmd_args[1:]:
+            if arg == "run":
+                result.append("execute")
+            else:
+                result.append(arg)
+    else:
+        result = list(cmd_args)
+        # Still replace 'run' with 'execute' if it's there
+        for i in range(len(result)):
+            if result[i] == "run":
+                result[i] = "execute"
+                break
 
     if adapter:
         if "--adapter" in result:
             result[result.index("--adapter") + 1] = adapter
         else:
-            for i, arg in enumerate(result):
-                if arg.endswith(".spl"):
-                    result.insert(i + 1, "--adapter")
-                    result.insert(i + 2, adapter)
+            # Add --adapter before the .spl file
+            for i in range(len(result)):
+                if result[i].endswith(".spl"):
+                    result.insert(i, "--adapter")
+                    result.insert(i + 1, adapter)
                     break
 
     if model:
-        if "-m" in result:
-            result[result.index("-m") + 1] = model
-        elif "--model" in result:
-            result[result.index("--model") + 1] = model
-        else:
+        # Check if -m or --model already exists
+        found_model = False
+        for i in range(len(result)):
+            if result[i] in ("-m", "--model"):
+                result[i + 1] = model
+                found_model = True
+                break
+        
+        if not found_model:
+            # Add -m model after 'execute'
+            for i in range(len(result)):
+                if result[i] == "execute":
+                    result.insert(i + 1, "-m")
+                    result.insert(i + 2, model)
+                    found_model = True
+                    break
+        
+        if not found_model:
             result.extend(["-m", model])
 
     return result
@@ -151,10 +180,12 @@ def run_recipe_sequential(cmd_args: list[str], log_path: Path, cwd: Path) -> tup
     log_path.parent.mkdir(parents=True, exist_ok=True)
     start = datetime.now()
     try:
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(cwd)
         with open(log_path, "w") as log_file:
             process = subprocess.Popen(
                 cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, cwd=str(cwd),
+                text=True, cwd=str(cwd), env=env
             )
             state = "normal"
             for line in (process.stdout or []):
@@ -193,10 +224,12 @@ def run_recipe_parallel(recipe: dict, cmd_args: list[str], log_path: Path, cwd: 
     print(f"[{rid}] {name}  →  started")
     sys.stdout.flush()
     try:
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(cwd)
         with open(log_path, "w") as log_file:
             proc = subprocess.Popen(
                 cmd_args, stdout=log_file, stderr=subprocess.STDOUT,
-                text=True, cwd=str(cwd),
+                text=True, cwd=str(cwd), env=env
             )
             proc.wait()
         ok = proc.returncode == 0

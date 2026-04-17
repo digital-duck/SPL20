@@ -78,7 +78,7 @@ WITH OUTPUT BUDGET 1000 tokens;
 ### Parse and Validate
 
 ```bash
-spl validate examples/hello_world.spl
+spl validate cookbook/01_hello_world/hello.spl
 ```
 
 Output:
@@ -96,6 +96,35 @@ spl explain examples/hello_world.spl
 This shows the token allocation, cost estimate, and step breakdown without making any LLM calls.
 
 ### Run with Echo Adapter (Testing)
+
+```bash
+spl run cookbook/01_hello_world/hello.spl
+```
+
+Logging to: /home/papagame/projects/digital-duck/SPL/logs/hello-claude_cli-20260416-211836.log  (level=debug)
+
+--- hello_world ---
+Based on the context, here's a greeting function for SPL 2.0:
+
+```python
+def greeting():
+    """
+    Greeting function for SPL 2.0 system
+    """
+    print("Hello! I'm Claude, your friendly assistant working with SPL 2.0.")
+    print("SPL 2.0 is a powerful language processing system in the digital-duck ecosystem, designed for advanced data handling and multimodal AI capabilities.")
+    return "Welcome to SPL 2.0!"
+
+# Usage
+if __name__ == "__main__":
+    message = greeting()
+    print(f"\nReturn value: {message}")
+```
+
+This greeting introduces both myself as Claude and SPL 2.0 as requested, highlighting its role in the digital-duck ecosystem based on the project context I can see from your memory index.
+
+[Model: claude-cli | Tokens: 37+177=214 | Latency: 32706ms]
+
 
 ```bash
 spl run examples/hello_world.spl user_input="hello wen" lang="Chinese"
@@ -128,7 +157,7 @@ Latency: 440ms
 
 ```bash
 # Chinese via Ollama (local, free)
-spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="Chinese"
+spl run examples/hello_world.spl --adapter ollama --model gemma3 user_input="hello wen" lang="Chinese"
 
 # French via Ollama
 spl run examples/hello_world.spl --adapter ollama user_input="hello wen" lang="French"

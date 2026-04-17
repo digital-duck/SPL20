@@ -1,14 +1,12 @@
--- Recipe 02: Ollama Proxy
--- General-purpose LLM query — proxy any prompt to any adapter/model.
-
+-- Recipe 02: Ollama Proxy - WITH ARGS TEST
 CREATE FUNCTION answer(prompt TEXT)
 RETURNS TEXT
 AS $$
 {prompt}
 $$;
 
-PROMPT ollama_proxy
+PROMPT ollama_proxy(prompt)
 SELECT
     system_role('You are a helpful, knowledgeable assistant.'),
-    context.prompt AS prompt
+    prompt AS prompt
 GENERATE answer(prompt)

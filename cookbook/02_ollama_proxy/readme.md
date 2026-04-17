@@ -1,37 +1,44 @@
-# Recipe 02 — Ollama Proxy
+# Recipe 02: Ollama Proxy
 
-General-purpose LLM query — use any Ollama model from the command line with a single `.spl` file.
-
-> `proxy.spl` is a symlink to `scripts/ollama_proxy.spl` — the canonical reusable script.
-> Edit the source at `scripts/ollama_proxy.spl`.
+General-purpose LLM query — proxy any prompt to any adapter/model. This recipe is a "universal adapter" that lets you interact with any LLM using standard SPL parameters.
 
 ## Usage
 
 ```bash
-spl run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
-spl run scripts/ollama_proxy.spl --adapter ollama -m llama3.2 prompt="What is 10!"
-spl run scripts/ollama_proxy.spl --adapter ollama -m gemma3 prompt="What is 10! ?"
+export FILE_SPL="$HOME/projects/digital-duck/SPL20/cookbook/02_ollama_proxy/proxy.spl"
 
-export MOMAGRID_HUB_URL=http://192.168.0.235:9000
-spl run scripts/ollama_proxy.spl --adapter momagrid -m gemma3 prompt="What is 10!"
+## different commands
+# python
+spl    run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+
+# TypeScript
+spl-ts run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+
+# Go
+spl-go run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+
+
+
+
+# General usage
+spl run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+
+# Short form (trailing argument)
+spl run $FILE_SPL --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
+
+# Different adapter
+spl run $FILE_SPL --adapter anthropic prompt="Summarise the history of AI"
+
 ```
 
-The `--model (-m)` flag overrides the model at runtime — no `.spl` edits needed. This makes it trivial to test any Ollama model:
+## Parameters
 
-```bash
-for model in gemma3 llama3.2 mistral phi3 qwen2.5; do
-  echo "=== $model ==="
-  spl run scripts/ollama_proxy.spl --adapter ollama -m $model prompt="What is 2+2?"
-done
-```
+- `prompt` (required): The question or instruction for the LLM.
 
-Works with any adapter: `--adapter openrouter`, `--adapter momagrid`, `--adapter claude_cli`.
+## What it does
 
-## Source
+1.  **Defines a Proxy Function**: `CREATE FUNCTION answer(prompt TEXT)` acts as a simple pass-through.
+2.  **Binds Context**: `SELECT context.prompt AS prompt` captures the user input.
+3.  **Executes**: `GENERATE answer(prompt)` sends the prompt to the model.
 
-See [`scripts/ollama_proxy.spl`](../../scripts/ollama_proxy.spl) — also used by Recipe 04 (Model Showdown).
-
-```bash
-export MOMAGRID_HUB_URL=http://192.168.0.235:9000
-spl run scripts/ollama_proxy.spl --adapter momagrid -m gemma3 prompt="What is 9!?"
-```
+This explicit structure ensures compatibility across all SPL implementations (Python, TypeScript, etc.) and provides a clear audit trail in the logs.

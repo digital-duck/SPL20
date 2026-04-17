@@ -1,6 +1,4 @@
--- Recipe 02: Ollama Proxy
--- General-purpose LLM query — proxy any prompt to any adapter/model.
-
+-- Recipe 02: Ollama Proxy - NO ARGS TEST
 CREATE FUNCTION answer(prompt TEXT)
 RETURNS TEXT
 AS $$

@@ -3,14 +3,17 @@
 --
 -- Setup:
 --   pip install "dd-vectordb[faiss]" "dd-embed[sentence-transformers]"
---   spl doc-rag add /home/gongai/projects/digital-duck/zinets/who-is-wen.md
+--   spl doc-rag add cookbook/08_rag_query/data/who-is-wen.md
 --
 -- Usage:
 --   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="Where did Wen grow up?"
---   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is Momagrid and why was it built?"
---   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is the Gang of Four in the ZiNets research team?"
---   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="What is eta_AI and how is it measured?"
---   spl run cookbook/08_rag_query/rag_query.spl --adapter ollama question="How did Wen transition from physics to software engineering?"
+
+CREATE FUNCTION answer(question TEXT)
+RETURNS TEXT
+AS $$
+You are a knowledgeable assistant. Use the provided context to answer the question accurately.
+Question: {question}
+$$;
 
 PROMPT rag_answer
 SELECT

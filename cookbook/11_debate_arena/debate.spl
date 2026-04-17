@@ -8,7 +8,7 @@
 --   spl run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
 
 CREATE FUNCTION pro_argument(topic TEXT, previous TEXT) 
-RETURN TEXT
+RETURNS TEXT
 AS $$
 You are a skilled debate champion arguing STRONGLY IN FAVOR of the following motion:
 
@@ -23,7 +23,7 @@ Do NOT offer balanced views — you are arguing one side.
 $$;
 
 CREATE FUNCTION con_argument(topic TEXT, previous TEXT) 
-RETURN TEXT
+RETURNS TEXT
 AS $$
 You are a skilled debate champion arguing STRONGLY AGAINST the following motion:
 
@@ -38,7 +38,7 @@ Do NOT offer balanced views — you are arguing one side.
 $$;
 
 CREATE FUNCTION judge_debate(topic TEXT, pro_history TEXT, con_history TEXT) 
-RETURN TEXT
+RETURNS TEXT
 AS $$
 You are an impartial debate judge evaluating the following debate.
 
@@ -60,7 +60,7 @@ $$;
 
 WORKFLOW debate_arena
     INPUT:
-        @topic TEXT,
+        @topic TEXT DEFAULT 'AI should be open-sourced',
         @max_rounds INTEGER DEFAULT 3,
         @log_dir TEXT DEFAULT 'cookbook/11_debate_arena/logs-spl'
     OUTPUT: @verdict TEXT

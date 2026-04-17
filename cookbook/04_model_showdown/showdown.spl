@@ -5,16 +5,19 @@
 -- Usage:
 --   spl run cookbook/04_model_showdown/showdown.spl --adapter ollama \
 --       prompt="What is the meaning of life?"
---   spl run cookbook/04_model_showdown/showdown.spl --adapter ollama \
---       prompt="Explain recursion in 3 sentences" \
---       model_1=gemma3 model_2=llama3.2 model_3=mistral
+
+CREATE FUNCTION answer(prompt TEXT)
+RETURNS TEXT
+AS $$
+{prompt}
+$$;
 
 CREATE FUNCTION compare_responses(
     prompt TEXT,
     model_1 TEXT, answer_1 TEXT,
     model_2 TEXT, answer_2 TEXT,
     model_3 TEXT, answer_3 TEXT
-) RETURN TEXT
+) RETURNS TEXT
 AS $$
 You are a neutral evaluator comparing responses from three AI models.
 

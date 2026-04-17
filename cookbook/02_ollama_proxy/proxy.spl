@@ -10,6 +10,12 @@
 -- Parameters:
 --   prompt  (required)  The user prompt / question
 
+CREATE FUNCTION answer(prompt TEXT)
+RETURNS TEXT
+AS $$
+{prompt}
+$$;
+
 PROMPT ollama_proxy
 SELECT
     system_role('You are a helpful, knowledgeable assistant.'),

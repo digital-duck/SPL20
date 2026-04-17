@@ -3,9 +3,14 @@
 --
 -- Usage:
 --   spl run cookbook/03_multilingual/multilingual.spl --adapter ollama user_input="hello wen" lang="Chinese"
---   spl run cookbook/03_multilingual/multilingual.spl --adapter ollama user_input="hello wen" lang="French"
---   spl run cookbook/03_multilingual/multilingual.spl --adapter ollama user_input="hello wen" lang="Japanese"
---   spl run cookbook/03_multilingual/multilingual.spl --adapter ollama user_input="hello wen" lang="Spanish"
+
+CREATE FUNCTION greeting(input TEXT, lang TEXT)
+RETURNS TEXT
+AS $$
+You are a friendly assistant. 
+The user said: "{input}"
+Please respond in {lang}. Introduce yourself and SPL 2.0 in two sentences.
+$$;
 
 PROMPT multilingual_greeting
 SELECT
