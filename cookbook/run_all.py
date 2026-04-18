@@ -121,19 +121,10 @@ def apply_overrides(cmd_args: list[str], adapter: str, model: str) -> list[str]:
     # Check if we should use local spl.cli
     if cmd_args[0] == "spl":
         result = ["python3", "-m", "spl.cli"]
-        # Skip the original 'spl'
-        for arg in cmd_args[1:]:
-            if arg == "run":
-                result.append("execute")
-            else:
-                result.append(arg)
+        # Skip the original 'spl'; keep subcommand as-is (spl run → python3 -m spl.cli run)
+        result.extend(cmd_args[1:])
     else:
         result = list(cmd_args)
-        # Still replace 'run' with 'execute' if it's there
-        for i in range(len(result)):
-            if result[i] == "run":
-                result[i] = "execute"
-                break
 
     if adapter:
         if "--adapter" in result:
@@ -147,25 +138,25 @@ def apply_overrides(cmd_args: list[str], adapter: str, model: str) -> list[str]:
                     break
 
     if model:
-        # Check if -m or --model already exists
+        # Check if --model already exists (never match -m: that is Python's module flag)
         found_model = False
         for i in range(len(result)):
-            if result[i] in ("-m", "--model"):
+            if result[i] == "--model":
                 result[i + 1] = model
                 found_model = True
                 break
-        
+
         if not found_model:
-            # Add -m model after 'execute'
+            # Add --model after the subcommand (run/execute)
             for i in range(len(result)):
-                if result[i] == "execute":
-                    result.insert(i + 1, "-m")
+                if result[i] in ("run", "execute"):
+                    result.insert(i + 1, "--model")
                     result.insert(i + 2, model)
                     found_model = True
                     break
-        
+
         if not found_model:
-            result.extend(["-m", model])
+            result.extend(["--model", model])
 
     return result
 

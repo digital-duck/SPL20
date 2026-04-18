@@ -1,1 +1,1 @@
-Summarize this technical document, focusing on the core algorithm, its key steps, and its intended purpose, aiming for a summary accessible to someone with a foundational understanding of computer science but not necessarily expertise in quantum physics.
+Summarize this technical document, focusing on the core algorithm and its key steps, explaining it as if you were teaching it to a junior researcher with a strong foundation in physics but limited experience with quantum computing.

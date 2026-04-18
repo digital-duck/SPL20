@@ -35,6 +35,74 @@ import click
 from spl import __version__
 
 
+# ---------------------------------------------------------------------------
+# Run-log helpers (parity with spl-go / spl-ts)
+# ---------------------------------------------------------------------------
+
+class _CapturingAdapter:
+    """Thin wrapper that records the last prompt/model sent to the LLM."""
+    def __init__(self, inner):
+        self._inner = inner
+        self.last_prompt = ""
+        self.last_model = ""
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    async def generate(self, prompt: str = "", model: str = "", **kwargs):
+        self.last_prompt = prompt
+        self.last_model = model or getattr(self._inner, "default_model", "")
+        return await self._inner.generate(prompt, model=model, **kwargs)
+
+
+def _write_run_log(
+    log_path: Path,
+    stem: str,
+    adapter_name: str,
+    model_name: str,
+    source: str,
+    last_prompt: str,
+    results: list,
+    started_at: datetime,
+) -> None:
+    """Overwrite log_path with a rich markdown run log matching spl-go / spl-ts format."""
+    ts = started_at.strftime("%Y-%m-%d %H:%M:%S")
+
+    total_in  = sum(getattr(r, "input_tokens",  0) or getattr(r, "total_input_tokens",  0) for r in results)
+    total_out = sum(getattr(r, "output_tokens", 0) or getattr(r, "total_output_tokens", 0) for r in results)
+    total_ms  = sum(getattr(r, "latency_ms",    0) or getattr(r, "total_latency_ms",    0) for r in results)
+
+    outputs = []
+    for r in results:
+        v = getattr(r, "committed_value", None) or getattr(r, "content", "") or ""
+        if v:
+            outputs.append(v.rstrip())
+
+    lines = [
+        f"# SPL Run: {stem}",
+        "",
+        f"- **Adapter:** {adapter_name}",
+        f"- **Model:** {model_name}",
+        f"- **Tokens:** {total_in} in / {total_out} out",
+        f"- **Latency:** {total_ms:.0f}ms",
+        f"- **Timestamp:** {ts}",
+        "",
+        "## SPL Source",
+        "",
+        "```spl",
+        source.rstrip(),
+        "```",
+    ]
+
+    if last_prompt:
+        lines += ["", "## Final Prompt", "", "```prompt", last_prompt.rstrip(), "```"]
+
+    combined = "\n\n---\n\n".join(outputs) if outputs else "(no output)"
+    lines += ["", "## Output", "", "```output", combined, "```"]
+
+    log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _read_file(filepath: str) -> str:
@@ -397,6 +465,8 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
 
     _ensure_workspace(storage_dir)
 
+    started_at = datetime.now()
+
     # Set up logging
     log_path = _setup_logging(run_name="run", adapter=adapter, spl_file=file)
 
@@ -405,8 +475,11 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
     log.info("spl run %s --adapter %s %s", file, adapter,
              f"-m {model}" if model else "")
 
+    results = []
+    capturing: _CapturingAdapter | None = None
     try:
         from spl.executor import Executor
+        from spl.adapters import get_adapter
         from spl.ast_nodes import PromptStatement
 
         ast = _parse_source(source)
@@ -428,9 +501,10 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
             adapter_kwargs["allowed_tools"] = [t.strip() for t in allowed_tools.split(",")]
         if timeout is not None:
             adapter_kwargs["timeout"] = timeout
+
+        capturing = _CapturingAdapter(get_adapter(adapter, **(adapter_kwargs or {})))
         executor = Executor(
-            adapter_name=adapter,
-            adapter_kwargs=adapter_kwargs,
+            adapter=capturing,
             storage_dir=storage_dir,
             cache_enabled=cache,
             cache_ttl=cache_ttl,
@@ -473,6 +547,23 @@ def cmd_execute(file: str, adapter: str | None, model: str | None,
     except Exception as exc:
         log.exception("Execution failed: %s", exc)
         raise click.ClickException(str(exc)) from exc
+    finally:
+        if results is not None:
+            resolved_model = (
+                (capturing.last_model if capturing else None)
+                or model
+                or (getattr(results[0], "model", "") if results else "")
+            )
+            _write_run_log(
+                log_path=Path(log_path),
+                stem=Path(file).stem,
+                adapter_name=adapter,
+                model_name=resolved_model,
+                source=source,
+                last_prompt=capturing.last_prompt if capturing else "",
+                results=results,
+                started_at=started_at,
+            )
 
     click.echo(f"Log: {log_path}", err=True)
 

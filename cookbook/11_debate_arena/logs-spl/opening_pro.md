@@ -1,1 +1,1 @@
-Please provide me with your opponent's opening statement. I need to know what they’ve argued before I can formulate a strong rebuttal in support of open-sourcing AI. Once you give me their statement, I will craft a persuasive argument as requested.
+Please provide me with your opponent’s opening statement. I need to know what they’ve argued before I can formulate a strong rebuttal in favor of open-sourcing AI. Once you provide the opening statement, I’ll craft a persuasive argument as requested.

@@ -1,3 +1,1 @@
-This step defines the blueprint for our API, specifying the URLs (endpoints) and the JSON structure for representing todo items. It ensures a consistent and predictable way for the frontend to interact with the backend data. The primary output is a documented design in `api_design.md`.
-
-**Filenames:** `api_design.md`
+This step results in a documented API blueprint outlining all data structures for requests and responses. It establishes standardized JSON schemas for key entities like users and products, ensuring predictable data exchange between the client and server. The output consists of three files: `api_endpoints.md`, `user_schema.json`, and `product_schema.json`.

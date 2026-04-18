@@ -62,6 +62,21 @@ spl run cookbook/01_hello_world/hello.spl --adapter ollama \
 spl run cookbook/01_hello_world/hello.spl --adapter ollama -m llama3.2
 ```
 
+```bash
+export FILE_SPL="$HOME/projects/digital-duck/SPL20/cookbook/01_hello_world/hello.spl"
+
+## different commands
+# python
+spl    run $FILE_SPL --adapter ollama -m gemma3 --param user_input="hello wen" --param lang="Chinese"
+
+# TypeScript
+spl-ts run $FILE_SPL --adapter ollama -m gemma3 --param user_input="hello wen" --param lang="Chinese"
+
+# Go
+spl-go run $FILE_SPL --adapter ollama -m gemma3 --param user_input="hello wen" --param lang="Chinese"
+```
+
+
 ## What it does
 
 1.  **Defines a Template**: Uses `CREATE FUNCTION greeting()` to provide a structured prompt template.

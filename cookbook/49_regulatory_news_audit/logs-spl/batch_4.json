@@ -1,7 +1,11 @@
 ```json
 {
   "risk_level": "high",
-  "flags": ["sanctions", "AML", "Market Manipulation"],
-  "summary": "The bank's settlement for sanctions violations indicates a significant risk of non-compliance with international sanctions regimes and potential AML vulnerabilities stemming from flawed payment routing processes."
+  "flags": [
+    "sanctions",
+    "AML",
+    "Market Manipulation"
+  ],
+  "summary": "The bank's settlement for sanctions violations indicates a significant risk of non-compliance with international regulations and potential reputational damage, demanding immediate investigation and remediation."
 }
 ```

@@ -1,5 +1,1 @@
-This step solidifies the API’s foundational structure by formally defining the REST endpoints for managing todo items – specifically, `/todos` for listing and creating items, and `/todos/{id}` for retrieving, updating, or deleting individual items. The output is a design document, `api_design.md`, that meticulously outlines these URLs and the JSON data model used to represent each todo item (id, title, description, completed).
-
-**Filenames Created:**
-
-*   `api_design.md`
+This step focuses on defining the core data structures for our API, establishing a standardized format for all interactions. It produces detailed JSON schemas for Users and Products, ensuring consistent data exchange between client and server. The resulting files are: `api_endpoints.md`, `user_schema.json`, and `product_schema.json`.
