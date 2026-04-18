@@ -69,7 +69,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/30_code_gen/code_gen.spl \
-    --adapter ollama -m gemma3 --tools cookbook/30_code_gen/tools.py \
+    --adapter ollama --model gemma3 --tools cookbook/30_code_gen/tools.py \
     spec="A function that validates an email address"
 ```
 

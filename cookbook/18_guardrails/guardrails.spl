@@ -4,20 +4,20 @@
 -- Four gates before a response is committed.
 --
 -- Usage (from catalog):
---   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama --model gemma3 \
 --       --tools cookbook/18_guardrails/tools.py \
 --       input_id=safe_encryption
 --
---   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama --model gemma3 \
 --       --tools cookbook/18_guardrails/tools.py \
 --       input_id=pii_ssn
 --
---   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama --model gemma3 \
 --       --tools cookbook/18_guardrails/tools.py \
 --       input_id=harmful_malware
 --
 -- Usage (ad-hoc — no catalog):
---   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/18_guardrails/guardrails.spl --adapter ollama --model gemma3 \
 --       --tools cookbook/18_guardrails/tools.py \
 --       user_input="My SSN is 123-45-6789, help me file taxes"
 --

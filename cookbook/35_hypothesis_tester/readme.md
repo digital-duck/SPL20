@@ -33,7 +33,7 @@ spl run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama \
     domain="product" \
     confidence_threshold=0.75
 
-spl run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama -m llama3.2 \
+spl run cookbook/35_hypothesis_tester/hypothesis.spl --adapter ollama --model llama3.2 \
     observation="Daily standups reduce sprint velocity by 10%" \
     domain="management"
 ```

@@ -3,7 +3,7 @@
 -- Each GENERATE feeds into the next via workflow variables.
 --
 -- Usage:
---   spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m gemma3 topic="distributed AI inference"
+--   spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama --model gemma3 topic="distributed AI inference"
 
 CREATE FUNCTION research(topic TEXT)
 RETURNS TEXT

@@ -61,7 +61,7 @@ logs/final.md      ← committed output
 
 ```bash
 spl run cookbook/09_chain_of_thought/chain.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     topic="distributed AI inference"
 ```
 

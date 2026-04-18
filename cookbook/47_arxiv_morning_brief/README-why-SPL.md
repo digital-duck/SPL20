@@ -71,7 +71,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/47_arxiv_morning_brief/arxiv_morning_brief.spl \
-    --adapter ollama -m gemma3 --tools cookbook/47_arxiv_morning_brief/tools.py \
+    --adapter ollama --model gemma3 --tools cookbook/47_arxiv_morning_brief/tools.py \
     urls="https://arxiv.org/pdf/2501.12948"
 ```
 

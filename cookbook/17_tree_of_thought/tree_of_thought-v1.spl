@@ -4,7 +4,7 @@
 -- Demonstrates branching exploration, comparative evaluation, and path scoring.
 --
 -- Usage:
---   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama -m gemma3 problem="How should a startup prioritize between growth and profitability?"
+--   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama --model gemma3 problem="How should a startup prioritize between growth and profitability?"
 --   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Design a caching strategy for a high-traffic API"
 --   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="Should we rewrite the legacy system or incrementally refactor?"
 --   spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama problem="..." model_a=gemma3 model_b=phi4 model_c=qwen2.5

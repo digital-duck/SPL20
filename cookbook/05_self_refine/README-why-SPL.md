@@ -134,7 +134,7 @@ spl run cookbook/05_self_refine/self_refine.spl \
 
 ```bash
 spl run cookbook/05_self_refine/self_refine.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     task="Explain recursion" \
     log_dir=cookbook/05_self_refine/logs-gemma3
 ```

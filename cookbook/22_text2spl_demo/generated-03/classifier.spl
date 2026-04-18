@@ -1,0 +1,13 @@
+PROMPT classify_intent
+SELECT @input AS text LIMIT 100 TOKENS
+GENERATE extract_entities(@text) INTO @entities;
+
+DO
+  EVALUATE
+    WHEN @entities = 'user_query' THEN
+      CALL route_user_query;
+    WHEN @entities = 'product_review' THEN
+      CALL handle_product_review;
+    ELSE
+      CALL unknown_intent_handler;
+  END;

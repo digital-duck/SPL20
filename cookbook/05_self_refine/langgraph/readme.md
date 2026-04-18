@@ -58,7 +58,7 @@ logs/final.md         ← committed output
 
 ```bash
 spl run cookbook/05_self_refine/self_refine.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     task="Write a haiku about coding"
 ```
 

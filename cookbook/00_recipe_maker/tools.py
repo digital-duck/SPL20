@@ -17,7 +17,7 @@ Tools:
 
 Usage:
   spl run cookbook/00_recipe_maker/recipe_maker.spl \\
-      --adapter ollama -m gemma3 \\
+      --adapter ollama --model gemma3 \\
       --tools cookbook/00_recipe_maker/tools.py \\
       concept="Customer churn predictor with explainability" \\
       output_dir="cookbook/38_churn_predictor/"
@@ -297,7 +297,7 @@ def notify_review(output_dir: str, artifact_list: str, feedback_mode: str) -> st
             f"     {resolved}",
             "",
             "  2. Run the generated workflow:",
-            f"     spl run {os.path.join(resolved, 'workflow.spl')} --adapter ollama -m <model>",
+            f"     spl run {os.path.join(resolved, 'workflow.spl')} --adapter ollama --model <model>",
             "        --tools " + os.path.join(resolved, "tools.py"),
             "",
             "  3. Taste the cake — does it produce the expected output?",

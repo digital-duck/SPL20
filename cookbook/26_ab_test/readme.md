@@ -31,26 +31,26 @@ Always pass `--tools tools.py`:
 ```bash
 # From catalog — neural networks explanation styles
 spl run cookbook/26_ab_test/ab_test.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     experiment_id=neural_networks \
     2>&1 | tee cookbook/out/26_ab_test-$(date +%Y%m%d_%H%M%S).md
 
 # From catalog — standing desk value proposition
 spl run cookbook/26_ab_test/ab_test.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     experiment_id=standing_desk winner_threshold=2.0
 
 # From catalog — code review style
 spl run cookbook/26_ab_test/ab_test.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     experiment_id=code_review
 
 # Ad-hoc — no catalog needed
 spl run cookbook/26_ab_test/ab_test.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/26_ab_test/tools.py \
     task="Summarize the French Revolution in 3 sentences" \
     prompt_a="Be concise and factual" \

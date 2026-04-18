@@ -1,1 +1,7 @@
-This document is a test for map-reduce summarization using the classic sentence "The quick brown fox jumps over the lazy dog." The second input is simply "0," likely a placeholder or indication of a count.
+Okay! That's the classic pangram - a sentence that contains every letter of the alphabet. 😊 
+
+Do you want to do anything with it, like:
+
+*   Count the letters?
+*   Try to find other pangrams?
+*   Just chat about it?

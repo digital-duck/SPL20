@@ -1,1 +1,1 @@
-The quick brown fox jumps over the lazy dog. This is a test document for map-reduce summarization.
+The quick brown fox jumps over the lazy dog.

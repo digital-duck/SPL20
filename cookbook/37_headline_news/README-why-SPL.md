@@ -69,7 +69,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/37_headline_news/headline_news.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     topic="artificial intelligence"
 ```
 

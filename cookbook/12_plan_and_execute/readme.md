@@ -63,7 +63,7 @@ spl run cookbook/12_plan_and_execute/plan_execute.spl --adapter ollama \
 
 # Generate and write code to disk (one file per LLM call — reliable for any model)
 spl run cookbook/12_plan_and_execute/plan_execute.spl \
-    --adapter ollama -m "qwen2.5-coder" \
+    --adapter ollama --model "qwen2.5-coder" \
     --tools cookbook/12_plan_and_execute/tools.py \
     task="Build a REST API for a todo app" \
     output_dir="cookbook/12_plan_and_execute/output" \
@@ -73,7 +73,7 @@ spl run cookbook/12_plan_and_execute/plan_execute.spl \
 # code quality is bad, use Claude Code
 
 spl run cookbook/12_plan_and_execute/plan_execute.spl \
-    --adapter claude_cli -m claude-sonnet-4-6 \
+    --adapter claude_cli --model claude-sonnet-4-6 \
     --tools cookbook/12_plan_and_execute/tools.py \
     task="Build a REST API for a todo app" \
     output_dir="cookbook/12_plan_and_execute/output" \
@@ -214,7 +214,7 @@ Running with `qwen2.5-coder` produced 4 files but they were **not runnable toget
 
 ```bash
 spl run cookbook/12_plan_and_execute/plan_execute.spl \
-    --adapter claude_cli -m claude-sonnet-4-6 \
+    --adapter claude_cli --model claude-sonnet-4-6 \
     --tools cookbook/12_plan_and_execute/tools.py \
     task="Build a REST API for a todo app" \
     output_dir="cookbook/12_plan_and_execute/output" \

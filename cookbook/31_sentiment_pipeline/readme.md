@@ -32,7 +32,7 @@ Always pass `--tools tools.py`:
 ```bash
 # Product reviews → full report
 spl run cookbook/31_sentiment_pipeline/sentiment.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     filename=product_reviews.txt \
     domain=product_reviews \
@@ -40,21 +40,21 @@ spl run cookbook/31_sentiment_pipeline/sentiment.spl \
 
 # Support tickets
 spl run cookbook/31_sentiment_pipeline/sentiment.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     filename=support_tickets.txt \
     domain=support_tickets
 
 # Social media posts
 spl run cookbook/31_sentiment_pipeline/sentiment.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     filename=social_media.txt \
     domain=social_media
 
 # Inline pipe-delimited (no file needed)
 spl run cookbook/31_sentiment_pipeline/sentiment.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     items="Great product, love it! | Terrible experience, never again | It was okay I guess" \
     delimiter="|" \

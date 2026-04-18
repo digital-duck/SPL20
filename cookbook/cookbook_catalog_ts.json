@@ -1,14 +1,14 @@
 {
-  "_comment": "SPL.ts Cookbook Catalog — mirrors cookbook_catalog.json but uses 'spl-ts' CLI. Recipes requiring --tools (Python), claude_cli adapter, cloud adapters, or RAG are disabled until SPL.ts gains those features. Param syntax: --param key=value (TypeScript CLI convention).",
+  "_comment": "SPL.ts Cookbook Catalog \u2014 mirrors cookbook_catalog.json but uses 'spl-ts' CLI. Recipes requiring --tools (Python), claude_cli adapter, cloud adapters, or RAG are disabled until SPL.ts gains those features. Param syntax: --param key=value (TypeScript CLI convention).",
   "_schema": {
-    "is_active": "bool   — included in default batch run (python run_all.py --catalog-file cookbook/cookbook_catalog_ts.json)",
-    "approval_status": "string — new | approved | wip | disabled | rejected"
+    "is_active": "bool   \u2014 included in default batch run (python run_all.py --catalog-file cookbook/cookbook_catalog_ts.json)",
+    "approval_status": "string \u2014 new | approved | wip | disabled | rejected"
   },
   "recipes": [
     {
       "id": "01",
       "name": "Hello World",
-      "description": "Minimal SPL program — verify spl-ts + adapter + model work",
+      "description": "Minimal SPL program \u2014 verify spl-ts + adapter + model work",
       "args": [
         "spl-ts",
         "run",
@@ -25,7 +25,7 @@
     {
       "id": "02",
       "name": "Ollama Proxy",
-      "description": "General-purpose LLM query — proxy any Ollama model",
+      "description": "General-purpose LLM query \u2014 proxy any Ollama model",
       "args": [
         "spl-ts",
         "run",
@@ -44,7 +44,7 @@
     {
       "id": "03",
       "name": "Multilingual Greeting",
-      "description": "Greet in any language — parametric context demo",
+      "description": "Greet in any language \u2014 parametric context demo",
       "args": [
         "spl-ts",
         "run",
@@ -65,7 +65,7 @@
     {
       "id": "04",
       "name": "Model Showdown",
-      "description": "Same prompt to multiple models — compare output and latency via parallel CTEs",
+      "description": "PROMPT...GENERATE...INTO \u2014 multi-model showdown with parallel CTE output",
       "args": [
         "spl-ts",
         "run",
@@ -84,7 +84,7 @@
     {
       "id": "05",
       "name": "Self-Refine",
-      "description": "Iterative improvement: draft → critique → refine loop — primary NDD closure anchor",
+      "description": "Iterative improvement: draft \u2192 critique \u2192 refine loop \u2014 primary NDD closure anchor",
       "args": [
         "spl-ts",
         "run",
@@ -103,20 +103,24 @@
     {
       "id": "06",
       "name": "ReAct Agent",
-      "description": "Requires claude_cli adapter + --tools (Python) — not supported in spl-ts",
+      "description": "ReAct Agent \u2014 tool-augmented reasoning with claude_cli + Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/06_react_agent/react_agent.spl",
         "--adapter",
-        "ollama",
+        "claude_cli",
+        "--model",
+        "claude-sonnet-4-6",
+        "--tools",
+        "./cookbook/06_react_agent/tools.py",
         "--param",
         "country=France"
       ],
       "dir": "06_react_agent",
       "log": "react_agent",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "agentic"
     },
     {
@@ -141,7 +145,7 @@
     {
       "id": "08",
       "name": "RAG Query",
-      "description": "Requires rag.query() — not yet implemented in spl-ts",
+      "description": "Requires rag.query() \u2014 not yet implemented in spl-ts",
       "args": [
         "spl-ts",
         "run",
@@ -160,7 +164,7 @@
     {
       "id": "09",
       "name": "Chain of Thought",
-      "description": "Multi-step reasoning: Research → Analyze → Summarize",
+      "description": "Multi-step reasoning: Research \u2192 Analyze \u2192 Summarize",
       "args": [
         "spl-ts",
         "run",
@@ -234,13 +238,15 @@
     {
       "id": "13",
       "name": "Map-Reduce Summarizer",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Map-Reduce Summarizer \u2014 chunk \u2192 summarize \u2192 reduce with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/13_map_reduce/map_reduce.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/13_map_reduce/tools.py",
         "--param",
         "document=The quick brown fox jumps over the lazy dog.",
         "--param",
@@ -248,14 +254,14 @@
       ],
       "dir": "13_map_reduce",
       "log": "map_reduce",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "application"
     },
     {
       "id": "14",
       "name": "Multi-Agent Collaboration",
-      "description": "Researcher → Analyst → Writer collaboration via PROCEDURE",
+      "description": "Researcher \u2192 Analyst \u2192 Writer collaboration via PROCEDURE",
       "args": [
         "spl-ts",
         "run",
@@ -293,7 +299,7 @@
     {
       "id": "16",
       "name": "Reflection Agent",
-      "description": "Meta-cognitive loop: solve → reflect → correct until confident",
+      "description": "Meta-cognitive loop: solve \u2192 reflect \u2192 correct until confident",
       "args": [
         "spl-ts",
         "run",
@@ -350,7 +356,7 @@
     {
       "id": "19",
       "name": "Memory Conversation",
-      "description": "Requires memory.get/set — not yet implemented in spl-ts",
+      "description": "Requires memory.get/set \u2014 not yet implemented in spl-ts",
       "args": [
         "spl-ts",
         "run",
@@ -407,7 +413,7 @@
     {
       "id": "22",
       "name": "Text2SPL Demo",
-      "description": "Shell script wrapper — calls spl2 internally, not portable to spl-ts",
+      "description": "Shell script wrapper \u2014 calls spl2 internally, not portable to spl-ts",
       "args": [
         "bash",
         "./cookbook/22_text2spl_demo/text2spl_demo.sh"
@@ -421,7 +427,7 @@
     {
       "id": "23",
       "name": "Structured Output",
-      "description": "CREATE FUNCTION with JSON schema — extract typed data from free text",
+      "description": "CREATE FUNCTION with JSON schema \u2014 extract typed data from free text",
       "args": [
         "spl-ts",
         "run",
@@ -440,7 +446,7 @@
     {
       "id": "24",
       "name": "Few-Shot Prompting",
-      "description": "Gold-standard examples embedded in SELECT context — in-context learning",
+      "description": "Gold-standard examples embedded in SELECT context \u2014 in-context learning",
       "args": [
         "spl-ts",
         "run",
@@ -461,7 +467,7 @@
     {
       "id": "25",
       "name": "Nested Procedures",
-      "description": "PROCEDURE calling PROCEDURE — deep composability without external orchestration",
+      "description": "PROCEDURE calling PROCEDURE \u2014 deep composability without external orchestration",
       "args": [
         "spl-ts",
         "run",
@@ -482,7 +488,7 @@
     {
       "id": "26",
       "name": "Prompt A/B Test",
-      "description": "CTEs + EVALUATE scoring — compare two prompt variants, pick winner automatically",
+      "description": "CTEs + EVALUATE scoring \u2014 compare two prompt variants, pick winner automatically",
       "args": [
         "spl-ts",
         "run",
@@ -505,7 +511,7 @@
     {
       "id": "27",
       "name": "Data Extraction",
-      "description": "Pull structured fields from messy text — names, dates, amounts, references",
+      "description": "Pull structured fields from messy text \u2014 names, dates, amounts, references",
       "args": [
         "spl-ts",
         "run",
@@ -526,7 +532,7 @@
     {
       "id": "28",
       "name": "Customer Support Triage",
-      "description": "Classify → route → draft response in one workflow",
+      "description": "Classify \u2192 route \u2192 draft response in one workflow",
       "args": [
         "spl-ts",
         "run",
@@ -608,7 +614,7 @@
     {
       "id": "32",
       "name": "Socratic Tutor",
-      "description": "Ask guiding questions rather than giving answers — persona-constrained generation",
+      "description": "Ask guiding questions rather than giving answers \u2014 persona-constrained generation",
       "args": [
         "spl-ts",
         "run",
@@ -650,7 +656,7 @@
     {
       "id": "34",
       "name": "Progressive Summarizer",
-      "description": "Layered summary: sentence → paragraph → page with fidelity verification",
+      "description": "Layered summary: sentence \u2192 paragraph \u2192 page with fidelity verification",
       "args": [
         "spl-ts",
         "run",
@@ -671,7 +677,7 @@
     {
       "id": "35",
       "name": "Hypothesis Tester",
-      "description": "Generate hypothesis → design test → evaluate evidence → conclude",
+      "description": "Generate hypothesis \u2192 design test \u2192 evaluate evidence \u2192 conclude",
       "args": [
         "spl-ts",
         "run",
@@ -692,45 +698,49 @@
     {
       "id": "36",
       "name": "Tool-Use / Function-Call",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Tool-Use / Function-Call \u2014 CALL to Python tools for stats computation",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/36_tool_use/tool_use.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/36_tool_use/tools.py",
         "--param",
         "sales=1200,1450,1380,1600,1750,1900"
       ],
       "dir": "36_tool_use",
       "log": "tool_use",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "agentic"
     },
     {
       "id": "37",
       "name": "Headline News Aggregator",
-      "description": "Requires claude_cli adapter — not supported in spl-ts",
+      "description": "Headline News Aggregator \u2014 web search via claude_cli adapter",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/37_headline_news/headline_news.spl",
         "--adapter",
-        "openai",
+        "claude_cli",
+        "--model",
+        "claude-opus-4-6",
         "--param",
         "topic=artificial intelligence"
       ],
       "dir": "37_headline_news",
       "log": "headline_news",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "application"
     },
     {
       "id": "38",
       "name": "Bedrock Quickstart",
-      "description": "Requires bedrock adapter — not supported in spl-ts",
+      "description": "Requires bedrock adapter \u2014 not supported in spl-ts",
       "args": [
         "spl-ts",
         "run",
@@ -749,7 +759,7 @@
     {
       "id": "39",
       "name": "Vertex AI Quickstart",
-      "description": "Requires vertex adapter — not supported in spl-ts",
+      "description": "Requires vertex adapter \u2014 not supported in spl-ts",
       "args": [
         "spl-ts",
         "run",
@@ -768,7 +778,7 @@
     {
       "id": "40",
       "name": "Azure OpenAI Quickstart",
-      "description": "Requires azure_openai adapter — not supported in spl-ts",
+      "description": "Requires azure_openai adapter \u2014 not supported in spl-ts",
       "args": [
         "spl-ts",
         "run",
@@ -787,51 +797,57 @@
     {
       "id": "41",
       "name": "Human Steering",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Human Steering \u2014 interactive loop with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/41_human_steering/human_steering.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/41_human_steering/tools.py",
         "--param",
         "topic=The future of agentic AI"
       ],
       "dir": "41_human_steering",
       "log": "human_steering",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "agentic"
     },
     {
       "id": "42",
       "name": "Knowledge Synthesis",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Knowledge Synthesis \u2014 store/retrieve knowledge with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/42_knowledge_synthesis/knowledge_synthesis.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/42_knowledge_synthesis/tools.py",
         "--param",
         "raw_text=Recent advances in sparse attention mechanisms dramatically reduce transformer memory footprint."
       ],
       "dir": "42_knowledge_synthesis",
       "log": "knowledge_synthesis",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "retrieval"
     },
     {
       "id": "43",
       "name": "Prompt Self-Tuning",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Prompt Self-Tuning \u2014 iterative prompt optimization with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/43_prompt_self_tuning/prompt_self_tuning.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/43_prompt_self_tuning/tools.py",
         "--param",
         "baseline_prompt=Summarize this technical document.",
         "--param",
@@ -839,20 +855,22 @@
       ],
       "dir": "43_prompt_self_tuning",
       "log": "prompt_self_tuning",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "agentic"
     },
     {
       "id": "44",
       "name": "Adaptive Failover",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Adaptive Failover \u2014 primary/fallback model routing with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/44_adaptive_failover/adaptive_failover.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/44_adaptive_failover/tools.py",
         "--param",
         "query=Explain quantum entanglement for a technical audience.",
         "--param",
@@ -862,14 +880,14 @@
       ],
       "dir": "44_adaptive_failover",
       "log": "adaptive_failover",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "agentic"
     },
     {
       "id": "45",
       "name": "Vision to Action",
-      "description": "LLM classifies image description into DELIVERY/INTRUSION/IGNORE — deterministic EVALUATE decision tree",
+      "description": "LLM classifies image description into DELIVERY/INTRUSION/IGNORE \u2014 deterministic EVALUATE decision tree",
       "args": [
         "spl-ts",
         "run",
@@ -888,32 +906,36 @@
     {
       "id": "47",
       "name": "arXiv Morning Brief",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "arXiv Morning Brief \u2014 fetch + summarize papers with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/47_arxiv_morning_brief/arxiv_morning_brief.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/47_arxiv_morning_brief/tools.py",
         "--param",
         "urls=cookbook/47_arxiv_morning_brief/arxiv-papers.txt"
       ],
       "dir": "47_arxiv_morning_brief",
       "log": "arxiv_morning_brief",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "application"
     },
     {
       "id": "48",
       "name": "Credit Risk Assessment",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Credit Risk Assessment \u2014 rule-based scoring with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/48_credit_risk/assess_credit_risk.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/48_credit_risk/tools.py",
         "--param",
         "applicant_data=Applicant: Jane Doe | Income: $72,000 | Debt: $18,000 | Employment: 5 years | Prior defaults: none",
         "--param",
@@ -921,27 +943,29 @@
       ],
       "dir": "48_credit_risk",
       "log": "credit_risk",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "application"
     },
     {
       "id": "49",
       "name": "Regulatory News Audit",
-      "description": "Requires --tools (Python) — not supported in spl-ts",
+      "description": "Regulatory News Audit \u2014 classify news items with Python tools bridge",
       "args": [
         "spl-ts",
         "run",
         "./cookbook/49_regulatory_news_audit/audit_news.spl",
         "--adapter",
         "ollama",
+        "--tools",
+        "./cookbook/49_regulatory_news_audit/tools.py",
         "--param",
         "news_batch_path=cookbook/49_regulatory_news_audit/data/news_feed.txt"
       ],
       "dir": "49_regulatory_news_audit",
       "log": "audit_news",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "new",
       "category": "application"
     }
   ]

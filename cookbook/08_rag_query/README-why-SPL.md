@@ -59,7 +59,7 @@ spl doc-rag add path/to/your/document.md
 
 # Then run the query
 spl run cookbook/08_rag_query/rag_query.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     question="What is Momagrid?"
 ```
 

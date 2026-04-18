@@ -59,7 +59,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/14_multi_agent/multi_agent.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     topic="Impact of AI on healthcare"
 ```
 

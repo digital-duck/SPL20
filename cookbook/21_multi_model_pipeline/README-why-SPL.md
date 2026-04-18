@@ -69,7 +69,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/21_multi_model_pipeline/multi_model.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     topic="climate change"
 ```
 

@@ -10,13 +10,13 @@
 --     → commit structured daily digest
 --
 -- Usage:
---   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli --model claude-opus-4-6 \
 --       topic="artificial intelligence"
 --
---   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli --model claude-opus-4-6 \
 --       topic="renewable energy" style="executive brief" max_headlines=5
 --
---   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli -m claude-opus-4-6 \
+--   spl run cookbook/37_headline_news/headline_news.spl --adapter claude_cli --model claude-opus-4-6 \
 --       topic="quantum computing" style="bullet points" perspective="global"
 
 CREATE FUNCTION news_format_guide(style TEXT DEFAULT 'structured')

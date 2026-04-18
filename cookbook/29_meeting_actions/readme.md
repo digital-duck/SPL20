@@ -31,7 +31,7 @@ Always pass `--tools tools.py` so the deterministic tools are available:
 ```bash
 # Sprint planning → markdown (good for copy-pasting into Confluence)
 spl run cookbook/29_meeting_actions/meeting_actions.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/29_meeting_actions/tools.py \
     filename=sprint_planning.txt \
     output_format=markdown \
@@ -39,21 +39,21 @@ spl run cookbook/29_meeting_actions/meeting_actions.spl \
 
 # Design review → JSON (inspect structured output)
 spl run cookbook/29_meeting_actions/meeting_actions.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/29_meeting_actions/tools.py \
     filename=design_review.txt \
     output_format=json
 
 # Daily standup → email format
 spl run cookbook/29_meeting_actions/meeting_actions.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/29_meeting_actions/tools.py \
     filename=standup.txt \
     output_format=email
 
 # Inline transcript (no file needed)
 spl run cookbook/29_meeting_actions/meeting_actions.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/29_meeting_actions/tools.py \
     transcript="Alice: fix the login bug by Friday. Bob: I will handle it." \
     output_format=markdown

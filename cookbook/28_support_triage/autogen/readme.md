@@ -47,7 +47,7 @@ Check logs in `cookbook/28_support_triage/autogen/logs-autogen`.
 
 ```bash
 spl run cookbook/28_support_triage/support_triage.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/28_support_triage/tools.py \
     ticket="My account has been charged twice for order #ORD-12345"
 ```

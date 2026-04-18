@@ -46,7 +46,7 @@ Check logs in `cookbook/18_guardrails/crewai/logs-crewai`.
 
 ```bash
 spl run cookbook/18_guardrails/guardrails.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     user_input="My SSN is 123-45-6789, help me file taxes"
 ```

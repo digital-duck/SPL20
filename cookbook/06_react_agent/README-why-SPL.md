@@ -59,7 +59,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/06_react_agent/react_agent.spl \
-    --adapter ollama -m gemma3 --tools cookbook/06_react_agent/tools.py \
+    --adapter ollama --model gemma3 --tools cookbook/06_react_agent/tools.py \
     country="France"
 ```
 

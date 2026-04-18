@@ -59,7 +59,7 @@ spl run cookbook/01_hello_world/hello.spl --adapter ollama \
     --param lang="Chinese"
 
 # Specific model
-spl run cookbook/01_hello_world/hello.spl --adapter ollama -m llama3.2
+spl run cookbook/01_hello_world/hello.spl --adapter ollama --model llama3.2
 ```
 
 ```bash
@@ -67,13 +67,13 @@ export FILE_SPL="$HOME/projects/digital-duck/SPL20/cookbook/01_hello_world/hello
 
 ## different commands
 # python
-spl    run $FILE_SPL --adapter ollama -m gemma3 --param user_input="hello wen" --param lang="Chinese"
+spl    run $FILE_SPL --adapter ollama --model gemma3 --param user_input="hello wen" --param lang="Chinese"
 
 # TypeScript
-spl-ts run $FILE_SPL --adapter ollama -m gemma3 --param user_input="hello wen" --param lang="Chinese"
+spl-ts run $FILE_SPL --adapter ollama --model gemma3 --param user_input="hello wen" --param lang="Chinese"
 
 # Go
-spl-go run $FILE_SPL --adapter ollama -m gemma3 --param user_input="hello wen" --param lang="Chinese"
+spl-go run $FILE_SPL --adapter ollama --model gemma3 --param user_input="hello wen" --param lang="Chinese"
 ```
 
 

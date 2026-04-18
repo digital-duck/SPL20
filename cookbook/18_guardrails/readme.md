@@ -27,32 +27,32 @@ Always pass `--tools tools.py`:
 ```bash
 # From catalog — safe input
 spl run cookbook/18_guardrails/guardrails.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=safe_encryption \
     2>&1 | tee cookbook/out/18_guardrails-$(date +%Y%m%d_%H%M%S).md
 
 # From catalog — PII redaction test
 spl run cookbook/18_guardrails/guardrails.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=pii_ssn
 
 # From catalog — harmful request (should block at Gate 1)
 spl run cookbook/18_guardrails/guardrails.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=harmful_malware
 
 # From catalog — multiple PII types
 spl run cookbook/18_guardrails/guardrails.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     input_id=pii_multiple
 
 # Ad-hoc — no catalog needed
 spl run cookbook/18_guardrails/guardrails.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/18_guardrails/tools.py \
     user_input="Explain how encryption works"
 

@@ -10,7 +10,7 @@ Tools:
 
 Usage:
   spl run cookbook/26_ab_test/ab_test.spl \\
-      --adapter ollama -m gemma3 \\
+      --adapter ollama --model gemma3 \\
       --tools cookbook/26_ab_test/tools.py \\
       experiment_id=neural_networks
 """

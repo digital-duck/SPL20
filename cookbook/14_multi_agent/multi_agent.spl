@@ -4,7 +4,7 @@
 -- Demonstrates procedural decomposition, CALL-based delegation, and role specialization.
 --
 -- Usage:
---   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m gemma3 topic="Impact of AI on healthcare"
+--   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama --model gemma3 topic="Impact of AI on healthcare"
 --   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="Future of renewable energy"
 --   spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama topic="State of quantum computing in 2025"
 --

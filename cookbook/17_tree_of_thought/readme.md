@@ -28,7 +28,7 @@ spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama \
 spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama \
     problem="Design a caching strategy for a high-traffic API"
 
-spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama -m llama3.2 \
+spl run cookbook/17_tree_of_thought/tree_of_thought.spl --adapter ollama --model llama3.2 \
     problem="How should a startup prioritize between growth and profitability?"
 ```
 

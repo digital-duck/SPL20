@@ -54,7 +54,7 @@ verdict.md
 
 ```bash
 spl run cookbook/11_debate_arena/debate.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     topic="AI should be open-sourced"
 ```
 

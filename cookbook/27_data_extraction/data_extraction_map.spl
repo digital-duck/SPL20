@@ -6,7 +6,7 @@
 -- reads the config, and map_merge() annotates the output with run metadata.
 --
 -- Usage:
---   spl run cookbook/27_data_extraction/data_extraction_map.spl --adapter ollama -m gemma3
+--   spl run cookbook/27_data_extraction/data_extraction_map.spl --adapter ollama --model gemma3
 --
 --   spl run cookbook/27_data_extraction/data_extraction_map.spl --adapter ollama \
 --       format="invoice" \

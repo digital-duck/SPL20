@@ -7,7 +7,7 @@
 --   • a file path — the file contents are loaded automatically via load_spec()
 --
 -- Usage:
---   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama --model gemma3 \
 --       --tools cookbook/30_code_gen/tools.py \
 --       spec="A function that validates an email address" language="Python"
 --
@@ -16,7 +16,7 @@
 --       spec="Binary search over a sorted list, return index or -1" language="Go" \
 --       test_framework="testing"
 --
---   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/30_code_gen/code_gen.spl --adapter ollama --model gemma3 \
 --       --tools cookbook/30_code_gen/tools.py \
 --       spec="specs/email_validator.txt" language="Python"
 

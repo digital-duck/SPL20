@@ -105,7 +105,7 @@
         "./cookbook/06_react_agent/react_agent.spl",
         "--adapter",
         "claude_cli",
-        "-m",
+        "--model",
         "claude-sonnet-4-6",
         "--claude-allowed-tools",
         "WebSearch",
@@ -394,15 +394,16 @@
     {
       "id": "22",
       "name": "Text2SPL Demo",
-      "description": "Shell script wrapper — calls spl2 internally, not directly portable to spl-go",
+      "description": "Natural language → SPL compiler demo via spl-go text2spl",
       "args": [
         "bash",
-        "./cookbook/22_text2spl_demo/text2spl_demo.sh"
+        "./cookbook/22_text2spl_demo/text2spl_demo.sh",
+        "--spl-bin", "spl-go"
       ],
       "dir": "22_text2spl_demo",
       "log": "text2spl_demo",
-      "is_active": false,
-      "approval_status": "disabled",
+      "is_active": true,
+      "approval_status": "approved",
       "category": "application"
     },
     {
@@ -683,7 +684,7 @@
         "./cookbook/37_headline_news/headline_news.spl",
         "--adapter",
         "claude_cli",
-        "-m",
+        "--model",
         "claude-opus-4-6",
         "topic=artificial intelligence"
       ],

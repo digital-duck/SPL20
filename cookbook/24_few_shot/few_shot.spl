@@ -3,7 +3,7 @@
 -- Demonstrates in-context learning — no fine-tuning required.
 --
 -- Usage:
---   spl run cookbook/24_few_shot/few_shot.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/24_few_shot/few_shot.spl --adapter ollama --model gemma3 \
 --       text="The quarterly results exceeded all analyst forecasts by a significant margin"
 --
 --   spl run cookbook/24_few_shot/few_shot.spl --adapter ollama \

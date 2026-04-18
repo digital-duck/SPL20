@@ -10,7 +10,7 @@ Embed gold-standard examples in `SELECT` context to guide output format and styl
 
 ```bash
 # General sentiment + summary
-spl run cookbook/24_few_shot/few_shot.spl --adapter ollama -m gemma3 \
+spl run cookbook/24_few_shot/few_shot.spl --adapter ollama --model gemma3 \
     text="The quarterly results exceeded all analyst forecasts by a significant margin"
 
 # Finance domain

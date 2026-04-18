@@ -1,0 +1,39 @@
+WORKFLOW refine_text
+  INPUT @draft TEXT
+  OUTPUT @final TEXT
+DO
+  DO
+    GENERATE rewrite(@draft, style='improved') INTO @temp;
+    GENERATE sentiment(@temp) INTO @quality;
+    COMMIT @temp;
+    IF @quality < 0.8 THEN
+      @temp := @draft;
+    END;
+  EXCEPTION
+    WHEN HallucinationDetected THEN
+      @final := 'unknown';
+      COMMIT @final;
+    WHEN ModelOverloaded THEN
+      RETRY;
+  END;
+  GENERATE summarize(@temp) INTO @summary;
+  IF @summary != 'text is of high quality' THEN
+    @draft := @temp;
+    REPEAT
+      DO
+        GENERATE rewrite(@draft, style='improved') INTO @temp;
+        GENERATE sentiment(@temp) INTO @quality;
+        COMMIT @temp;
+        IF @quality < 0.8 THEN
+          @temp := @draft;
+        END;
+      EXCEPTION
+        WHEN HallucinationDetected THEN
+          @final := 'unknown';
+          COMMIT @final;
+        WHEN ModelOverloaded THEN
+          RETRY;
+      END;
+    WHILE @summary != 'text is of high quality';
+  END;
+END;

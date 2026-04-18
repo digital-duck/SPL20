@@ -106,7 +106,7 @@
         "./cookbook/06_react_agent/react_agent.spl",
         "--adapter",
         "claude_cli",
-        "-m",
+        "--model",
         "claude-sonnet-4-6",
         "--claude-allowed-tools",
         "WebSearch",
@@ -684,7 +684,7 @@
         "./cookbook/37_headline_news/headline_news.spl",
         "--adapter",
         "claude_cli",
-        "-m",
+        "--model",
         "claude-opus-4-6",
         "topic=artificial intelligence"
       ],

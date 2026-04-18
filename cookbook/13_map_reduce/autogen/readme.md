@@ -42,7 +42,7 @@ Done. Saved to cookbook/13_map_reduce/logs-autogen/final_summary.md
 
 ```bash
 spl run cookbook/13_map_reduce/map_reduce.spl \
-    --adapter ollama -m gemma3 --tools cookbook/13_map_reduce/tools.py \
+    --adapter ollama --model gemma3 --tools cookbook/13_map_reduce/tools.py \
     document="$(cat cookbook/13_map_reduce/large_doc.txt)" \
     style="bullet points"
 ```

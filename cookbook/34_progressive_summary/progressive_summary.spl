@@ -3,7 +3,7 @@
 -- Each layer is a compressed, self-contained summary of the previous layer.
 --
 -- Usage:
---   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama --model gemma3 \
 --       text="$(cat long_article.txt)"
 --
 --   spl run cookbook/34_progressive_summary/progressive_summary.spl --adapter ollama \

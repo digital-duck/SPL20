@@ -41,7 +41,7 @@ spl run cookbook/05_self_refine/self_refine.spl \
 ### With a different model
 ```bash
 spl run cookbook/05_self_refine/self_refine.spl \
-    --adapter ollama -m llama3.2 \
+    --adapter ollama --model llama3.2 \
     task="Explain recursion in one paragraph" \
     max_iterations=4
 ```
@@ -65,7 +65,7 @@ spl run cookbook/05_self_refine/self_refine.spl \
 
 export OPENAI_API_KEY=sk-...
 spl run cookbook/05_self_refine/self_refine.spl \
-    --adapter openai -m gpt-4o-mini\
+    --adapter openai --model gpt-4o-mini\
     task="How does Transformer work in deep learning" \
     max_iterations=3 \
     output_budget=2000 \
@@ -73,7 +73,7 @@ spl run cookbook/05_self_refine/self_refine.spl \
 
 export ANTHROPIC_API_KEY=sk-...
 spl run cookbook/05_self_refine/self_refine.spl \
-    --adapter anthropic -m claude-sonnet-4-5-20250929 \
+    --adapter anthropic --model claude-sonnet-4-5-20250929 \
     task="How does Transformer work in deep learning" \
     max_iterations=3 \
     output_budget=2000 \

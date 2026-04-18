@@ -19,7 +19,7 @@ WORKFLOW layered_explainer
 
 ```bash
 # Explain quantum computing to high schoolers
-spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama -m gemma3 \
+spl run cookbook/25_nested_procs/nested_procs.spl --adapter ollama --model gemma3 \
     topic="quantum computing" audience="high school students"
 
 # Deep-dive for policy makers

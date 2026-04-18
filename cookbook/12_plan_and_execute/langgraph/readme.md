@@ -54,7 +54,7 @@ Check logs in `cookbook/12_plan_and_execute/langgraph/logs-langgraph`.
 
 ```bash
 spl run cookbook/12_plan_and_execute/plan_execute.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/12_plan_and_execute/tools.py \
     task="Build a simple URL shortener in Python" \
     output_dir="cookbook/12_plan_and_execute/output"

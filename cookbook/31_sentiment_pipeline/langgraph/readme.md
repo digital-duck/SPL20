@@ -49,7 +49,7 @@ Check logs in `cookbook/31_sentiment_pipeline/langgraph/logs-langgraph`.
 
 ```bash
 spl run cookbook/31_sentiment_pipeline/sentiment.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/31_sentiment_pipeline/tools.py \
     items="Great product, love it! | Terrible experience, never again | It was okay" \
     delimiter="|"

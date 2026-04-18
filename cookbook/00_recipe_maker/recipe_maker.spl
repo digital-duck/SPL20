@@ -8,20 +8,20 @@
 --
 -- Usage:
 --   spl run cookbook/00_recipe_maker/recipe_maker.spl \
---       --adapter ollama -m gemma3 \
+--       --adapter ollama --model gemma3 \
 --       --tools cookbook/00_recipe_maker/tools.py \
 --       concept="Customer churn predictor with SHAP explainability" \
 --       output_dir="cookbook/38_churn_predictor/"
 --
 --   spl run cookbook/00_recipe_maker/recipe_maker.spl \
---       --adapter ollama -m gemma3 \
+--       --adapter ollama --model gemma3 \
 --       --tools cookbook/00_recipe_maker/tools.py \
 --       concept="Resume screener for software engineering roles" \
 --       dataset="data/resumes.json" \
 --       output_dir="cookbook/39_resume_screener/"
 --
 --   spl run cookbook/00_recipe_maker/recipe_maker.spl \
---       --adapter ollama -m gemma3 \
+--       --adapter ollama --model gemma3 \
 --       --tools cookbook/00_recipe_maker/tools.py \
 --       concept="Legal contract risk analyser" \
 --       resources="references/legal_risk_taxonomy.md" \

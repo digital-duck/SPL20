@@ -28,7 +28,7 @@ spl run cookbook/16_reflection/reflection.spl --adapter ollama \
 spl run cookbook/16_reflection/reflection.spl --adapter ollama \
     problem="Design a URL shortener system"
 
-spl run cookbook/16_reflection/reflection.spl --adapter ollama -m llama3.2 \
+spl run cookbook/16_reflection/reflection.spl --adapter ollama --model llama3.2 \
     problem="Explain why bubble sort is O(n^2)"
 ```
 

@@ -9,7 +9,7 @@ Tools:
 
 Usage:
   spl run cookbook/29_meeting_actions/meeting_actions.spl \\
-      --adapter ollama -m gemma3 \\
+      --adapter ollama --model gemma3 \\
       --tools cookbook/29_meeting_actions/tools.py \\
       filename=sprint_planning.txt \\
       output_format=markdown

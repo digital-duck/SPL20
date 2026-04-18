@@ -33,7 +33,7 @@ export MOMAGRID_HUB_URL=http://192.168.0.170:9000
 # use pinggy-free.link for external access to a local hub (no auth, not recommended for production)
 export MOMAGRID_HUB_URL=https://qgzqm-99-111-153-200.run.pinggy-free.link
 
-python cookbook/run_all.py --workers 10 --adapter momagrid -m gemma3 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S)-momagrid.md
+python cookbook/run_all.py --workers 10 --adapter momagrid --model gemma3 2>&1 | tee cookbook/out/run_all_$(date +%Y%m%d_%H%M%S)-momagrid.md
 #################################################################
 
 """

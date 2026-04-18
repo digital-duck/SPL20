@@ -68,7 +68,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/16_reflection/reflection.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     problem="What are the trade-offs of microservices vs monoliths?"
 ```
 

@@ -66,7 +66,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/15_code_review/code_review.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     code="def foo(x): return eval(x)"
 ```
 

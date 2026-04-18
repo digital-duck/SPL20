@@ -90,7 +90,7 @@ pip install -r requirements-cookbook.txt
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/13_map_reduce/map_reduce.spl \
-    --adapter ollama -m gemma3 --tools cookbook/13_map_reduce/tools.py \
+    --adapter ollama --model gemma3 --tools cookbook/13_map_reduce/tools.py \
     document="$(cat cookbook/13_map_reduce/data/large_doc.txt)" \
     style="bullet points"
 ```

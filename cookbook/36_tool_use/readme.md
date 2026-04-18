@@ -21,7 +21,7 @@ The recipe makes the architectural principle explicit in the comments:
 
 pip install -e . 
 spl run cookbook/06_react_agent/react_agent.spl \
-    --adapter claude_cli -m claude-sonnet-4-6 \
+    --adapter claude_cli --model claude-sonnet-4-6 \
     --claude-allowed-tools WebSearch \
     --tools cookbook/06_react_agent/tools.py \
     --timeout 200 \

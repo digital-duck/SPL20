@@ -22,7 +22,7 @@ response(prompt)
 
 ```bash
 spl run cookbook/07_safe_generation/safe_generation.spl --adapter ollama \
-    -m phi4 prompt="Explain how internet works" \
+    --model phi4 prompt="Explain how internet works" \
     2>&1 | tee cookbook/out/07_safe_generation-$(date +%Y%m%d_%H%M%S).md 
 
 spl run cookbook/07_safe_generation/safe_generation.spl --adapter ollama \

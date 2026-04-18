@@ -9,7 +9,7 @@ Tools:
 
 Usage:
   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \\
-      --adapter ollama -m gemma3 \\
+      --adapter ollama --model gemma3 \\
       --tools cookbook/32_socratic_tutor/tools.py \\
       topic_id=sky_blue subject=science student_level="middle school"
 """

@@ -28,14 +28,14 @@ Always pass `--tools tools.py`:
 ```bash
 # Minimal — concept only
 spl run cookbook/00_recipe_maker/recipe_maker.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/00_recipe_maker/tools.py \
     concept="Customer churn predictor with SHAP explainability" \
     output_dir="cookbook/38_churn_predictor/"
 
 # With existing dataset
 spl run cookbook/00_recipe_maker/recipe_maker.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/00_recipe_maker/tools.py \
     concept="Resume screener for software engineering roles" \
     dataset="data/resumes.json" \
@@ -43,7 +43,7 @@ spl run cookbook/00_recipe_maker/recipe_maker.spl \
 
 # With reference material
 spl run cookbook/00_recipe_maker/recipe_maker.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/00_recipe_maker/tools.py \
     concept="Legal contract risk analyser" \
     resources="references/legal_risk_taxonomy.md" \
@@ -51,7 +51,7 @@ spl run cookbook/00_recipe_maker/recipe_maker.spl \
 
 # Regenerate an existing recipe (iterate mode)
 spl run cookbook/00_recipe_maker/recipe_maker.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/00_recipe_maker/tools.py \
     concept="Improve recipe 28 support triage with priority routing" \
     dataset="cookbook/28_support_triage/orders.json" \

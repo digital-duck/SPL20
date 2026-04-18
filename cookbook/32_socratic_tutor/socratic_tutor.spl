@@ -5,23 +5,23 @@
 --
 -- Usage (topic from catalog):
 --   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
---       --adapter ollama -m gemma3 \
+--       --adapter ollama --model gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic_id=sky_blue subject=science student_level="middle school"
 --
 --   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
---       --adapter ollama -m gemma3 \
+--       --adapter ollama --model gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic_id=sqrt2_irrational subject=math student_level=undergraduate
 --
 --   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
---       --adapter ollama -m gemma3 \
+--       --adapter ollama --model gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic_id=recursion subject=programming student_level="high school"
 --
 -- Usage (freeform topic, no catalog):
 --   spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
---       --adapter ollama -m gemma3 \
+--       --adapter ollama --model gemma3 \
 --       --tools cookbook/32_socratic_tutor/tools.py \
 --       topic="Why is the speed of light constant?" student_level=undergraduate
 --

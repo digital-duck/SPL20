@@ -58,7 +58,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/25_nested_procs/nested_procs.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     topic="quantum computing" audience="high school students"
 ```
 

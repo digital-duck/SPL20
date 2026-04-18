@@ -3,7 +3,7 @@
 -- Demonstrates schema-constrained generation — the LLM must return valid JSON matching the spec.
 --
 -- Usage:
---   spl run cookbook/23_structured_output/structured_output.spl --adapter ollama -m gemma3 \
+--   spl run cookbook/23_structured_output/structured_output.spl --adapter ollama --model gemma3 \
 --       text="John Smith, 42, joined Acme Corp in March 2021 earning $95,000/year"
 --
 --   spl run cookbook/23_structured_output/structured_output.spl --adapter ollama \

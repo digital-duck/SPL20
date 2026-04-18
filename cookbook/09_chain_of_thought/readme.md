@@ -22,7 +22,7 @@ research(topic) → @research
 spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama \
     topic="distributed AI inference"
 
-spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama -m llama3.2 \
+spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama --model llama3.2 \
     topic="quantum computing"
 
 spl run cookbook/09_chain_of_thought/chain.spl --adapter ollama \

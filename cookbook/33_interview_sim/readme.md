@@ -36,32 +36,32 @@ Always pass `--tools tools.py`:
 ```bash
 # Senior SWE — system design — experienced candidate (hard)
 spl run cookbook/33_interview_sim/interview_sim.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/33_interview_sim/tools.py \
     role_key=senior_swe focus=system_design candidate_id=alice_senior_swe difficulty=hard \
     2>&1 | tee cookbook/out/33_interview_sim-$(date +%Y%m%d_%H%M%S).md
 
 # Senior SWE — algorithms — junior candidate (interesting gap)
 spl run cookbook/33_interview_sim/interview_sim.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/33_interview_sim/tools.py \
     role_key=senior_swe focus=algorithms candidate_id=eve_junior_swe
 
 # Data scientist — statistics — PhD candidate
 spl run cookbook/33_interview_sim/interview_sim.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/33_interview_sim/tools.py \
     role_key=data_scientist focus=statistics candidate_id=carol_data_scientist difficulty=hard
 
 # DevOps — Kubernetes — mid-level candidate
 spl run cookbook/33_interview_sim/interview_sim.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/33_interview_sim/tools.py \
     role_key=devops_engineer focus=kubernetes candidate_id=dave_devops
 
 # Freeform — no catalog needed
 spl run cookbook/33_interview_sim/interview_sim.spl \
-    --adapter ollama -m gemma3 \
+    --adapter ollama --model gemma3 \
     --tools cookbook/33_interview_sim/tools.py \
     role="ML Engineer" focus="deep learning" difficulty=medium experience="3 years"
 

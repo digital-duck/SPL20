@@ -24,7 +24,7 @@ con_argument(topic, opening)  ──┘
 spl run cookbook/11_debate_arena/debate.spl --adapter ollama \
     topic="AI should be open-sourced"
 
-spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 \
+spl run cookbook/11_debate_arena/debate.spl --adapter ollama --model llama3.2 \
     topic="Remote work is better than office work"
 
 spl run cookbook/11_debate_arena/debate.spl --adapter ollama \

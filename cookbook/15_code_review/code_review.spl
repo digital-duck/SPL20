@@ -3,7 +3,7 @@
 -- Demonstrates tool-augmented analysis, multi-criteria evaluation, and structured output.
 --
 -- Usage:
---   spl run cookbook/15_code_review/code_review.spl --adapter ollama -m gemma3 code="./myscript.py"
+--   spl run cookbook/15_code_review/code_review.spl --adapter ollama --model gemma3 code="./myscript.py"
 --   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="$(cat main.go)"
 --   spl run cookbook/15_code_review/code_review.spl --adapter ollama code="def foo(x): return eval(x)"
 --

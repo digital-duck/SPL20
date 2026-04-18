@@ -9,22 +9,22 @@ export FILE_SPL="$HOME/projects/digital-duck/SPL20/cookbook/02_ollama_proxy/prox
 
 ## different commands
 # python
-spl    run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+spl    run $FILE_SPL --adapter ollama --model gemma3 --param prompt="What is 10! ?"
 
 # TypeScript
-spl-ts run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+spl-ts run $FILE_SPL --adapter ollama --model gemma3 --param prompt="What is 10! ?"
 
 # Go
-spl-go run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+spl-go run $FILE_SPL --adapter ollama --model gemma3 --param prompt="What is 10! ?"
 
 
 
 
 # General usage
-spl run $FILE_SPL --adapter ollama -m gemma3 --param prompt="What is 10! ?"
+spl run $FILE_SPL --adapter ollama --model gemma3 --param prompt="What is 10! ?"
 
 # Short form (trailing argument)
-spl run $FILE_SPL --adapter ollama -m llama3.2 prompt="Write a haiku about coding"
+spl run $FILE_SPL --adapter ollama --model llama3.2 prompt="Write a haiku about coding"
 
 # Different adapter
 spl run $FILE_SPL --adapter anthropic prompt="Summarise the history of AI"

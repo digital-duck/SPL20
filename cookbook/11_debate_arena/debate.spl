@@ -3,8 +3,8 @@
 -- Demonstrates multi-perspective reasoning, adversarial generation, and semantic evaluation.
 --
 -- Usage:
---   spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m gemma3 topic="AI should be open-sourced"
---   spl run cookbook/11_debate_arena/debate.spl --adapter ollama -m llama3.2 topic="Remote work is better than office work"
+--   spl run cookbook/11_debate_arena/debate.spl --adapter ollama --model gemma3 topic="AI should be open-sourced"
+--   spl run cookbook/11_debate_arena/debate.spl --adapter ollama --model llama3.2 topic="Remote work is better than office work"
 --   spl run cookbook/11_debate_arena/debate.spl --adapter ollama topic="Tabs are better than spaces"
 
 CREATE FUNCTION pro_argument(topic TEXT, previous TEXT) 

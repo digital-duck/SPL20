@@ -26,7 +26,7 @@ spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama \
 spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama \
     topic="Impact of AI on healthcare"
 
-spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama -m llama3.2 \
+spl run cookbook/14_multi_agent/multi_agent.spl --adapter ollama --model llama3.2 \
     topic="State of quantum computing in 2025"
 ```
 

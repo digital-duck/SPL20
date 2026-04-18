@@ -66,7 +66,7 @@ END
 ### 1. SPL (Native)
 ```bash
 spl run cookbook/32_socratic_tutor/socratic_tutor.spl \
-    --adapter ollama -m gemma3 --tools cookbook/32_socratic_tutor/tools.py \
+    --adapter ollama --model gemma3 --tools cookbook/32_socratic_tutor/tools.py \
     topic_id="recursion" subject="programming"
 ```
 

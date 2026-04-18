@@ -423,7 +423,7 @@ is a declarative language for orchestrating LLM workflows — think SQL for AI.
 ### Test — Ollama Proxy (any model, any prompt)
 
 ```bash
-spl run cookbook/02_ollama_proxy/proxy.spl --adapter ollama -m gemma3 prompt="Explain quantum computing"
+spl run cookbook/02_ollama_proxy/proxy.spl --adapter ollama --model gemma3 prompt="Explain quantum computing"
 ```
 
 ```
@@ -466,7 +466,7 @@ bash cookbook/04_model_showdown/showdown.sh "What is the meaning of life?"
 ### Test — Self-Refining Agent
 
 ```bash
-spl run cookbook/05_self_refine/self_refine.spl --adapter ollama -m gemma3 task="Write a haiku about coding"
+spl run cookbook/05_self_refine/self_refine.spl --adapter ollama --model gemma3 task="Write a haiku about coding"
 ```
 
 

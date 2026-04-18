@@ -9,9 +9,25 @@
 
 set -uo pipefail
 
-ADAPTER="${1:-ollama}"
-MODEL="${2:-gemma3}"
-OUTDIR="22_text2spl_demo/generated"
+ADAPTER="ollama"
+MODEL="gemma3"
+SPL_BIN="spl"   # override with --spl-bin spl-go for Go runtime
+
+# Parse --adapter / --model / --spl-bin flags (run_all.py injects these) or positional args
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --adapter) ADAPTER="$2"; shift 2 ;;
+        --model|-m) MODEL="$2"; shift 2 ;;
+        --spl-bin) SPL_BIN="$2"; shift 2 ;;
+        --*) shift 2 ;;          # skip unknown --flag value pairs
+        *) ADAPTER="$1"; MODEL="${2:-$MODEL}"; break ;;
+    esac
+done
+
+# spl-go removed the -m shorthand; use --model for both (both accept it)
+MODEL_FLAG="--model"
+TS=$(date +%Y%m%d_%H%M%S)
+OUTDIR="cookbook/22_text2spl_demo/generated-${TS}"
 mkdir -p "$OUTDIR"
 
 PASS=0
@@ -27,11 +43,11 @@ run_demo() {
 
     # Use --no-validate so generation succeeds even if output has syntax issues;
     # we validate separately to show current maturity of each mode.
-    if spl text2spl "$desc" \
-        --adapter "$ADAPTER" -m "$MODEL" --mode "$mode" --no-validate -o "$outfile" 2>&1; then
+    if "$SPL_BIN" text2spl "$desc" \
+        --adapter "$ADAPTER" $MODEL_FLAG "$MODEL" --mode "$mode" --no-validate -o "$outfile" 2>&1; then
         echo ""
         echo "  Validating generated code..."
-        if spl validate "$outfile" 2>&1; then
+        if "$SPL_BIN" validate "$outfile" 2>&1; then
             echo "  [validation: OK]"
         else
             echo "  [validation: warning — generated code has issues (known limitation for $mode mode)]"
@@ -45,7 +61,7 @@ run_demo() {
 }
 
 echo "=== SPL 2.0 text2SPL Compiler Demo ==="
-echo "    Adapter: $ADAPTER  Model: $MODEL"
+echo "    Runtime: $SPL_BIN  Adapter: $ADAPTER  Model: $MODEL"
 echo ""
 
 # --- Demo 1: Simple PROMPT (most reliable) ---
@@ -69,7 +85,7 @@ ls -la "$OUTDIR"/*.spl 2>/dev/null || echo "  (no files generated)"
 echo ""
 echo "=== Demo complete: $PASS passed, $FAIL failed ==="
 echo "  To view:    cat $OUTDIR/summarize.spl"
-echo "  To execute: spl run $OUTDIR/summarize.spl --adapter $ADAPTER"
+echo "  To execute: $SPL_BIN run $OUTDIR/summarize.spl --adapter $ADAPTER"
 
 # Exit non-zero only if all demos failed
 if [ "$PASS" -eq 0 ] && [ "$FAIL" -gt 0 ]; then
